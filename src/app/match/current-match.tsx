@@ -44,11 +44,17 @@ function PlayerCurrentMatch({ player }: { player: Player }) {
       <Button
         {...minusAttrs}
         size="icon-lg"
-        className="h-full grow rounded-none pr-12"
+        className="group h-full grow rounded-none pr-12"
         variant="ghost"
         onClick={() => updateHp(player.id, -1)}
       >
-        <Minus className="text-background/60 size-8" strokeWidth={4} />
+        <Minus
+          className="text-background/60 group-active:text-background size-8"
+          strokeWidth={4}
+        />
+        <span className="text-background text-5xl">
+          {player.hpUpdated < 0 ? `${Math.abs(player.hpUpdated)}` : ""}
+        </span>
       </Button>
       <div className="pointer-events-none absolute flex h-full w-full items-center justify-center">
         <button className="pointer-events-auto">{player.hp}</button>
@@ -56,11 +62,17 @@ function PlayerCurrentMatch({ player }: { player: Player }) {
       <Button
         {...plusAttrs}
         size="icon-lg"
-        className="h-full grow rounded-none pl-12"
+        className="group h-full grow rounded-none pl-12"
         variant="ghost"
         onClick={() => updateHp(player.id, 1)}
       >
-        <Plus className="text-background/60 size-8" strokeWidth={4} />
+        <Plus
+          className="text-background/60 group-active:text-background size-8"
+          strokeWidth={4}
+        />
+        <span className="text-background text-5xl">
+          {player.hpUpdated > 0 ? `${Math.abs(player.hpUpdated)}` : ""}
+        </span>
       </Button>
     </div>
   );
@@ -69,7 +81,7 @@ export default function CurrentMatch() {
   const players = useCurrentMatch((state) => state.players);
 
   return (
-    <div className="bg-background grid grow grid-cols-2 gap-3">
+    <div className="bg-background grid grow grid-cols-2 grid-rows-2 items-stretch gap-3">
       {players.map((player) => (
         <PlayerCurrentMatch player={player} key={player.id} />
       ))}

@@ -6,6 +6,8 @@ export interface Player {
   id: string;
   displayName: string;
   hp: number;
+  hpUpdated: number;
+  hpUpdatedTimeout: NodeJS.Timeout | null;
   backgroundColor: string;
 }
 
@@ -33,6 +35,8 @@ export const useCurrentMatch = create<CurrentMatchState>()(
           displayName: `P${i}`,
           hp: BASE_SETTINGS.startingHp,
           backgroundColor: randomHexColor(),
+          hpUpdated: 0,
+          hpUpdatedTimeout: null,
         }),
       ),
 
@@ -47,8 +51,21 @@ export const useCurrentMatch = create<CurrentMatchState>()(
           ),
         })),
 
-      updateHp: (playerId, amount) =>
-        get().updatePlayer(playerId, (player) => ({ hp: player.hp + amount })),
+      updateHp: (playerId, amount) => {
+        get().updatePlayer(playerId, (player) => {
+          if (player.hpUpdatedTimeout) clearTimeout(player.hpUpdatedTimeout);
+          return {
+            hp: player.hp + amount,
+            hpUpdated: player.hpUpdated + amount,
+            hpUpdatedTimeout: setTimeout(() => {
+              get().updatePlayer(playerId, {
+                hpUpdated: 0,
+                hpUpdatedTimeout: null,
+              });
+            }, 500),
+          };
+        });
+      },
 
       setHp: (playerId, hp) => get().updatePlayer(playerId, { hp }),
     }),
