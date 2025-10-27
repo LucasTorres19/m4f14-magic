@@ -1,7 +1,7 @@
 "use client";
 import { Button } from "@/components/ui/button";
 import { useCurrentMatch, type Player } from "../_stores/use-current-match";
-import { Home,History, Minus, Plus, Settings } from "lucide-react";
+import { Home, History, Minus, Plus, Settings } from "lucide-react";
 import { useLongPress } from "@uidotdev/usehooks";
 import { useRef } from "react";
 import { cn } from "@/lib/utils";
@@ -17,8 +17,8 @@ import {
 import Link from "next/link";
 
 function Grid(n: number) {
-  const cols = Math.ceil(Math.sqrt(n));
-  const rows = Math.ceil(n / cols);
+  const cols = Math.max(1, Math.ceil(n / 2));
+  const rows = n > cols ? 2 : n > 0 ? 1 : 0;
   return { cols, rows };
 }
 
@@ -34,65 +34,51 @@ type CSSVars = CSSProperties & {
   "--y": string;
 };
 
-function PlayerCurrentMatch({ player }: { player: Player }) {
+function PlayerCurrentMatch({ player, flipped = false }: { player: Player; flipped?: boolean }) {
   const minusIntervalRef = useRef<NodeJS.Timeout | null>(null);
   const plusIntervalRef = useRef<NodeJS.Timeout | null>(null);
   const updateHp = useCurrentMatch((s) => s.updateHp);
 
   const minusAttrs = useLongPress(
-    () => {
-      minusIntervalRef.current = setInterval(() => updateHp(player.id, -1), 50);
-    },
-    {
-      onFinish: () =>
-        minusIntervalRef.current && clearInterval(minusIntervalRef.current),
-      threshold: 500,
-    },
+    () => { minusIntervalRef.current = setInterval(() => updateHp(player.id, -1), 50); },
+    { onFinish: () => minusIntervalRef.current && clearInterval(minusIntervalRef.current), threshold: 500 },
   );
-
   const plusAttrs = useLongPress(
-    () => {
-      plusIntervalRef.current = setInterval(() => updateHp(player.id, 1), 50);
-    },
-    {
-      onFinish: () =>
-        plusIntervalRef.current && clearInterval(plusIntervalRef.current),
-      threshold: 500,
-    },
+    () => { plusIntervalRef.current = setInterval(() => updateHp(player.id, 1), 50); },
+    { onFinish: () => plusIntervalRef.current && clearInterval(plusIntervalRef.current), threshold: 500 },
   );
 
-  return (
-    <div
-      style={{ backgroundColor: player.backgroundColor }}
-      className="text-background relative flex items-stretch justify-center overflow-hidden rounded-3xl text-[clamp(2rem,10vmin,8rem)]"
-    >
-      <Button
-        {...minusAttrs}
-        size="icon-lg"
-        className="group h-full grow rounded-none pr-12"
-        variant="ghost"
-        onClick={() => updateHp(player.id, -1)}
-      >
-        <Minus
-          className={cn(
-            "group-active:text-background size-8",
-            player.hpUpdated < 0 ? "text-background" : "text-background/60",
-          )}
-          strokeWidth={4}
-        />
-        <span className="text-background text-5xl">
-          {player.hpUpdated < 0 ? `${Math.abs(player.hpUpdated)}` : ""}
-        </span>
-      </Button>
-
-      <div className="pointer-events-none absolute inset-0 flex items-center justify-center">
-        <button className="pointer-events-auto">{player.hp}</button>
-      </div>
-
+  const renderBtn = (opts: { side: "left" | "right"; type: "minus" | "plus" }) => {
+    const isLeft = opts.side === "left";
+    const padSideClass = isLeft ? "pr-12" : "pl-12";
+    const common = `group h-full grow rounded-none ${padSideClass}`;
+    if (opts.type === "minus") {
+      return (
+        <Button
+          {...minusAttrs}
+          size="icon-lg"
+          className={common}
+          variant="ghost"
+          onClick={() => updateHp(player.id, -1)}
+        >
+          <Minus
+            className={cn(
+              "group-active:text-background size-8",
+              player.hpUpdated < 0 ? "text-background" : "text-background/60",
+            )}
+            strokeWidth={4}
+          />
+          <span className="text-background text-5xl">
+            {player.hpUpdated < 0 ? `${Math.abs(player.hpUpdated)}` : ""}
+          </span>
+        </Button>
+      );
+    }
+    return (
       <Button
         {...plusAttrs}
         size="icon-lg"
-        className="group h-full grow rounded-none pl-12"
+        className={common}
         variant="ghost"
         onClick={() => updateHp(player.id, 1)}
       >
@@ -107,9 +93,26 @@ function PlayerCurrentMatch({ player }: { player: Player }) {
           {player.hpUpdated > 0 ? `${Math.abs(player.hpUpdated)}` : ""}
         </span>
       </Button>
+    );
+  };
+
+  const leftBtn = flipped ? renderBtn({ side: "left", type: "plus" }) : renderBtn({ side: "left", type: "minus" });
+  const rightBtn = flipped ? renderBtn({ side: "right", type: "minus" }) : renderBtn({ side: "right", type: "plus" });
+
+  return (
+    <div
+      style={{ backgroundColor: player.backgroundColor }}
+      className="text-background relative flex items-stretch justify-center overflow-hidden rounded-3xl text-[clamp(2rem,10vmin,8rem)]"
+    >
+      {leftBtn}
+      <div className="pointer-events-none absolute inset-0 flex items-center justify-center">
+        <button className={cn("pointer-events-auto", flipped && "rotate-180")}>{player.hp}</button>
+      </div>
+      {rightBtn}
     </div>
   );
 }
+
 
 export default function CurrentMatch() {
   const players = useCurrentMatch((s) => s.players);
@@ -143,8 +146,12 @@ export default function CurrentMatch() {
 
   return (
     <div className="relative grid h-dvh w-full gap-3 p-3" style={styleGrid}>
-      {players.map((player) => (
-        <PlayerCurrentMatch player={player} key={player.id} />
+      {players.map((player, idx) => (
+        <PlayerCurrentMatch
+          player={player}
+          key={player.id}
+          flipped={idx < cols}
+        />
       ))}
 
       <div className="pointer-events-none absolute z-40" style={styleBtn}>
@@ -154,9 +161,6 @@ export default function CurrentMatch() {
               variant="settings"
               size="icon"
               className="pointer-events-auto h-full w-full rounded-full shadow-lg"
-              onClick={() => {
-                console.log("carlos gay");
-              }}
             >
               <Settings className="size-4 transition-transform hover:animate-spin" />
             </Button>
@@ -169,15 +173,19 @@ export default function CurrentMatch() {
               </SheetDescription>
             </SheetHeader>
             <div className="relative flex items-center justify-center">
-              
               <div className="absolute left-0">
                 <Button size="sm" asChild>
-                  <Link href="/"><Home className="size-5" /></Link>
+                  <Link href="/">
+                    <Home className="size-5" />
+                  </Link>
                 </Button>
               </div>
 
               <Button size="lg" asChild>
-                <Link href="/match/hp-history"><History className="mr-2 size-5" />HISTORY</Link>
+                <Link href="/match/hp-history">
+                  <History className="mr-2 size-5" />
+                  HISTORY
+                </Link>
               </Button>
             </div>
           </SheetContent>
