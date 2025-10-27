@@ -68,7 +68,7 @@ export default function CurrentMatch() {
   const players = useCurrentMatch((state) => state.players);
 
   return (
-    <div className="bg-background grid grow grid-cols-2 gap-3">
+    <div className="bg-background grid h-screen grow grid-cols-2 gap-3">
       {players.map((player) => (
         <PlayerCurrentMatch player={player} key={player.id} />
       ))}
