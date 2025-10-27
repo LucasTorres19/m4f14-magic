@@ -4,6 +4,7 @@ import { useCurrentMatch, type Player } from "./_stores/use-current-match";
 import { Minus, Plus } from "lucide-react";
 import { useLongPress } from "@uidotdev/usehooks";
 import { useRef } from "react";
+
 function PlayerCurrentMatch({ player }: { player: Player }) {
   const minusIntervalRef = useRef<NodeJS.Timeout | null>(null);
   const plusIntervalRef = useRef<NodeJS.Timeout | null>(null);
@@ -68,7 +69,7 @@ export default function CurrentMatch() {
   const players = useCurrentMatch((state) => state.players);
 
   return (
-    <div className="bg-background grid h-screen grow grid-cols-2 gap-3">
+    <div className="bg-background grid grow grid-cols-2 gap-3">
       {players.map((player) => (
         <PlayerCurrentMatch player={player} key={player.id} />
       ))}
