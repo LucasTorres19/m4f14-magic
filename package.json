@@ -1,6 +1,7 @@
 {
   "name": "mafia-magic",
   "version": "0.1.0",
+  "description": "aplicacion super mafiosa mira el commit q t e meti gil de goma",
   "private": true,
   "type": "module",
   "scripts": {
