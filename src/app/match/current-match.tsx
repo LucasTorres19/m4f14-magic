@@ -1,11 +1,20 @@
 "use client";
 import { Button } from "@/components/ui/button";
 import { useCurrentMatch, type Player } from "../_stores/use-current-match";
-import { Minus, Plus, Settings } from "lucide-react";
+import { History, Minus, Plus, Settings } from "lucide-react";
 import { useLongPress } from "@uidotdev/usehooks";
 import { useRef } from "react";
 import { cn } from "@/lib/utils";
 import type { CSSProperties } from "react";
+import {
+  Sheet,
+  SheetContent,
+  SheetDescription,
+  SheetHeader,
+  SheetTitle,
+  SheetTrigger,
+} from "@/components/ui/sheet";
+import Link from "next/link";
 
 function Grid(n: number) {
   const cols = Math.ceil(Math.sqrt(n));
@@ -31,34 +40,72 @@ function PlayerCurrentMatch({ player }: { player: Player }) {
   const updateHp = useCurrentMatch((s) => s.updateHp);
 
   const minusAttrs = useLongPress(
-    () => { minusIntervalRef.current = setInterval(() => updateHp(player.id, -1), 50); },
-    { onFinish: () => minusIntervalRef.current && clearInterval(minusIntervalRef.current), threshold: 500 },
+    () => {
+      minusIntervalRef.current = setInterval(() => updateHp(player.id, -1), 50);
+    },
+    {
+      onFinish: () =>
+        minusIntervalRef.current && clearInterval(minusIntervalRef.current),
+      threshold: 500,
+    },
   );
 
   const plusAttrs = useLongPress(
-    () => { plusIntervalRef.current = setInterval(() => updateHp(player.id, 1), 50); },
-    { onFinish: () => plusIntervalRef.current && clearInterval(plusIntervalRef.current), threshold: 500 },
+    () => {
+      plusIntervalRef.current = setInterval(() => updateHp(player.id, 1), 50);
+    },
+    {
+      onFinish: () =>
+        plusIntervalRef.current && clearInterval(plusIntervalRef.current),
+      threshold: 500,
+    },
   );
 
   return (
     <div
       style={{ backgroundColor: player.backgroundColor }}
-      className="relative flex items-stretch justify-center overflow-hidden rounded-3xl text-background text-[clamp(2rem,10vmin,8rem)]"
+      className="text-background relative flex items-stretch justify-center overflow-hidden rounded-3xl text-[clamp(2rem,10vmin,8rem)]"
     >
-      <Button {...minusAttrs} size="icon-lg" className="group h-full grow rounded-none pr-12" variant="ghost"
-        onClick={() => updateHp(player.id, -1)}>
-        <Minus className={cn("group-active:text-background size-8", player.hpUpdated < 0 ? "text-background" : "text-background/60")} strokeWidth={4} />
-        <span className="text-background text-5xl">{player.hpUpdated < 0 ? `${Math.abs(player.hpUpdated)}` : ""}</span>
+      <Button
+        {...minusAttrs}
+        size="icon-lg"
+        className="group h-full grow rounded-none pr-12"
+        variant="ghost"
+        onClick={() => updateHp(player.id, -1)}
+      >
+        <Minus
+          className={cn(
+            "group-active:text-background size-8",
+            player.hpUpdated < 0 ? "text-background" : "text-background/60",
+          )}
+          strokeWidth={4}
+        />
+        <span className="text-background text-5xl">
+          {player.hpUpdated < 0 ? `${Math.abs(player.hpUpdated)}` : ""}
+        </span>
       </Button>
 
       <div className="pointer-events-none absolute inset-0 flex items-center justify-center">
         <button className="pointer-events-auto">{player.hp}</button>
       </div>
 
-      <Button {...plusAttrs} size="icon-lg" className="group h-full grow rounded-none pl-12" variant="ghost"
-        onClick={() => updateHp(player.id, 1)}>
-        <Plus className={cn("group-active:text-background size-8", player.hpUpdated > 0 ? "text-background" : "text-background/60")} strokeWidth={4} />
-        <span className="text-background text-5xl">{player.hpUpdated > 0 ? `${Math.abs(player.hpUpdated)}` : ""}</span>
+      <Button
+        {...plusAttrs}
+        size="icon-lg"
+        className="group h-full grow rounded-none pl-12"
+        variant="ghost"
+        onClick={() => updateHp(player.id, 1)}
+      >
+        <Plus
+          className={cn(
+            "group-active:text-background size-8",
+            player.hpUpdated > 0 ? "text-background" : "text-background/60",
+          )}
+          strokeWidth={4}
+        />
+        <span className="text-background text-5xl">
+          {player.hpUpdated > 0 ? `${Math.abs(player.hpUpdated)}` : ""}
+        </span>
       </Button>
     </div>
   );
@@ -101,14 +148,36 @@ export default function CurrentMatch() {
       ))}
 
       <div className="pointer-events-none absolute z-40" style={styleBtn}>
-        <Button
-          variant="settings"
-          size="icon"
-          className="pointer-events-auto h-full w-full rounded-full shadow-lg"
-          onClick={() => { console.log("carlos gay"); }}
-        >
-          <Settings className="size-4 transition-transform hover:animate-spin" />
-        </Button>
+        <Sheet>
+          <SheetTrigger asChild>
+            <Button
+              variant="settings"
+              size="icon"
+              className="pointer-events-auto h-full w-full rounded-full shadow-lg"
+              onClick={() => {
+                console.log("carlos gay");
+              }}
+            >
+              <Settings className="size-4 transition-transform hover:animate-spin" />
+            </Button>
+          </SheetTrigger>
+          <SheetContent hideClose side="bottom" className="gap-0 px-2 py-4">
+            <SheetHeader className="p-0">
+              <SheetTitle hidden>Bottom Toolbar</SheetTitle>
+              <SheetDescription hidden>
+                Bottom toolbar with some buttons :D
+              </SheetDescription>
+            </SheetHeader>
+            <div className="flex justify-center gap-2">
+              <Button size="lg" asChild>
+                <Link href="/match/hp-history">
+                  <History />
+                  HISTORY
+                </Link>
+              </Button>
+            </div>
+          </SheetContent>
+        </Sheet>
       </div>
     </div>
   );
