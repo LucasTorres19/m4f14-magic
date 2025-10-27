@@ -1,7 +1,7 @@
 "use client";
 import { Button } from "@/components/ui/button";
 import { useCurrentMatch, type Player } from "../_stores/use-current-match";
-import { History, Minus, Plus, Settings } from "lucide-react";
+import { Home,History, Minus, Plus, Settings } from "lucide-react";
 import { useLongPress } from "@uidotdev/usehooks";
 import { useRef } from "react";
 import { cn } from "@/lib/utils";
@@ -168,12 +168,16 @@ export default function CurrentMatch() {
                 Bottom toolbar with some buttons :D
               </SheetDescription>
             </SheetHeader>
-            <div className="flex justify-center gap-2">
+            <div className="relative flex items-center justify-center">
+              
+              <div className="absolute left-0">
+                <Button size="sm" asChild>
+                  <Link href="/"><Home className="size-5" /></Link>
+                </Button>
+              </div>
+
               <Button size="lg" asChild>
-                <Link href="/match/hp-history">
-                  <History />
-                  HISTORY
-                </Link>
+                <Link href="/match/hp-history"><History className="mr-2 size-5" />HISTORY</Link>
               </Button>
             </div>
           </SheetContent>
