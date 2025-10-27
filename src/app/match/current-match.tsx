@@ -5,12 +5,25 @@ import { Minus, Plus, Settings } from "lucide-react";
 import { useLongPress } from "@uidotdev/usehooks";
 import { useRef } from "react";
 import { cn } from "@/lib/utils";
+import type { CSSProperties } from "react";
 
 function Grid(n: number) {
   const cols = Math.ceil(Math.sqrt(n));
   const rows = Math.ceil(n / cols);
   return { cols, rows };
 }
+
+type CSSVars = CSSProperties & {
+  "--cols": string;
+  "--rows": string;
+  "--gap": string;
+  "--pad": string;
+  "--hit": string;
+  "--cellW": string;
+  "--cellH": string;
+  "--x": string;
+  "--y": string;
+};
 
 function PlayerCurrentMatch({ player }: { player: Player }) {
   const minusIntervalRef = useRef<NodeJS.Timeout | null>(null);
@@ -59,44 +72,42 @@ export default function CurrentMatch() {
   const GAP = "0.75rem";
   const PAD = "0.75rem";
 
+  const styleGrid: CSSVars = {
+    gridTemplateColumns: `repeat(${cols}, minmax(0, 1fr))`,
+    gridTemplateRows: `repeat(${rows}, minmax(0, 1fr))`,
+    "--cols": String(cols),
+    "--rows": String(rows),
+    "--gap": GAP,
+    "--pad": PAD,
+    "--hit": "min(var(--gap), 2rem)",
+    "--cellW": `calc((100% - (var(--cols) - 1) * var(--gap) - 2 * var(--pad)) / var(--cols))`,
+    "--cellH": `calc((100% - (var(--rows) - 1) * var(--gap) - 2 * var(--pad)) / var(--rows))`,
+    "--x": `calc(var(--pad) + var(--cellW) + (var(--gap) / 2))`,
+    "--y": `calc(var(--pad) + var(--cellH) + (var(--gap) / 2))`,
+  };
+
+  const styleBtn: CSSProperties = {
+    left: "var(--x)",
+    top: "var(--y)",
+    width: "var(--hit)",
+    height: "var(--hit)",
+    transform: "translate(-50%, -50%)",
+  };
+
   return (
-    <div
-      className="relative grid h-dvh w-full gap-3 p-3"
-      style={{
-        gridTemplateColumns: `repeat(${cols}, minmax(0, 1fr))`,
-        gridTemplateRows: `repeat(${rows}, minmax(0, 1fr))`,
-        ["--cols" as any]: String(cols),
-        ["--rows" as any]: String(rows),
-        ["--gap"  as any]: GAP,
-        ["--pad"  as any]: PAD,
-        ["--hit"  as any]: "min(var(--gap), 2rem)",
-        ["--cellW" as any]: `calc((100% - (var(--cols) - 1) * var(--gap) - 2 * var(--pad)) / var(--cols))`,
-        ["--cellH" as any]: `calc((100% - (var(--rows) - 1) * var(--gap) - 2 * var(--pad)) / var(--rows))`,
-        ["--x" as any]: `calc(var(--pad) + var(--cellW) + (var(--gap) / 2))`,
-        ["--y" as any]: `calc(var(--pad) + var(--cellH) + (var(--gap) / 2))`,
-      }}
-    >
+    <div className="relative grid h-dvh w-full gap-3 p-3" style={styleGrid}>
       {players.map((player) => (
         <PlayerCurrentMatch player={player} key={player.id} />
       ))}
 
-      <div
-        className="pointer-events-none absolute z-40"
-        style={{
-          left: "var(--x)",
-          top: "var(--y)",
-          width: "var(--hit)",
-          height: "var(--hit)",
-          transform: "translate(-50%, -50%)",
-        }}
-      >
+      <div className="pointer-events-none absolute z-40" style={styleBtn}>
         <Button
           variant="settings"
           size="icon"
           className="pointer-events-auto h-full w-full rounded-full shadow-lg"
-          onClick={() => {console.log("carlos gay");}}
+          onClick={() => { console.log("carlos gay"); }}
         >
-          <Settings className="size-4" />
+          <Settings className="size-4 transition-transform hover:animate-spin" />
         </Button>
       </div>
     </div>
