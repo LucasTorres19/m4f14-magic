@@ -6,41 +6,35 @@ import { useLongPress } from "@uidotdev/usehooks";
 import { useRef } from "react";
 import { cn } from "@/lib/utils";
 
+function Grid(n: number) {
+  const cols = Math.ceil(Math.sqrt(n));
+  const rows = Math.ceil(n / cols);
+  return { cols, rows };
+}
+
 function PlayerCurrentMatch({ player }: { player: Player }) {
   const minusIntervalRef = useRef<NodeJS.Timeout | null>(null);
   const plusIntervalRef = useRef<NodeJS.Timeout | null>(null);
+  const updateHp = useCurrentMatch((s) => s.updateHp);
 
-  const updateHp = useCurrentMatch((state) => state.updateHp);
   const minusAttrs = useLongPress(
     () => {
-      minusIntervalRef.current = setInterval(() => {
-        updateHp(player.id, -1);
-      }, 50);
+      minusIntervalRef.current = setInterval(() => updateHp(player.id, -1), 50);
     },
-    {
-      onFinish: () =>
-        minusIntervalRef.current && clearInterval(minusIntervalRef.current),
-      threshold: 500,
-    },
+    { onFinish: () => minusIntervalRef.current && clearInterval(minusIntervalRef.current), threshold: 500 },
   );
 
   const plusAttrs = useLongPress(
     () => {
-      plusIntervalRef.current = setInterval(() => {
-        updateHp(player.id, 1);
-      }, 50);
+      plusIntervalRef.current = setInterval(() => updateHp(player.id, 1), 50);
     },
-    {
-      onFinish: () =>
-        plusIntervalRef.current && clearInterval(plusIntervalRef.current),
-      threshold: 500,
-    },
+    { onFinish: () => plusIntervalRef.current && clearInterval(plusIntervalRef.current), threshold: 500 },
   );
 
   return (
     <div
       style={{ backgroundColor: player.backgroundColor }}
-      className="text-background relative flex items-stretch justify-center overflow-hidden rounded-3xl text-9xl"
+      className="relative flex items-stretch justify-center overflow-hidden rounded-3xl text-background text-[clamp(2rem,10vmin,8rem)]"
     >
       <Button
         {...minusAttrs}
@@ -60,9 +54,11 @@ function PlayerCurrentMatch({ player }: { player: Player }) {
           {player.hpUpdated < 0 ? `${Math.abs(player.hpUpdated)}` : ""}
         </span>
       </Button>
-      <div className="pointer-events-none absolute flex h-full w-full items-center justify-center">
+
+      <div className="pointer-events-none absolute inset-0 flex items-center justify-center">
         <button className="pointer-events-auto">{player.hp}</button>
       </div>
+
       <Button
         {...plusAttrs}
         size="icon-lg"
@@ -84,11 +80,17 @@ function PlayerCurrentMatch({ player }: { player: Player }) {
     </div>
   );
 }
+
 export default function CurrentMatch() {
-  const players = useCurrentMatch((state) => state.players);
+  const players = useCurrentMatch((s) => s.players);
+  const n = players.length;
+  const { cols, rows } = Grid(n);
 
   return (
-    <div className="bg-background grid grow grid-cols-2 grid-rows-2 items-stretch gap-3">
+    <div
+      className="relative grid h-dvh w-full gap-3 p-3"
+      style={{ gridTemplateColumns: `repeat(${cols}, minmax(0, 1fr))`,gridTemplateRows: `repeat(${rows}, minmax(0, 1fr))`,}}>
+        
       {players.map((player) => (
         <PlayerCurrentMatch player={player} key={player.id} />
       ))}
