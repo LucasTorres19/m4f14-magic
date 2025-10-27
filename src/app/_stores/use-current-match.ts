@@ -34,7 +34,7 @@ export const useCurrentMatch = create<CurrentMatchState>()(
       players: Array.from({ length: BASE_SETTINGS.playersCount }).map(
         (_, i) => ({
           id: crypto.randomUUID(),
-          displayName: `P${i}`,
+          displayName: `P${i + 1}`,
           hp: BASE_SETTINGS.startingHp,
           backgroundColor: randomHexColor(),
           hpUpdated: 0,
