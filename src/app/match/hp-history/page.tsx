@@ -8,6 +8,7 @@ import { Triangle, X } from "lucide-react";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import Link from "next/link";
 import { Button } from "@/components/ui/button";
+import { useSettings } from "@/app/_stores/use-settings";
 
 function Pill(props: ComponentProps<"div">) {
   return (
@@ -25,6 +26,7 @@ export default function HistoryPage() {
   const { hpHistory, players } = useCurrentMatch(
     useShallow((s) => ({ hpHistory: s.hpHistory, players: s.players })),
   );
+  const startingHp = useSettings((s) => s.startingHp);
   const containerRef = useRef<HTMLDivElement | null>(null);
 
   const getViewport = () =>
@@ -65,6 +67,11 @@ export default function HistoryPage() {
               gridTemplateColumns: `repeat(${players.length}, minmax(0, 1fr))`,
             }}
           >
+            {players.map((p) => (
+              <Pill key={p.id} style={{ backgroundColor: p.backgroundColor }}>
+                <span className="text-background">{startingHp}</span>
+              </Pill>
+            ))}
             {hpHistory
               .map((record, i) => {
                 return [
