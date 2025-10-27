@@ -12,7 +12,7 @@ interface SettingsStore {
 
 export const BASE_SETTINGS = {
   startingHp: 40,
-  playersCount: 4,
+  playersCount: 6,
 } as const satisfies Partial<SettingsStore>;
 
 export const useSettings = create<SettingsStore>()(
