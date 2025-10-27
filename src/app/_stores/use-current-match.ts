@@ -13,13 +13,15 @@ export interface Player {
 
 interface CurrentMatchState {
   players: Player[];
-
+  hpHistory: { playerId: string; hpUpdated: number; currentHp: number }[];
   updatePlayer: (
     playerId: string,
     data:
       | Partial<Omit<Player, "id">>
       | ((player: Player) => Partial<Omit<Player, "id">>),
   ) => void;
+
+  findPlayer: (playerId: string) => Player | undefined;
 
   updateHp: (playerId: string, amount: number) => void;
 
@@ -39,7 +41,7 @@ export const useCurrentMatch = create<CurrentMatchState>()(
           hpUpdatedTimeout: null,
         }),
       ),
-
+      hpHistory: [],
       updatePlayer: (playerId, data) =>
         set((state) => ({
           players: state.players.map((player) =>
@@ -51,6 +53,8 @@ export const useCurrentMatch = create<CurrentMatchState>()(
           ),
         })),
 
+      findPlayer: (playerId) => get().players.find((p) => p.id === playerId),
+
       updateHp: (playerId, amount) => {
         get().updatePlayer(playerId, (player) => {
           if (player.hpUpdatedTimeout) clearTimeout(player.hpUpdatedTimeout);
@@ -58,6 +62,20 @@ export const useCurrentMatch = create<CurrentMatchState>()(
             hp: player.hp + amount,
             hpUpdated: player.hpUpdated + amount,
             hpUpdatedTimeout: setTimeout(() => {
+              set((state) => {
+                const player = state.findPlayer(playerId);
+                if (!player) return {};
+                return {
+                  hpHistory: [
+                    ...state.hpHistory,
+                    {
+                      playerId,
+                      hpUpdated: player.hpUpdated,
+                      currentHp: player.hp,
+                    },
+                  ],
+                };
+              });
               get().updatePlayer(playerId, {
                 hpUpdated: 0,
                 hpUpdatedTimeout: null,
