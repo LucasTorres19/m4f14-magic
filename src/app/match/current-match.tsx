@@ -1,6 +1,6 @@
 "use client";
 import { Button } from "@/components/ui/button";
-import { useCurrentMatch, type Player } from "./_stores/use-current-match";
+import { useCurrentMatch, type Player } from "../_stores/use-current-match";
 import { Minus, Plus } from "lucide-react";
 import { useLongPress } from "@uidotdev/usehooks";
 import { useRef } from "react";
