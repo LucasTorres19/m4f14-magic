@@ -65,6 +65,7 @@ export const useCurrentMatch = create<CurrentMatchState>()(
               set((state) => {
                 const player = state.findPlayer(playerId);
                 if (!player) return {};
+                if (player.hpUpdated == 0) return {};
                 return {
                   hpHistory: [
                     ...state.hpHistory,
