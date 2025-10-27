@@ -2,15 +2,46 @@
 import { Button } from "@/components/ui/button";
 import { useCurrentMatch, type Player } from "./_stores/use-current-match";
 import { Minus, Plus } from "lucide-react";
-
+import { useLongPress } from "@uidotdev/usehooks";
+import { useRef } from "react";
 function PlayerCurrentMatch({ player }: { player: Player }) {
+  const minusIntervalRef = useRef<NodeJS.Timeout | null>(null);
+  const plusIntervalRef = useRef<NodeJS.Timeout | null>(null);
+
   const updateHp = useCurrentMatch((state) => state.updateHp);
+  const minusAttrs = useLongPress(
+    () => {
+      minusIntervalRef.current = setInterval(() => {
+        updateHp(player.id, -1);
+      }, 50);
+    },
+    {
+      onFinish: () =>
+        minusIntervalRef.current && clearInterval(minusIntervalRef.current),
+      threshold: 500,
+    },
+  );
+
+  const plusAttrs = useLongPress(
+    () => {
+      plusIntervalRef.current = setInterval(() => {
+        updateHp(player.id, 1);
+      }, 50);
+    },
+    {
+      onFinish: () =>
+        plusIntervalRef.current && clearInterval(plusIntervalRef.current),
+      threshold: 500,
+    },
+  );
+
   return (
     <div
       style={{ backgroundColor: player.backgroundColor }}
       className="text-background relative flex items-stretch justify-center overflow-hidden rounded-3xl text-9xl"
     >
       <Button
+        {...minusAttrs}
         size="icon-lg"
         className="h-full grow rounded-none pr-12"
         variant="ghost"
@@ -22,6 +53,7 @@ function PlayerCurrentMatch({ player }: { player: Player }) {
         <button className="pointer-events-auto">{player.hp}</button>
       </div>
       <Button
+        {...plusAttrs}
         size="icon-lg"
         className="h-full grow rounded-none pl-12"
         variant="ghost"
