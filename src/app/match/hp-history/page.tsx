@@ -4,8 +4,10 @@ import { useCurrentMatch } from "@/app/_stores/use-current-match";
 import { cn } from "@/lib/utils";
 import type { ComponentProps } from "react";
 import { useShallow } from "zustand/react/shallow";
-import { Triangle } from "lucide-react";
+import { Triangle, X } from "lucide-react";
 import { ScrollArea } from "@/components/ui/scroll-area";
+import Link from "next/link";
+import { Button } from "@/components/ui/button";
 
 function Pill(props: ComponentProps<"div">) {
   return (
@@ -25,7 +27,7 @@ export default function HistoryPage() {
   );
 
   return (
-    <main className="flex min-h-screen flex-col gap-2 overflow-y-hidden py-4">
+    <main className="relative flex min-h-screen flex-col gap-2 overflow-y-hidden py-4">
       <div className="flex h-10 w-full gap-2">
         {players.map((p) => (
           <Pill key={p.id} style={{ backgroundColor: p.backgroundColor }}>
@@ -87,6 +89,16 @@ export default function HistoryPage() {
             .flat()}
         </div>
       </ScrollArea>
+      <Button
+        variant="destructive"
+        size="icon-lg"
+        asChild
+        className="absolute bottom-1/12 left-1/2 -translate-x-1/2 rounded-full"
+      >
+        <Link href="/match">
+          <X />
+        </Link>
+      </Button>
     </main>
   );
 }
