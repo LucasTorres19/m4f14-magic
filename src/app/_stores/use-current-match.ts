@@ -1,7 +1,7 @@
 import { create } from "zustand";
 import { persist } from "zustand/middleware";
 import { BASE_SETTINGS } from "./use-settings";
-import { randomHexColor } from "@/utils/random";
+import { makePlayers } from "@/utils/random";
 export interface Player {
   id: string;
   displayName: string;
@@ -22,19 +22,16 @@ interface CurrentMatchState {
   updateHp: (playerId: string, amount: number) => void;
 
   setHp: (playerId: string, hp: number) => void;
+
+  addPlayers: (n: number) => void;
+
+  resetMatch: (mode?: "base" | "empty") => void;
 }
 
 export const useCurrentMatch = create<CurrentMatchState>()(
   persist(
     (set, get) => ({
-      players: Array.from({ length: BASE_SETTINGS.playersCount }).map(
-        (_, i) => ({
-          id: crypto.randomUUID(),
-          displayName: `P${i}`,
-          hp: BASE_SETTINGS.startingHp,
-          backgroundColor: randomHexColor(),
-        }),
-      ),
+      players: makePlayers(BASE_SETTINGS.playersCount, 0),
 
       updatePlayer: (playerId, data) =>
         set((state) => ({
@@ -47,11 +44,22 @@ export const useCurrentMatch = create<CurrentMatchState>()(
           ),
         })),
 
+      resetMatch: (mode = "base") =>
+        set({
+          players:
+            mode === "empty" ? [] : makePlayers(BASE_SETTINGS.playersCount, 0),
+        }),
+
       updateHp: (playerId, amount) =>
         get().updatePlayer(playerId, (player) => ({ hp: player.hp + amount })),
 
       setHp: (playerId, hp) => get().updatePlayer(playerId, { hp }),
+      addPlayers: (n) =>
+        set((state) => ({
+          players: [...state.players, ...makePlayers(n, state.players.length)],
+        })),
     }),
+
     { name: "current-match-store" },
   ),
 );
