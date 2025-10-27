@@ -4,6 +4,7 @@ import { useCurrentMatch, type Player } from "../_stores/use-current-match";
 import { Minus, Plus } from "lucide-react";
 import { useLongPress } from "@uidotdev/usehooks";
 import { useRef } from "react";
+import { cn } from "@/lib/utils";
 
 function PlayerCurrentMatch({ player }: { player: Player }) {
   const minusIntervalRef = useRef<NodeJS.Timeout | null>(null);
@@ -49,7 +50,10 @@ function PlayerCurrentMatch({ player }: { player: Player }) {
         onClick={() => updateHp(player.id, -1)}
       >
         <Minus
-          className="text-background/60 group-active:text-background size-8"
+          className={cn(
+            "group-active:text-background size-8",
+            player.hpUpdated < 0 ? "text-background" : "text-background/60",
+          )}
           strokeWidth={4}
         />
         <span className="text-background text-5xl">
@@ -67,7 +71,10 @@ function PlayerCurrentMatch({ player }: { player: Player }) {
         onClick={() => updateHp(player.id, 1)}
       >
         <Plus
-          className="text-background/60 group-active:text-background size-8"
+          className={cn(
+            "group-active:text-background size-8",
+            player.hpUpdated > 0 ? "text-background" : "text-background/60",
+          )}
           strokeWidth={4}
         />
         <span className="text-background text-5xl">
