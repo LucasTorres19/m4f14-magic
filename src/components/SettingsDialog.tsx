@@ -80,7 +80,7 @@ export default function SettingsDialog({
 
       <DialogContent className="sm:max-w-md">
         <DialogHeader>
-          <DialogTitle>Configuración de partida</DialogTitle>
+          <DialogTitle>Nueva partida</DialogTitle>
           <DialogDescription>
             Ajustá la vida inicial y la cantidad de jugadores.    
           </DialogDescription>
@@ -125,7 +125,7 @@ export default function SettingsDialog({
             </Button>
           </DialogClose>
           <Button type="button" onClick={onSave} className="ml-3">
-            Guardar y reiniciar
+            Guardar y jugar
           </Button>
         </DialogFooter>
       </DialogContent>

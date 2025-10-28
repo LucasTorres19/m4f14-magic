@@ -21,6 +21,8 @@ const buttonVariants = cva(
         link: "text-primary underline-offset-4 hover:underline",
         settings:
           "pointer-events-auto h-full w-full rounded-full shadow-lg transition-transform duration-300 hover:rotate-180",
+        success:
+          "bg-success text-success-foreground hover:bg-success/90 focus-visible:ring-success/20 dark:focus-visible:ring-success/40",
       },
       size: {
         default: "h-9 px-4 py-2 has-[>svg]:px-3",

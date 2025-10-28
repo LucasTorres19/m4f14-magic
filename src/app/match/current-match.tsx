@@ -184,8 +184,8 @@ export default function CurrentMatch() {
 
                  <SettingsDialog
                   trigger={
-                    <Button size="sm" className="pointer-events-auto">
-                      <Wrench className="size-5" />
+                    <Button size="sm" variant={"success"} className="pointer-events-auto">
+                      <Plus className="size-5" />
                     </Button>
                   }
                 /> 
