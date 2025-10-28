@@ -76,53 +76,60 @@ function PlayerCurrentMatch({
     },
   );
 
-  const renderBtn = (opts: {
-    side: "left" | "right";
-    type: "minus" | "plus";
-  }) => {
-    const isLeft = opts.side === "left";
-    const padSideClass = isLeft ? "pr-12" : "pl-12";
-    const common = `group h-full grow rounded-none ${padSideClass}`;
-    if (opts.type === "minus") {
-      return (
-        <Button
-          {...minusAttrs}
-          size="icon-lg"
-          className={common}
-          variant="ghost"
-          onClick={() => updateHp(player.id, -1)}
+  return (
+    <div
+      style={{ backgroundColor: player.backgroundColor }}
+      className={cn(
+        "text-background relative flex items-stretch justify-center overflow-hidden rounded-3xl text-[clamp(2rem,10vmin,8rem)]",
+        flipped && "flex-row-reverse",
+      )}
+    >
+      <Button
+        {...minusAttrs}
+        size="icon-lg"
+        className={cn(
+          "group h-full grow rounded-none",
+          flipped ? "flex-row-reverse pl-12" : "pr-12",
+        )}
+        variant="ghost"
+        onClick={() => updateHp(player.id, -1)}
+      >
+        <span
+          className={cn(
+            "text-background absolute text-2xl",
+            flipped
+              ? "bottom-4 left-1/2 -translate-x-1/2 rotate-180"
+              : "top-4 left-1/2 -translate-x-1/2",
+          )}
         >
-          <span
-            className={cn(
-              "text-background absolute text-2xl",
-              flipped
-                ? "bottom-4 left-1/2 -translate-x-1/2 rotate-180"
-                : "top-4 left-1/2 -translate-x-1/2",
-            )}
-          >
-            {player.displayName}
-          </span>
-          <Minus
-            className={cn(
-              "group-active:text-background size-8",
-              player.hpUpdated < 0 ? "text-background" : "text-background/60",
-            )}
-            strokeWidth={4}
-          />
+          {player.displayName}
+        </span>
+        <Minus
+          className={cn(
+            "group-active:text-background size-8",
+            player.hpUpdated < 0 ? "text-background" : "text-background/60",
+          )}
+          strokeWidth={4}
+        />
 
-          <span
-            className={cn("text-background text-5xl", flipped && "rotate-180")}
-          >
-            {player.hpUpdated < 0 ? `${Math.abs(player.hpUpdated)}` : ""}
-          </span>
-        </Button>
-      );
-    }
-    return (
+        <span
+          className={cn("text-background text-5xl", flipped && "rotate-180")}
+        >
+          {player.hpUpdated < 0 ? `${Math.abs(player.hpUpdated)}` : ""}
+        </span>
+      </Button>
+      <div className="pointer-events-none absolute inset-0 flex items-center justify-center">
+        <button className={cn("pointer-events-auto", flipped && "rotate-180")}>
+          {player.hp}
+        </button>
+      </div>
       <Button
         {...plusAttrs}
         size="icon-lg"
-        className={common}
+        className={cn(
+          "group h-full grow rounded-none",
+          flipped ? "flex-row-reverse pr-12" : "pl-12",
+        )}
         variant="ghost"
         onClick={() => updateHp(player.id, 1)}
       >
@@ -139,28 +146,6 @@ function PlayerCurrentMatch({
           {player.hpUpdated > 0 ? `${Math.abs(player.hpUpdated)}` : ""}
         </span>
       </Button>
-    );
-  };
-
-  const leftBtn = flipped
-    ? renderBtn({ side: "left", type: "plus" })
-    : renderBtn({ side: "left", type: "minus" });
-  const rightBtn = flipped
-    ? renderBtn({ side: "right", type: "minus" })
-    : renderBtn({ side: "right", type: "plus" });
-
-  return (
-    <div
-      style={{ backgroundColor: player.backgroundColor }}
-      className="text-background relative flex items-stretch justify-center overflow-hidden rounded-3xl text-[clamp(2rem,10vmin,8rem)]"
-    >
-      {leftBtn}
-      <div className="pointer-events-none absolute inset-0 flex items-center justify-center">
-        <button className={cn("pointer-events-auto", flipped && "rotate-180")}>
-          {player.hp}
-        </button>
-      </div>
-      {rightBtn}
     </div>
   );
 }
