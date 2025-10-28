@@ -1,7 +1,15 @@
 "use client";
 import { Button } from "@/components/ui/button";
 import { useCurrentMatch, type Player } from "../_stores/use-current-match";
-import { RotateCcw,Home, History, Minus, Plus, Settings, Wrench } from "lucide-react";
+import {
+  RotateCcw,
+  Home,
+  History,
+  Minus,
+  Plus,
+  Settings,
+  Wrench,
+} from "lucide-react";
 import { useLongPress } from "@uidotdev/usehooks";
 import { useRef } from "react";
 import { cn } from "@/lib/utils";
@@ -36,24 +44,45 @@ type CSSVars = CSSProperties & {
   "--y": string;
 };
 
-function PlayerCurrentMatch({ player, flipped = false }: { player: Player; flipped?: boolean }) {
+function PlayerCurrentMatch({
+  player,
+  flipped = false,
+}: {
+  player: Player;
+  flipped?: boolean;
+}) {
   const minusIntervalRef = useRef<NodeJS.Timeout | null>(null);
   const plusIntervalRef = useRef<NodeJS.Timeout | null>(null);
   const updateHp = useCurrentMatch((s) => s.updateHp);
 
   const minusAttrs = useLongPress(
-    () => { minusIntervalRef.current = setInterval(() => updateHp(player.id, -1), 50); },
-    { onFinish: () => minusIntervalRef.current && clearInterval(minusIntervalRef.current), threshold: 500 },
+    () => {
+      minusIntervalRef.current = setInterval(() => updateHp(player.id, -1), 50);
+    },
+    {
+      onFinish: () =>
+        minusIntervalRef.current && clearInterval(minusIntervalRef.current),
+      threshold: 500,
+    },
   );
   const plusAttrs = useLongPress(
-    () => { plusIntervalRef.current = setInterval(() => updateHp(player.id, 1), 50); },
-    { onFinish: () => plusIntervalRef.current && clearInterval(plusIntervalRef.current), threshold: 500 },
+    () => {
+      plusIntervalRef.current = setInterval(() => updateHp(player.id, 1), 50);
+    },
+    {
+      onFinish: () =>
+        plusIntervalRef.current && clearInterval(plusIntervalRef.current),
+      threshold: 500,
+    },
   );
 
-  const renderBtn = (opts: { side: "left" | "right"; type: "minus" | "plus" }) => {
+  const renderBtn = (opts: {
+    side: "left" | "right";
+    type: "minus" | "plus";
+  }) => {
     const isLeft = opts.side === "left";
     const padSideClass = isLeft ? "pr-12" : "pl-12";
-    const common = `relative group h-full grow rounded-none ${padSideClass}`;
+    const common = `group h-full grow rounded-none ${padSideClass}`;
     if (opts.type === "minus") {
       return (
         <Button
@@ -63,12 +92,14 @@ function PlayerCurrentMatch({ player, flipped = false }: { player: Player; flipp
           variant="ghost"
           onClick={() => updateHp(player.id, -1)}
         >
-           <span
-              className={cn(
-                "text-background text-1xl absolute top-0",
-                flipped ? "right-2/3 rotate-180" : "left-2/3"
-              )}
-            >
+          <span
+            className={cn(
+              "text-background absolute text-2xl",
+              flipped
+                ? "bottom-4 left-1/2 -translate-x-1/2 rotate-180"
+                : "top-4 left-1/2 -translate-x-1/2",
+            )}
+          >
             {player.displayName}
           </span>
           <Minus
@@ -78,8 +109,10 @@ function PlayerCurrentMatch({ player, flipped = false }: { player: Player; flipp
             )}
             strokeWidth={4}
           />
-         
-          <span className={cn("text-background text-5xl", flipped && "rotate-180")}>
+
+          <span
+            className={cn("text-background text-5xl", flipped && "rotate-180")}
+          >
             {player.hpUpdated < 0 ? `${Math.abs(player.hpUpdated)}` : ""}
           </span>
         </Button>
@@ -100,15 +133,21 @@ function PlayerCurrentMatch({ player, flipped = false }: { player: Player; flipp
           )}
           strokeWidth={4}
         />
-        <span className={cn("text-background text-5xl", flipped && "rotate-180")}>
+        <span
+          className={cn("text-background text-5xl", flipped && "rotate-180")}
+        >
           {player.hpUpdated > 0 ? `${Math.abs(player.hpUpdated)}` : ""}
         </span>
       </Button>
     );
   };
 
-  const leftBtn = flipped ? renderBtn({ side: "left", type: "plus" }) : renderBtn({ side: "left", type: "minus" });
-  const rightBtn = flipped ? renderBtn({ side: "right", type: "minus" }) : renderBtn({ side: "right", type: "plus" });
+  const leftBtn = flipped
+    ? renderBtn({ side: "left", type: "plus" })
+    : renderBtn({ side: "left", type: "minus" });
+  const rightBtn = flipped
+    ? renderBtn({ side: "right", type: "minus" })
+    : renderBtn({ side: "right", type: "plus" });
 
   return (
     <div
@@ -117,13 +156,14 @@ function PlayerCurrentMatch({ player, flipped = false }: { player: Player; flipp
     >
       {leftBtn}
       <div className="pointer-events-none absolute inset-0 flex items-center justify-center">
-        <button className={cn("pointer-events-auto", flipped && "rotate-180")}>{player.hp}</button>
+        <button className={cn("pointer-events-auto", flipped && "rotate-180")}>
+          {player.hp}
+        </button>
       </div>
       {rightBtn}
     </div>
   );
 }
-
 
 export default function CurrentMatch() {
   const players = useCurrentMatch((s) => s.players);
@@ -191,22 +231,29 @@ export default function CurrentMatch() {
                   </Link>
                 </Button>
 
-                 <SettingsDialog
+                <SettingsDialog
                   trigger={
-                    <Button size="sm" variant={"success"} className="pointer-events-auto">
+                    <Button
+                      size="sm"
+                      variant={"success"}
+                      className="pointer-events-auto"
+                    >
                       <Plus className="size-5" />
                     </Button>
                   }
-                /> 
+                />
 
-                 <ResetButton
-                    trigger={
-                      <Button size="sm" variant="destructive" className="pointer-events-auto">
-                        <RotateCcw className="size-5" />
-                      </Button>
-                    }
-                  />
-                  
+                <ResetButton
+                  trigger={
+                    <Button
+                      size="sm"
+                      variant="destructive"
+                      className="pointer-events-auto"
+                    >
+                      <RotateCcw className="size-5" />
+                    </Button>
+                  }
+                />
               </div>
 
               <Button size="lg" asChild>
