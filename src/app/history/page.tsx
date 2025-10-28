@@ -1,3 +1,5 @@
+import { format } from "date-fns";
+import { es } from "date-fns/locale";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
 import { api } from "@/trpc/server";
@@ -9,11 +11,6 @@ import type { AppRouter } from "@/server/api/root";
 
 type MatchesOutput = inferRouterOutputs<AppRouter>["matches"]["findAll"];
 type MatchSummary = MatchesOutput[number];
-
-const dateFormatter = new Intl.DateTimeFormat("es-AR", {
-  dateStyle: "long",
-  timeStyle: "short",
-});
 
 const gradientPalettes: [string, ...string[]] = [
   "from-amber-500/15 via-rose-500/10 to-purple-700/20",
@@ -156,7 +153,7 @@ interface MatchCardProps {
 
 const MatchCard = ({ match, gradient }: MatchCardProps) => {
   const playerCount = match.players.length;
-  const createdAt = dateFormatter.format(match.createdAt);
+  const createdAt = format(new Date(match.createdAt), "PPpp", { locale: es });
 
   return (
     <article className="ornate-border relative overflow-hidden rounded-3xl border border-primary/30 bg-card/70 p-6 shadow-xl backdrop-blur">

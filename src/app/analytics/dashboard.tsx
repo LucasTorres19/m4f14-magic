@@ -1,5 +1,7 @@
 "use client";
 
+import { format, parseISO } from "date-fns";
+import { es } from "date-fns/locale";
 import { ArrowLeft, BarChart3, Crown, Flame, Sparkles } from "lucide-react";
 import Link from "next/link";
 import {
@@ -32,15 +34,6 @@ import {
 import type { AnalyticsSnapshot } from "@/server/services/analytics";
 
 const numberFormatter = new Intl.NumberFormat("es-AR");
-const dayFormatter = new Intl.DateTimeFormat("es-AR", {
-  weekday: "short",
-  month: "short",
-  day: "numeric",
-});
-const longDateFormatter = new Intl.DateTimeFormat("es-AR", {
-  dateStyle: "full",
-});
-
 const matchesPerDayConfig: ChartConfig = {
   matches: {
     label: "Duelos",
@@ -57,11 +50,11 @@ const weeklyWinsConfig: ChartConfig = {
 
 const buildMatchesPerDayData = (snapshot: AnalyticsSnapshot) =>
   snapshot.matchesPerDay.map((bucket) => {
-    const date = new Date(`${bucket.day}T00:00:00`);
+    const date = parseISO(bucket.day);
     return {
-      day: dayFormatter.format(date),
+      day: format(date, "EEE d MMM", { locale: es }),
       matches: bucket.matches,
-      fullLabel: longDateFormatter.format(date),
+      fullLabel: format(date, "PPPP", { locale: es }),
     };
   });
 
@@ -112,7 +105,7 @@ export function AnalyticsDashboard({ analytics }: AnalyticsDashboardProps) {
   const allTimeChampion = analytics.allTimeTopPlayer;
   const streakChampion = analytics.currentWinningStreak;
   const streakChampionLastWin = streakChampion
-    ? longDateFormatter.format(new Date(streakChampion.lastWinAt))
+    ? format(parseISO(streakChampion.lastWinAt), "PPPP", { locale: es })
     : null;
 
   const weeklyMetrics: Metric[] = [

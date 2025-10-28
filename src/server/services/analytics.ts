@@ -1,19 +1,14 @@
+import { addDays, formatISO, parseISO, startOfDay, subDays } from "date-fns";
 import { eq, sql } from "drizzle-orm";
 
 import { db } from "@/server/db";
 import { matches, players, playersToMatches } from "@/server/db/schema";
 
-const DAY_IN_MS = 24 * 60 * 60 * 1000;
 const DAYS_IN_WEEK = 7;
 const MATCH_DAY_BUCKET = 10;
 
-const startOfDay = (input: Date) => {
-  const date = new Date(input);
-  date.setHours(0, 0, 0, 0);
-  return date;
-};
-
-const dateKey = (input: Date) => startOfDay(input).toISOString().slice(0, 10);
+const dateKey = (input: Date) =>
+  formatISO(startOfDay(input), { representation: "date" });
 
 export type AnalyticsSnapshot = {
   totals: {
@@ -48,10 +43,8 @@ export const getAnalyticsSnapshot = async (
   now = new Date(),
 ): Promise<AnalyticsSnapshot> => {
   const today = startOfDay(now);
-  const weekStart = new Date(today.getTime() - (DAYS_IN_WEEK - 1) * DAY_IN_MS);
-  const matchesRangeStart = new Date(
-    today.getTime() - (MATCH_DAY_BUCKET - 1) * DAY_IN_MS,
-  );
+  const weekStart = subDays(today, DAYS_IN_WEEK - 1);
+  const matchesRangeStart = subDays(today, MATCH_DAY_BUCKET - 1);
 
   const [matchRows, totalPlayersRow, participantRows] = await Promise.all([
     db
@@ -95,7 +88,7 @@ export const getAnalyticsSnapshot = async (
 
   const matchesPerDayBuckets = new Map<string, number>();
   for (let index = 0; index < MATCH_DAY_BUCKET; index++) {
-    const day = new Date(matchesRangeStart.getTime() + index * DAY_IN_MS);
+    const day = addDays(matchesRangeStart, index);
     matchesPerDayBuckets.set(dateKey(day), 0);
   }
 
@@ -246,7 +239,7 @@ export const getAnalyticsSnapshot = async (
       streak > currentWinningStreak.streak ||
       (streak === currentWinningStreak.streak &&
         lastWinAt.getTime() >
-          new Date(currentWinningStreak.lastWinAt).getTime())
+          parseISO(currentWinningStreak.lastWinAt).getTime())
     ) {
       currentWinningStreak = {
         playerId,
