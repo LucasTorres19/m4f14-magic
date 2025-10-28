@@ -164,7 +164,7 @@ export default function CurrentMatch() {
               size="icon"
               className="pointer-events-auto h-full w-full rounded-full shadow-lg"
             >
-              <Settings className="size-4 transition-transform hover:animate-spin" />
+              <Settings className="size-8 transition-transform hover:animate-spin" />
             </Button>
           </SheetTrigger>
           <SheetContent hideClose side="bottom" className="gap-0 px-2 py-4">

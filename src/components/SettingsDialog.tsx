@@ -35,7 +35,7 @@ export default function SettingsDialog({
   minHp = 1,
   maxHp = 200,
   minPlayers = 2,
-  maxPlayers = 8,
+  maxPlayers = 10,
   onSaved,
 }: SettingsDialogProps) {
   const settingsSet = useSettings((s) => s.set);
