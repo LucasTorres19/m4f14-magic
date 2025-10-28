@@ -1,6 +1,12 @@
 "use client";
-
-import { createContext, useContext, useRef, type ReactNode } from "react";
+import {
+  createContext,
+  useContext,
+  useEffect,
+  useRef,
+  useState,
+  type ReactNode,
+} from "react";
 import { useStore } from "zustand";
 import {
   createCurrentMatchStore,
@@ -27,9 +33,44 @@ export const CurrentMatchPovider = ({
 
   storeRef.current ??= createCurrentMatchStore(initCurrentMatchStore(settings));
 
+  const [hasHydrated, setHasHydrated] = useState<boolean>(() => {
+    const store = storeRef.current;
+    if (!store?.persist?.hasHydrated) return false;
+    return store.persist.hasHydrated();
+  });
+
+  useEffect(() => {
+    const store = storeRef.current;
+    if (!store) return;
+
+    const unsubscribeHydrate = store.persist.onHydrate?.(() => {
+      setHasHydrated(false);
+    });
+
+    const unsubscribeFinish = store.persist.onFinishHydration?.(() => {
+      setHasHydrated(true);
+    });
+
+    const alreadyHydrated = store.persist.hasHydrated?.() ?? false;
+
+    if (!alreadyHydrated) {
+      const maybePromise = store.persist.rehydrate();
+      void Promise.resolve(maybePromise).catch(() => {
+        setHasHydrated(true);
+      });
+    } else {
+      setHasHydrated(true);
+    }
+
+    return () => {
+      unsubscribeHydrate?.();
+      unsubscribeFinish?.();
+    };
+  }, []);
+
   return (
     <CurrentMatchContext.Provider value={storeRef.current}>
-      {children}
+      {hasHydrated && children}
     </CurrentMatchContext.Provider>
   );
 };

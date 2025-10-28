@@ -140,7 +140,7 @@ export const createCurrentMatchStore = (
             hpHistory: [],
           })),
       }),
-      { name: "current-match-store" },
+      { name: "current-match-store", skipHydration: true },
     ),
   );
 };
