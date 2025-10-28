@@ -81,11 +81,17 @@ export function MagicMenu() {
 
             {/* Other menu options */}
             <Button
+              asChild
               variant="outline"
               className="bg-muted/30 hover:bg-muted/50 text-foreground border-border hover:border-primary/50 h-12 w-full text-base font-medium transition-all duration-300 hover:scale-105"
             >
-              <LibraryBig className="mr-2 h-4 w-4" />
-              Historia
+              <Link
+                href="/history"
+                className="flex w-full items-center justify-center"
+              >
+                <LibraryBig className="mr-2 h-4 w-4" />
+                Historia
+              </Link>
             </Button>
 
             <Button
