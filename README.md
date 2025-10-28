@@ -9,6 +9,7 @@ Pagina oficial de LIMTG (Liga Interna Magic: The Gathering)
 - Contador de vidas
 
 - Timer integrado en el contador de vidas
+  - Estaba pensando que por ahi podemos hacer que cuando queden 10 segundos arranque el soundtrack del c4 del counter y que cuando termine explote el c4 (atte: terjan)
 
 - Estadísticas
 
