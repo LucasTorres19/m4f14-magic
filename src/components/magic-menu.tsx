@@ -4,32 +4,19 @@ import { Button } from "@/components/ui/button";
 import {
   BarChart3,
   Dices,
-  Layers,
+  Crown,
   LibraryBig,
   Sparkles,
   Users,
 } from "lucide-react";
 import Link from "next/link";
+import FlyingCards from "./Flying-cards";
 
 export function MagicMenu() {
   return (
     <div className="bg-background relative min-h-screen overflow-hidden">
-      <div className="pointer-events-none absolute inset-0">
-        {Array.from({ length: 16 }).map((_, i) => (
-          <div
-            key={i}
-            className="flying-card absolute"
-            style={{
-              left: `${Math.random() * 100}%`,
-              top: `${Math.random() * 100}%`,
-              // animationDelay: `${i * 2}s`,
-              animationDuration: `${15 + Math.random() * 10}s`,
-            }}
-          >
-            <div className="from-card/60 to-card/40 border-primary/30 ornate-border h-28 w-20 rounded-lg border-2 bg-linear-to-br opacity-40 shadow-lg backdrop-blur-sm md:h-32 md:w-24" />
-          </div>
-        ))}
-      </div>
+      
+      <FlyingCards />
 
       <div className="absolute inset-0 opacity-30">
         <div className="bg-primary/20 float-animation absolute top-20 left-20 h-96 w-96 rounded-full blur-[120px]" />
@@ -119,8 +106,8 @@ export function MagicMenu() {
               variant="outline"
               className="bg-muted/30 hover:bg-muted/50 text-foreground border-border hover:border-primary/50 h-12 w-full text-base font-medium transition-all duration-300 hover:scale-105"
             >
-              <Layers className="mr-2 h-4 w-4" />
-              Barajas
+              <Crown className="mr-2 h-4 w-4" />
+              Comandantes
             </Button>
 
             <Button

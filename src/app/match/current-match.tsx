@@ -19,6 +19,7 @@ import { useRef } from "react";
 import { type Player } from "../_stores/current-match-store";
 import SaveMatch from "./save-match";
 import { useCurrentMatch } from "../_stores/current-match-provider";
+import FlyingCards from "@/components/Flying-cards";
 
 function Grid(n: number) {
   const cols = Math.max(1, Math.ceil(n / 2));
@@ -175,7 +176,10 @@ export default function CurrentMatch() {
   };
 
   return (
-    <div className="relative grid h-dvh w-full gap-3 p-3" style={styleGrid}>
+    <div className="relative grid h-dvh w-full gap-3 p-3 bg-background min-h-screen overflow-hidden" style={styleGrid}>
+        
+      <FlyingCards />
+      
       {players.map((player, idx) => (
         <PlayerCurrentMatch
           player={player}
