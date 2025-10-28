@@ -1,6 +1,6 @@
 "use client";
 
-import { type ReactNode, createContext, useRef, useContext } from "react";
+import { createContext, useContext, useRef, type ReactNode } from "react";
 import { useStore } from "zustand";
 import { createSettingsStore, type SettingsStore } from "./settings-store";
 export type SettingsApi = ReturnType<typeof createSettingsStore>;
@@ -15,9 +15,8 @@ export interface SettingsProviderProps {
 
 export const SettingsPovider = ({ children }: SettingsProviderProps) => {
   const storeRef = useRef<SettingsApi | null>(null);
-  if (storeRef.current === null) {
-    storeRef.current = createSettingsStore();
-  }
+
+  storeRef.current ??= createSettingsStore();
 
   return (
     <SettingsContext.Provider value={storeRef.current}>

@@ -1,6 +1,6 @@
 "use client";
 
-import { type ReactNode, createContext, useRef, useContext } from "react";
+import { createContext, useContext, useRef, type ReactNode } from "react";
 import { useStore } from "zustand";
 import {
   createCurrentMatchStore,
@@ -24,9 +24,8 @@ export const CurrentMatchPovider = ({
 }: CurrentMatchProviderProps) => {
   const storeRef = useRef<CurrentMatchApi | null>(null);
   const settings = useSettings((state) => state);
-  if (storeRef.current === null) {
-    storeRef.current = createCurrentMatchStore(initCurrentMatchStore(settings));
-  }
+
+  storeRef.current ??= createCurrentMatchStore(initCurrentMatchStore(settings));
 
   return (
     <CurrentMatchContext.Provider value={storeRef.current}>
