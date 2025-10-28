@@ -127,14 +127,17 @@ export function AnalyticsDashboard({ analytics }: AnalyticsDashboardProps) {
 
   return (
     <>
-      <header className="mb-10 flex flex-col gap-6 md:flex-row md:items-center md:justify-between">
-        <div className="flex items-center gap-3">
+      <header className="mb-10 flex flex-col items-center gap-6 text-center md:flex-row md:items-center md:justify-between md:text-left">
+        <div className="flex w-full flex-col items-center gap-3 sm:flex-row sm:justify-center md:w-auto md:items-center md:justify-start">
           <Button
             asChild
             variant="outline"
             className="border-primary/40 bg-card/70 text-card-foreground hover:border-primary/60 hover:bg-card/80"
           >
-            <Link href="/" className="flex items-center gap-2">
+            <Link
+              href="/"
+              className="flex w-full items-center justify-center gap-2 sm:w-auto sm:justify-start"
+            >
               <ArrowLeft className="size-4" />
               Volver al menú
             </Link>
@@ -145,24 +148,24 @@ export function AnalyticsDashboard({ analytics }: AnalyticsDashboardProps) {
           </div>
         </div>
 
-        <div className="text-primary flex flex-col gap-2 text-right uppercase tracking-[0.35em]">
+        <div className="text-primary flex flex-col items-center gap-2 uppercase tracking-[0.18em] sm:flex-row sm:gap-4 sm:tracking-[0.3em] md:flex-col md:items-end md:text-right md:tracking-[0.35em]">
           <span className="text-sm">Oráculo</span>
-          <span className="text-muted-foreground text-xs tracking-[0.5em]">
+          <span className="text-muted-foreground text-xs tracking-[0.28em] sm:tracking-[0.4em] md:tracking-[0.5em]">
             Consejo de métricas mágicas
           </span>
         </div>
       </header>
 
       <section className="mb-12 space-y-6">
-        <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-3">
+        <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-3">
           {metrics.map((metric) => (
             <Card
               key={metric.title}
-              className="border-primary/40 bg-card/75 shadow-xl backdrop-blur"
+              className="border-primary/40 bg-card/75 shadow-xl backdrop-blur transition-transform duration-200 hover:-translate-y-1"
             >
-              <CardHeader className="gap-4">
-                <div className="flex items-center justify-between">
-                  <CardTitle className="text-muted-foreground text-xs uppercase tracking-[0.45em]">
+              <CardHeader className="gap-4 text-center sm:text-left">
+                <div className="flex flex-wrap items-center justify-center gap-4 sm:justify-between">
+                  <CardTitle className="text-muted-foreground text-xs uppercase tracking-[0.3em] sm:tracking-[0.4em]">
                     {metric.title}
                   </CardTitle>
                   <BarChart3 className="text-primary/70 size-4" />
@@ -190,11 +193,11 @@ export function AnalyticsDashboard({ analytics }: AnalyticsDashboardProps) {
                 Evolución de partidas registradas durante los últimos diez días.
               </CardDescription>
             </CardHeader>
-            <CardContent className="px-0">
+            <CardContent className="px-3 pb-6 md:px-0">
               {matchesPerDayData.some((entry) => entry.matches > 0) ? (
                 <ChartContainer
                   config={matchesPerDayConfig}
-                  className="h-64 w-full"
+                  className="min-h-40 w-full sm:h-[280px] md:h-64"
                 >
                   <AreaChart data={matchesPerDayData}>
                     <defs>
@@ -264,8 +267,8 @@ export function AnalyticsDashboard({ analytics }: AnalyticsDashboardProps) {
                 Los indicadores clave de la semana mágica.
               </CardDescription>
             </CardHeader>
-            <CardContent className="px-6">
-              <ul className="text-muted-foreground space-y-4 text-sm leading-relaxed">
+            <CardContent className="px-4 sm:px-6">
+              <ul className="text-muted-foreground space-y-4 text-sm leading-relaxed text-center sm:text-left">
                 <li>
                   <span className="text-foreground font-semibold">
                     {numberFormatter.format(
@@ -311,11 +314,11 @@ export function AnalyticsDashboard({ analytics }: AnalyticsDashboardProps) {
                 Invocadores con más victorias en los últimos siete días.
               </CardDescription>
             </CardHeader>
-            <CardContent className="px-0">
+            <CardContent className="px-3 pb-6 md:px-0">
               {weeklyWinsData.length > 0 ? (
                 <ChartContainer
                   config={weeklyWinsConfig}
-                  className="h-64 w-full"
+                  className="min-h-40 w-full sm:h-[280px] md:h-64"
                 >
                   <BarChart data={weeklyWinsData}>
                     <CartesianGrid strokeDasharray="4 4" vertical={false} />
@@ -363,11 +366,11 @@ export function AnalyticsDashboard({ analytics }: AnalyticsDashboardProps) {
                 partidas.
               </CardDescription>
             </CardHeader>
-            <CardContent className="px-0">
+            <CardContent className="px-3 pb-6 md:px-0">
               {startingHpData.length > 0 ? (
                 <ChartContainer
                   config={startingHpConfig}
-                  className="h-64 w-full"
+                  className="min-h-40 w-full sm:h-[280px] md:h-64"
                 >
                   <BarChart data={startingHpData}>
                     <CartesianGrid strokeDasharray="4 4" vertical={false} />
@@ -412,7 +415,7 @@ export function AnalyticsDashboard({ analytics }: AnalyticsDashboardProps) {
 }
 
 const EmptyChartState = ({ message }: { message: string }) => (
-  <div className="text-muted-foreground flex h-64 w-full flex-col items-center justify-center gap-3 px-6 text-center text-sm">
+  <div className="text-muted-foreground flex min-h-40 h-[260px] w-full flex-col items-center justify-center gap-3 px-6 text-center text-sm sm:h-[280px] md:h-64">
     <Sparkles className="text-primary size-6 animate-pulse" />
     <p>{message}</p>
   </div>
