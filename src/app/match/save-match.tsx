@@ -421,7 +421,7 @@ export default function SaveMatch() {
         setErrorMessage(
           error instanceof Error
             ? error.message
-            : "No pudimos guardar la partida. Intenta nuevamente.",
+            : "No pudimos finalizar la partida. Intenta nuevamente.",
         );
         console.error(error);
       }
@@ -643,7 +643,7 @@ export default function SaveMatch() {
         </DialogTrigger>
         <DialogContent className="sm:max-w-md">
           <DialogHeader>
-            <DialogTitle>Guardar partida</DialogTitle>
+            <DialogTitle>Finalizar partida</DialogTitle>
             <DialogDescription>
               Ajustá el podio arrastrando a los invocadores si queres cambiar la
               posicion final.
@@ -728,7 +728,7 @@ export default function SaveMatch() {
                 {matchSave.isPending && (
                   <Loader2 className="size-4 animate-spin" />
                 )}
-                Guardar
+                Finalizar
               </Button>
             </DialogFooter>
 
