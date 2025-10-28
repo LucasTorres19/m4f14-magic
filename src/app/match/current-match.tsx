@@ -70,7 +70,7 @@ function PlayerCurrentMatch({ player, flipped = false }: { player: Player; flipp
             )}
             strokeWidth={4}
           />
-          <span className="text-background text-5xl">
+          <span className={cn("text-background text-5xl", flipped && "rotate-180")}>
             {player.hpUpdated < 0 ? `${Math.abs(player.hpUpdated)}` : ""}
           </span>
         </Button>
@@ -91,7 +91,7 @@ function PlayerCurrentMatch({ player, flipped = false }: { player: Player; flipp
           )}
           strokeWidth={4}
         />
-        <span className="text-background text-5xl">
+        <span className={cn("text-background text-5xl", flipped && "rotate-180")}>
           {player.hpUpdated > 0 ? `${Math.abs(player.hpUpdated)}` : ""}
         </span>
       </Button>
