@@ -1,6 +1,6 @@
 "use client";
 
-import { ArrowLeft, BarChart3, Sparkles } from "lucide-react";
+import { ArrowLeft, BarChart3, Crown, Sparkles } from "lucide-react";
 import Link from "next/link";
 import {
   Area,
@@ -109,6 +109,7 @@ function MetricCard({ metric }: { metric: Metric }) {
 export function AnalyticsDashboard({ analytics }: AnalyticsDashboardProps) {
   const matchesPerDayData = buildMatchesPerDayData(analytics);
   const weeklyWinsData = buildWeeklyWinsData(analytics);
+  const allTimeChampion = analytics.allTimeTopPlayer;
 
   const weeklyMetrics: Metric[] = [
     {
@@ -342,10 +343,39 @@ export function AnalyticsDashboard({ analytics }: AnalyticsDashboardProps) {
 
           <Card className="border-primary/40 bg-card/80 shadow-xl backdrop-blur">
             <CardHeader>
-              <CardTitle className="text-foreground text-lg font-semibold tracking-wide"></CardTitle>
-              <CardDescription></CardDescription>
-              <CardContent className="px-3 pb-6 md:px-0"></CardContent>
+              <CardTitle className="text-foreground text-lg font-semibold tracking-wide">
+                Campeón de todos los tiempos
+              </CardTitle>
+              <CardDescription>
+                Invocador con la mayor cantidad de victorias registradas.
+              </CardDescription>
             </CardHeader>
+            <CardContent className="px-3 pb-6 md:px-0">
+              {allTimeChampion ? (
+                <div className="flex h-full flex-col items-center justify-center gap-5 rounded-xl bg-muted/20 p-6 text-center sm:p-8">
+                  <div className="flex flex-col items-center gap-3">
+                    <span
+                      className="flex size-16 items-center justify-center rounded-full border border-foreground/10 shadow-inner transition-all"
+                      style={{ backgroundColor: allTimeChampion.backgroundColor }}
+                      aria-hidden="true"
+                    >
+                      <Crown className="text-white/90 size-7 drop-shadow" />
+                    </span>
+                    <p className="text-foreground text-xl font-semibold tracking-tight">
+                      {allTimeChampion.name}
+                    </p>
+                  </div>
+                  <p className="text-muted-foreground text-sm leading-relaxed">
+                    {`Reclamó ${numberFormatter.format(allTimeChampion.wins)} victorias totales.`}
+                  </p>
+                </div>
+              ) : (
+                <div className="text-muted-foreground flex h-full flex-col items-center justify-center gap-3 px-6 py-12 text-center text-sm">
+                  <Sparkles className="text-primary size-6 animate-pulse" />
+                  <p>El oráculo aguarda al primer campeón histórico.</p>
+                </div>
+              )}
+            </CardContent>
           </Card>
         </div>
       </section>

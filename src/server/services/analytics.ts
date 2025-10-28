@@ -29,6 +29,12 @@ export type AnalyticsSnapshot = {
     wins: number;
     backgroundColor: string;
   }[];
+  allTimeTopPlayer: {
+    playerId: number;
+    name: string;
+    wins: number;
+    backgroundColor: string;
+  } | null;
 };
 
 export const getAnalyticsSnapshot = async (
@@ -101,19 +107,38 @@ export const getAnalyticsSnapshot = async (
     }),
   );
 
-  const winsByPlayer = new Map<
+  const weeklyWinsByPlayer = new Map<
+    number,
+    { name: string; wins: number; backgroundColor: string }
+  >();
+  const allTimeWinsByPlayer = new Map<
     number,
     { name: string; wins: number; backgroundColor: string }
   >();
 
   participantRows.forEach((participant) => {
-    if (participant.placement !== 1 || participant.matchCreatedAt < weekStart) {
+    if (participant.placement !== 1) {
       return;
     }
 
-    const current = winsByPlayer.get(participant.playerId);
-    if (!current) {
-      winsByPlayer.set(participant.playerId, {
+    const allTimeCurrent = allTimeWinsByPlayer.get(participant.playerId);
+    if (!allTimeCurrent) {
+      allTimeWinsByPlayer.set(participant.playerId, {
+        name: participant.name ?? "Invocador desconocido",
+        wins: 1,
+        backgroundColor: participant.backgroundColor ?? "#1f2937",
+      });
+    } else {
+      allTimeCurrent.wins += 1;
+    }
+
+    if (participant.matchCreatedAt < weekStart) {
+      return;
+    }
+
+    const weeklyCurrent = weeklyWinsByPlayer.get(participant.playerId);
+    if (!weeklyCurrent) {
+      weeklyWinsByPlayer.set(participant.playerId, {
         name: participant.name ?? "Invocador desconocido",
         wins: 1,
         backgroundColor: participant.backgroundColor ?? "#1f2937",
@@ -121,10 +146,10 @@ export const getAnalyticsSnapshot = async (
       return;
     }
 
-    current.wins += 1;
+    weeklyCurrent.wins += 1;
   });
 
-  const weeklyTopPlayers = Array.from(winsByPlayer.entries())
+  const weeklyTopPlayers = Array.from(weeklyWinsByPlayer.entries())
     .map(([playerId, payload]) => ({
       playerId,
       name: payload.name,
@@ -133,6 +158,18 @@ export const getAnalyticsSnapshot = async (
     }))
     .sort((a, b) => b.wins - a.wins)
     .slice(0, 6);
+
+  let allTimeTopPlayer: AnalyticsSnapshot["allTimeTopPlayer"] = null;
+  allTimeWinsByPlayer.forEach((payload, playerId) => {
+    if (!allTimeTopPlayer || payload.wins > allTimeTopPlayer.wins) {
+      allTimeTopPlayer = {
+        playerId,
+        name: payload.name,
+        wins: payload.wins,
+        backgroundColor: payload.backgroundColor,
+      };
+    }
+  });
 
   const startingHpTotals = new Map<number, number>();
   matchRows.forEach((match) => {
@@ -149,5 +186,6 @@ export const getAnalyticsSnapshot = async (
     },
     matchesPerDay,
     weeklyTopPlayers,
+    allTimeTopPlayer,
   };
 };
