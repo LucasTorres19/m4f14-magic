@@ -1,6 +1,6 @@
 "use client";
 
-import { ArrowLeft, BarChart3, Crown, Sparkles } from "lucide-react";
+import { ArrowLeft, BarChart3, Crown, Flame, Sparkles } from "lucide-react";
 import Link from "next/link";
 import {
   Area,
@@ -110,6 +110,10 @@ export function AnalyticsDashboard({ analytics }: AnalyticsDashboardProps) {
   const matchesPerDayData = buildMatchesPerDayData(analytics);
   const weeklyWinsData = buildWeeklyWinsData(analytics);
   const allTimeChampion = analytics.allTimeTopPlayer;
+  const streakChampion = analytics.currentWinningStreak;
+  const streakChampionLastWin = streakChampion
+    ? longDateFormatter.format(new Date(streakChampion.lastWinAt))
+    : null;
 
   const weeklyMetrics: Metric[] = [
     {
@@ -167,6 +171,47 @@ export function AnalyticsDashboard({ analytics }: AnalyticsDashboardProps) {
           </span>
         </div>
       </header>
+
+      {streakChampion && (
+        <div className="relative mb-12 overflow-hidden rounded-3xl border border-primary/50 bg-linear-to-br from-primary/30 via-background to-background p-px shadow-[0_25px_80px_-45px_rgba(56,189,248,0.8)]">
+          <div className="pointer-events-none absolute inset-0 opacity-70">
+            <div className="absolute -top-24 right-0 h-72 w-72 rounded-full bg-primary/40 blur-3xl" />
+            <div className="absolute -bottom-20 left-6 h-60 w-60 rounded-full bg-accent/30 blur-3xl" />
+          </div>
+          <div className="relative flex flex-col gap-6 rounded-[calc(var(--radius-3xl)-1px)] bg-card/90 px-6 py-8 sm:flex-row sm:items-center sm:justify-between sm:px-10">
+            <div className="flex flex-col gap-5 text-center sm:flex-row sm:items-center sm:text-left">
+              <span
+                className="relative flex size-20 items-center justify-center rounded-2xl border border-white/20 shadow-[0_0_35px_rgba(250,204,21,0.35)] transition-transform duration-200 hover:-translate-y-1"
+                style={{ backgroundColor: streakChampion.backgroundColor }}
+                aria-hidden="true"
+              >
+                <Flame className="text-white size-10 drop-shadow-lg" />
+              </span>
+              <div className="flex flex-col gap-2">
+                <span className="text-primary text-xs font-semibold uppercase tracking-[0.4em]">
+                  Racha legendaria
+                </span>
+                <p className="text-foreground text-2xl font-semibold tracking-tight sm:text-3xl">
+                  {streakChampion.name}
+                </p>
+                <p className="text-muted-foreground text-sm leading-relaxed">
+                  {streakChampionLastWin
+                    ? `Último triunfo sellado el ${streakChampionLastWin}.`
+                    : "El fuego de la victoria sigue encendido."}
+                </p>
+              </div>
+            </div>
+            <div className="flex flex-1 flex-col items-center gap-2 sm:items-end">
+              <div className="text-foreground text-5xl font-black tracking-tight sm:text-6xl">
+                {numberFormatter.format(streakChampion.streak)}
+              </div>
+              <div className="text-muted-foreground text-sm uppercase tracking-[0.4em]">
+                Victorias seguidas
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
 
       <section className="mb-12 space-y-6">
         <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-3">
@@ -356,7 +401,9 @@ export function AnalyticsDashboard({ analytics }: AnalyticsDashboardProps) {
                   <div className="flex flex-col items-center gap-3">
                     <span
                       className="flex size-16 items-center justify-center rounded-full border border-foreground/10 shadow-inner transition-all"
-                      style={{ backgroundColor: allTimeChampion.backgroundColor }}
+                      style={{
+                        backgroundColor: allTimeChampion.backgroundColor,
+                      }}
                       aria-hidden="true"
                     >
                       <Crown className="text-white/90 size-7 drop-shadow" />

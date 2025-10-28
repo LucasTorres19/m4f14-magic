@@ -35,6 +35,13 @@ export type AnalyticsSnapshot = {
     wins: number;
     backgroundColor: string;
   } | null;
+  currentWinningStreak: {
+    playerId: number;
+    name: string;
+    streak: number;
+    backgroundColor: string;
+    lastWinAt: string;
+  } | null;
 };
 
 export const getAnalyticsSnapshot = async (
@@ -115,8 +122,41 @@ export const getAnalyticsSnapshot = async (
     number,
     { name: string; wins: number; backgroundColor: string }
   >();
+  const matchesByPlayer = new Map<
+    number,
+    {
+      name: string;
+      backgroundColor: string;
+      matches: {
+        matchId: number;
+        createdAt: Date;
+        placement: number | null;
+      }[];
+    }
+  >();
 
   participantRows.forEach((participant) => {
+    const existingCollection = matchesByPlayer.get(participant.playerId);
+    if (!existingCollection) {
+      matchesByPlayer.set(participant.playerId, {
+        name: participant.name ?? "Invocador desconocido",
+        backgroundColor: participant.backgroundColor ?? "#1f2937",
+        matches: [
+          {
+            matchId: participant.matchId,
+            createdAt: participant.matchCreatedAt,
+            placement: participant.placement,
+          },
+        ],
+      });
+    } else {
+      existingCollection.matches.push({
+        matchId: participant.matchId,
+        createdAt: participant.matchCreatedAt,
+        placement: participant.placement,
+      });
+    }
+
     if (participant.placement !== 1) {
       return;
     }
@@ -171,6 +211,53 @@ export const getAnalyticsSnapshot = async (
     }
   });
 
+  let currentWinningStreak: AnalyticsSnapshot["currentWinningStreak"] = null;
+  matchesByPlayer.forEach((payload, playerId) => {
+    const orderedMatches = payload.matches
+      .slice()
+      .sort((a, b) => {
+        const timeDiff = b.createdAt.getTime() - a.createdAt.getTime();
+        if (timeDiff !== 0) {
+          return timeDiff;
+        }
+        return b.matchId - a.matchId;
+      });
+
+    let streak = 0;
+    let lastWinAt: Date | null = null;
+
+    for (const match of orderedMatches) {
+      if (match.placement === 1) {
+        streak += 1;
+        if (!lastWinAt || match.createdAt > lastWinAt) {
+          lastWinAt = match.createdAt;
+        }
+      } else {
+        break;
+      }
+    }
+
+    if (streak < 3 || !lastWinAt) {
+      return;
+    }
+
+    if (
+      !currentWinningStreak ||
+      streak > currentWinningStreak.streak ||
+      (streak === currentWinningStreak.streak &&
+        lastWinAt.getTime() >
+          new Date(currentWinningStreak.lastWinAt).getTime())
+    ) {
+      currentWinningStreak = {
+        playerId,
+        name: payload.name,
+        streak,
+        backgroundColor: payload.backgroundColor,
+        lastWinAt: lastWinAt.toISOString(),
+      };
+    }
+  });
+
   const startingHpTotals = new Map<number, number>();
   matchRows.forEach((match) => {
     const current = startingHpTotals.get(match.startingHp) ?? 0;
@@ -187,5 +274,6 @@ export const getAnalyticsSnapshot = async (
     matchesPerDay,
     weeklyTopPlayers,
     allTimeTopPlayer,
+    currentWinningStreak,
   };
 };
