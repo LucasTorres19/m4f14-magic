@@ -3,6 +3,7 @@
 import {
   useCallback,
   useEffect,
+  useId,
   useMemo,
   useState,
   type DragEvent,
@@ -10,7 +11,7 @@ import {
   type PointerEvent as ReactPointerEvent,
 } from "react";
 import { useShallow } from "zustand/react/shallow";
-import { Trophy, GripVertical, Loader2, Save } from "lucide-react";
+import { GripVertical, Loader2, Save } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -41,6 +42,51 @@ type OrderedPlayer = Pick<
   RankedPlayer,
   "id" | "displayName" | "backgroundColor"
 >;
+
+type SuggestedPlayer = {
+  id: number;
+  name: string;
+  backgroundColor: string;
+};
+
+type PlayerNameInputProps = {
+  value: string;
+  onChange: (value: string) => void;
+  placeholder: string;
+  ariaLabel: string;
+  suggestions: SuggestedPlayer[];
+};
+
+function PlayerNameInput({
+  value,
+  onChange,
+  placeholder,
+  ariaLabel,
+  suggestions,
+}: PlayerNameInputProps) {
+  const generatedId = useId();
+  const datalistId = `player-suggestions-${generatedId.replace(/:/g, "")}`;
+
+  return (
+    <>
+      <Input
+        list={datalistId}
+        value={value}
+        onChange={(event) => onChange(event.target.value)}
+        aria-label={ariaLabel}
+        placeholder={placeholder}
+        className="h-8 w-full px-2 text-sm"
+      />
+      <datalist className="max-h-80" id={datalistId}>
+        {suggestions.map((player) => (
+          <option key={player.id} value={player.name}>
+            {player.name}
+          </option>
+        ))}
+      </datalist>
+    </>
+  );
+}
 
 function computeInitialRanking(
   players: RankedPlayer[],
@@ -103,6 +149,21 @@ export default function SaveMatch() {
       playersCount: state.playersCount,
     })),
   );
+
+  const playersQuery = api.players.findAll.useQuery(undefined, {
+    staleTime: 1000 * 60 * 5,
+  });
+  const playerSuggestions = useMemo<SuggestedPlayer[]>(() => {
+    if (!playersQuery.data) return [];
+
+    return playersQuery.data
+      .map((player) => ({
+        id: player.id,
+        name: (player.name ?? "").trim(),
+        backgroundColor: player.backgroundColor,
+      }))
+      .filter((player) => player.name.length > 0);
+  }, [playersQuery.data]);
 
   const isMatchFinished = useMemo(
     () => players.filter((player) => player.hp > 0).length === 1,
@@ -453,14 +514,14 @@ export default function SaveMatch() {
                   </div>
 
                   <div className="flex grow flex-col gap-1">
-                    <Input
+                    <PlayerNameInput
                       value={player.displayName}
-                      onChange={(event) =>
-                        handleDisplayNameChange(player.id, event.target.value)
+                      onChange={(value) =>
+                        handleDisplayNameChange(player.id, value)
                       }
-                      aria-label={`Nombre del invocador en posicion ${player.placement}`}
+                      ariaLabel={`Nombre del invocador en posicion ${player.placement}`}
                       placeholder="Nombre del invocador"
-                      className="h-8 w-full px-2 text-sm"
+                      suggestions={playerSuggestions}
                     />
                   </div>
 
