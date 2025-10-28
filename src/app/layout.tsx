@@ -4,6 +4,8 @@ import { Toaster } from "@/components/ui/sonner";
 import { TRPCReactProvider } from "@/trpc/react";
 import { type Metadata } from "next";
 import { Geist } from "next/font/google";
+import { CurrentMatchPovider } from "./_stores/current-match-provider";
+import { SettingsPovider } from "./_stores/settings-provider";
 
 export const metadata: Metadata = {
   title: "Mafia Magic",
@@ -22,7 +24,11 @@ export default function RootLayout({
   return (
     <html lang="es" className={`${geist.variable} dark`}>
       <body className={`font-sans antialiased`}>
-        <TRPCReactProvider>{children}</TRPCReactProvider>
+        <TRPCReactProvider>
+          <SettingsPovider>
+            <CurrentMatchPovider>{children}</CurrentMatchPovider>
+          </SettingsPovider>
+        </TRPCReactProvider>
         <Toaster />
       </body>
     </html>

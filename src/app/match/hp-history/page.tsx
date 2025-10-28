@@ -1,7 +1,8 @@
 "use client";
 
-import { useCurrentMatch } from "@/app/_stores/use-current-match";
-import { useSettings } from "@/app/_stores/use-settings";
+import { useCurrentMatch } from "@/app/_stores/current-match-provider";
+import { useSettings } from "@/app/_stores/settings-provider";
+
 import { Button } from "@/components/ui/button";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { cn } from "@/lib/utils";

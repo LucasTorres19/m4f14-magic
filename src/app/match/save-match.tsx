@@ -46,8 +46,9 @@ import {
 import { cn } from "@/lib/utils";
 import { api } from "@/trpc/react";
 import { toast } from "sonner";
-import { useCurrentMatch } from "../_stores/use-current-match";
-import { useSettings } from "../_stores/use-settings";
+
+import { useCurrentMatch } from "../_stores/current-match-provider";
+import { useSettings } from "../_stores/settings-provider";
 
 type RankedPlayer = {
   id: string;

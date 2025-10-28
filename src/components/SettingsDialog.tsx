@@ -1,7 +1,8 @@
 "use client";
 
-import { useCurrentMatch } from "@/app/_stores/use-current-match";
-import { useSettings } from "@/app/_stores/use-settings";
+import { useCurrentMatch } from "@/app/_stores/current-match-provider";
+import { useSettings } from "@/app/_stores/settings-provider";
+
 import { Button } from "@/components/ui/button";
 import {
   Dialog,
@@ -15,7 +16,7 @@ import {
 } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { randomHexColor } from "@/utils/random";
+import { randomHexColor } from "@/utils/gen";
 import * as React from "react";
 
 type SettingsDialogProps = {
@@ -90,7 +91,7 @@ export default function SettingsDialog({
           id: existing?.id ?? `player-${i + 1}`,
           name: existing?.name ?? `invocador ${i + 1}`,
           hp: startingHp,
-          color: existing?.color ?? randomHexColor(),
+          color: existing?.color ?? randomHexColor(i),
         });
       }
       return next;

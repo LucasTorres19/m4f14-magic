@@ -1,0 +1,1 @@
+export { randomHexColor } from "./random";

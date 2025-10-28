@@ -16,8 +16,9 @@ import { History, Home, Minus, Plus, RotateCcw, Settings } from "lucide-react";
 import Link from "next/link";
 import type { CSSProperties } from "react";
 import { useRef } from "react";
-import { useCurrentMatch, type Player } from "../_stores/use-current-match";
+import { type Player } from "../_stores/current-match-store";
 import SaveMatch from "./save-match";
+import { useCurrentMatch } from "../_stores/current-match-provider";
 
 function Grid(n: number) {
   const cols = Math.max(1, Math.ceil(n / 2));
