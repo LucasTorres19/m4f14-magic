@@ -1,7 +1,7 @@
 "use client";
 import { Button } from "@/components/ui/button";
 import { useCurrentMatch, type Player } from "../_stores/use-current-match";
-import { RotateCcw,Home, History, Minus, Plus, Settings } from "lucide-react";
+import { RotateCcw,Home, History, Minus, Plus, Settings, Wrench } from "lucide-react";
 import { useLongPress } from "@uidotdev/usehooks";
 import { useRef } from "react";
 import { cn } from "@/lib/utils";
@@ -185,7 +185,7 @@ export default function CurrentMatch() {
                  <SettingsDialog
                   trigger={
                     <Button size="sm" className="pointer-events-auto">
-                      <Settings className="size-5" />
+                      <Wrench className="size-5" />
                     </Button>
                   }
                 /> 
