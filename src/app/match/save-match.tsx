@@ -51,6 +51,7 @@ import { cn } from "@/lib/utils";
 import { api } from "@/trpc/react";
 import { toast } from "sonner";
 
+import { ScrollArea } from "@/components/ui/scroll-area";
 import { useCurrentMatch } from "../_stores/current-match-provider";
 import { useSettings } from "../_stores/settings-provider";
 
@@ -758,225 +759,229 @@ export default function SaveMatch() {
             )}
           </Button>
         </DialogTrigger>
-        <DialogContent className="sm:max-w-md">
-          <DialogHeader>
-            <DialogTitle>Finalizar partida</DialogTitle>
-            <DialogDescription>
-              {step === 1
-                ? "Ajustá el podio arrastrando a los invocadores si queres cambiar la posición final."
-                : "Subí las capturas del duelo que quieras guardar junto a la partida."}
-            </DialogDescription>
-          </DialogHeader>
-
-          <form className="flex flex-col gap-4" onSubmit={handleSubmit}>
-            <div className="text-muted-foreground flex items-center justify-between text-xs">
-              <span>Paso {step} de 2</span>
-              <span>
+        <DialogContent className="sm:max-w-md overflow-hidden">
+          <ScrollArea className="max-h-[85vh] pr-4">
+            <DialogHeader>
+              <DialogTitle>Finalizar partida</DialogTitle>
+              <DialogDescription>
                 {step === 1
-                  ? "Ordená y confirmá invocadores"
-                  : "Agregá capturas"}
-              </span>
-            </div>
+                  ? "Ajustá el podio arrastrando a los invocadores si queres cambiar la posición final."
+                  : "Subí las capturas del duelo que quieras guardar junto a la partida."}
+              </DialogDescription>
+            </DialogHeader>
 
-            {step === 1 ? (
-              <ul className="flex flex-col gap-2">
-                {orderedWithPlacements.map((player) => (
+            <form className="flex flex-col gap-4" onSubmit={handleSubmit}>
+              <div className="text-muted-foreground flex items-center justify-between text-xs">
+                <span>Paso {step} de 2</span>
+                <span>
+                  {step === 1
+                    ? "Ordená y confirmá invocadores"
+                    : "Agregá capturas"}
+                </span>
+              </div>
+
+              {step === 1 ? (
+                <ul className="flex flex-col gap-2">
+                  {orderedWithPlacements.map((player) => (
+                    <li
+                      key={player.id}
+                      draggable={!comboboxActive}
+                      onDragStart={(event) => handleDragStart(event, player.id)}
+                      onDrop={(event) => handleDropItem(event, player.id)}
+                      onDragOver={(event) =>
+                        handleDragOverItem(event, player.id)
+                      }
+                      onPointerDown={(event) =>
+                        handlePointerDown(event, player.id)
+                      }
+                      onPointerMove={handlePointerMove}
+                      onPointerUp={handlePointerUp}
+                      onPointerCancel={handlePointerUp}
+                      onDragEnd={handleDragEnd}
+                      data-player-id={player.id}
+                      style={{ touchAction: comboboxActive ? "auto" : "none" }}
+                      className={cn(
+                        "border-border bg-muted/50 flex cursor-grab items-center gap-3 rounded-lg border px-3 py-2 transition-colors active:cursor-grabbing",
+                        draggingId === player.id && "opacity-60",
+                      )}
+                    >
+                      <span className="w-[1ch] text-lg font-semibold">
+                        {player.placement}
+                      </span>
+
+                      <div
+                        className="text-background flex size-10 shrink-0 items-center justify-center rounded-full text-sm font-semibold"
+                        style={{ backgroundColor: player.backgroundColor }}
+                      >
+                        {player.initials}
+                      </div>
+
+                      <div className="flex grow flex-col gap-1">
+                        <PlayerNameCombobox
+                          value={player.displayName}
+                          onChange={(value) =>
+                            handleDisplayNameChange(player.id, value)
+                          }
+                          ariaLabel={`Nombre del invocador en posición ${player.placement}`}
+                          placeholder="Nombre del invocador"
+                          suggestions={playerSuggestions}
+                          onInteractionChange={handleComboboxInteractionChange}
+                        />
+                      </div>
+
+                      <GripVertical className="text-muted-foreground size-4" />
+                    </li>
+                  ))}
                   <li
-                    key={player.id}
-                    draggable={!comboboxActive}
-                    onDragStart={(event) => handleDragStart(event, player.id)}
-                    onDrop={(event) => handleDropItem(event, player.id)}
-                    onDragOver={(event) => handleDragOverItem(event, player.id)}
-                    onPointerDown={(event) =>
-                      handlePointerDown(event, player.id)
-                    }
+                    onDrop={handleDropToEnd}
+                    onDragOver={(event) => {
+                      event.preventDefault();
+                      event.dataTransfer.dropEffect = "move";
+                    }}
                     onPointerMove={handlePointerMove}
                     onPointerUp={handlePointerUp}
                     onPointerCancel={handlePointerUp}
-                    onDragEnd={handleDragEnd}
-                    data-player-id={player.id}
+                    data-player-id="__drop-end"
                     style={{ touchAction: comboboxActive ? "auto" : "none" }}
-                    className={cn(
-                      "border-border bg-muted/50 flex cursor-grab items-center gap-3 rounded-lg border px-3 py-2 transition-colors active:cursor-grabbing",
-                      draggingId === player.id && "opacity-60",
-                    )}
+                    className="border-border/70 text-muted-foreground flex items-center justify-center rounded-lg border border-dashed px-3 py-2 text-xs"
                   >
-                    <span className="w-[1ch] text-lg font-semibold">
-                      {player.placement}
-                    </span>
-
-                    <div
-                      className="text-background flex size-10 shrink-0 items-center justify-center rounded-full text-sm font-semibold"
-                      style={{ backgroundColor: player.backgroundColor }}
-                    >
-                      {player.initials}
-                    </div>
-
-                    <div className="flex grow flex-col gap-1">
-                      <PlayerNameCombobox
-                        value={player.displayName}
-                        onChange={(value) =>
-                          handleDisplayNameChange(player.id, value)
-                        }
-                        ariaLabel={`Nombre del invocador en posición ${player.placement}`}
-                        placeholder="Nombre del invocador"
-                        suggestions={playerSuggestions}
-                        onInteractionChange={handleComboboxInteractionChange}
-                      />
-                    </div>
-
-                    <GripVertical className="text-muted-foreground size-4" />
+                    Soltá acá para mover al final
                   </li>
-                ))}
-                <li
-                  onDrop={handleDropToEnd}
-                  onDragOver={(event) => {
-                    event.preventDefault();
-                    event.dataTransfer.dropEffect = "move";
-                  }}
-                  onPointerMove={handlePointerMove}
-                  onPointerUp={handlePointerUp}
-                  onPointerCancel={handlePointerUp}
-                  data-player-id="__drop-end"
-                  style={{ touchAction: comboboxActive ? "auto" : "none" }}
-                  className="border-border/70 text-muted-foreground flex items-center justify-center rounded-lg border border-dashed px-3 py-2 text-xs"
-                >
-                  Soltá acá para mover al final
-                </li>
-              </ul>
-            ) : (
-              <div className="flex flex-col gap-3">
-                <div className="flex items-baseline justify-between">
-                  <Label className="text-sm font-medium">
-                    Capturas del duelo
-                  </Label>
-                  <span className="text-muted-foreground text-xs">
-                    {uploadedImages.length}/{MAX_MATCH_IMAGES}
-                  </span>
-                </div>
-                <p className="text-muted-foreground text-xs">
-                  Podés subir hasta {MAX_MATCH_IMAGES} imágenes.{" "}
-                  {remainingImageSlots > 0
-                    ? `Te quedan ${remainingImageSlots} ${
-                        remainingImageSlots === 1 ? "espacio" : "espacios"
-                      } disponibles.`
-                    : "Alcanzaste el límite permitido."}
-                </p>
-                {remainingImageSlots > 0 ? (
-                  <UploadDropzone
-                    endpoint="imageUploader"
-                    onUploadBegin={() => {
-                      setIsUploadingImages(true);
-                      setErrorMessage(null);
-                    }}
-                    onClientUploadComplete={handleUploadComplete}
-                    onUploadError={handleUploadError}
-                    appearance={{
-                      label: "text-sm font-medium text-foreground",
-                      button:
-                        "bg-primary text-primary-foreground hover:bg-primary/90",
-                      allowedContent: "text-xs text-muted-foreground",
-                    }}
-                    className="ut-uploadthing h-auto min-h-[140px] rounded-md border border-dashed border-muted-foreground/40 bg-muted/40"
-                  />
-                ) : (
-                  <div className="border-muted-foreground/50 bg-muted/20 text-muted-foreground rounded-md border border-dashed px-3 py-4 text-xs">
-                    Eliminá alguna imagen para cargar otra.
-                  </div>
-                )}
-                {uploadedImages.length > 0 ? (
-                  <div className="grid gap-2 sm:grid-cols-2">
-                    {uploadedImages.map((image, index) => (
-                      <div
-                        key={image.key}
-                        className="border-border/70 bg-background/70 flex flex-col gap-2 rounded-md border p-2 shadow-sm"
-                      >
-                        <div className="relative overflow-hidden rounded-md">
-                          <img
-                            src={image.url}
-                            alt={image.name ?? `Captura ${index + 1}`}
-                            className="h-32 w-full object-cover"
-                          />
-                          <Button
-                            type="button"
-                            size="icon"
-                            variant="ghost"
-                            onClick={() => handleRemoveImage(image.key)}
-                            aria-label="Eliminar imágen"
-                            className="absolute right-1 top-1 size-7 rounded-full bg-background/80 text-muted-foreground hover:bg-background"
-                          >
-                            <Trash2 className="size-4" />
-                          </Button>
-                        </div>
-                        <div className="flex flex-col gap-1 text-xs">
-                          <span className="text-foreground font-medium">
-                            Imágen {index + 1}
-                          </span>
-                          {image.name ? (
-                            <span className="text-muted-foreground truncate">
-                              {image.name}
-                            </span>
-                          ) : null}
-                        </div>
-                      </div>
-                    ))}
-                  </div>
-                ) : null}
-                {isUploadingImages ? (
-                  <div className="text-muted-foreground flex items-center gap-2 text-xs">
-                    <Loader2 className="size-3 animate-spin" />
-                    Subiendo imágenes...
-                  </div>
-                ) : null}
-              </div>
-            )}
-
-            <DialogFooter className="gap-2 sm:flex-row sm:justify-end">
-              <Button
-                type="button"
-                variant="secondary"
-                onClick={() => setOpen(false)}
-                disabled={matchSave.isPending}
-              >
-                Cancelar
-              </Button>
-              {step === 2 ? (
-                <>
-                  <Button
-                    type="button"
-                    variant="outline"
-                    onClick={handleBackToPlacements}
-                    disabled={matchSave.isPending || isUploadingImages}
-                  >
-                    Volver
-                  </Button>
-                  <Button
-                    type="submit"
-                    disabled={matchSave.isPending || isUploadingImages}
-                  >
-                    {matchSave.isPending && (
-                      <Loader2 className="size-4 animate-spin" />
-                    )}
-                    Finalizar
-                  </Button>
-                </>
+                </ul>
               ) : (
+                <div className="flex flex-col gap-3">
+                  <div className="flex items-baseline justify-between">
+                    <Label className="text-sm font-medium">
+                      Capturas del duelo
+                    </Label>
+                    <span className="text-muted-foreground text-xs">
+                      {uploadedImages.length}/{MAX_MATCH_IMAGES}
+                    </span>
+                  </div>
+                  <p className="text-muted-foreground text-xs">
+                    Podés subir hasta {MAX_MATCH_IMAGES} imágenes.{" "}
+                    {remainingImageSlots > 0
+                      ? `Te quedan ${remainingImageSlots} ${
+                          remainingImageSlots === 1 ? "espacio" : "espacios"
+                        } disponibles.`
+                      : "Alcanzaste el límite permitido."}
+                  </p>
+                  {remainingImageSlots > 0 ? (
+                    <UploadDropzone
+                      endpoint="imageUploader"
+                      onUploadBegin={() => {
+                        setIsUploadingImages(true);
+                        setErrorMessage(null);
+                      }}
+                      onClientUploadComplete={handleUploadComplete}
+                      onUploadError={handleUploadError}
+                      appearance={{
+                        label: "text-sm font-medium text-foreground",
+                        button:
+                          "bg-primary text-primary-foreground hover:bg-primary/90",
+                        allowedContent: "text-xs text-muted-foreground",
+                      }}
+                      className="ut-uploadthing h-auto min-h-[140px] rounded-md border border-dashed border-muted-foreground/40 bg-muted/40"
+                    />
+                  ) : (
+                    <div className="border-muted-foreground/50 bg-muted/20 text-muted-foreground rounded-md border border-dashed px-3 py-4 text-xs">
+                      Eliminá alguna imagen para cargar otra.
+                    </div>
+                  )}
+                  {uploadedImages.length > 0 ? (
+                    <div className="grid gap-2 sm:grid-cols-2">
+                      {uploadedImages.map((image, index) => (
+                        <div
+                          key={image.key}
+                          className="border-border/70 bg-background/70 flex flex-col gap-2 rounded-md border p-2 shadow-sm"
+                        >
+                          <div className="relative overflow-hidden rounded-md">
+                            <img
+                              src={image.url}
+                              alt={image.name ?? `Captura ${index + 1}`}
+                              className="h-32 w-full object-cover"
+                            />
+                            <Button
+                              type="button"
+                              size="icon"
+                              variant="ghost"
+                              onClick={() => handleRemoveImage(image.key)}
+                              aria-label="Eliminar imágen"
+                              className="absolute right-1 top-1 size-7 rounded-full bg-background/80 text-muted-foreground hover:bg-background"
+                            >
+                              <Trash2 className="size-4" />
+                            </Button>
+                          </div>
+                          <div className="flex flex-col gap-1 text-xs">
+                            <span className="text-foreground font-medium">
+                              Imágen {index + 1}
+                            </span>
+                            {image.name ? (
+                              <span className="text-muted-foreground truncate">
+                                {image.name}
+                              </span>
+                            ) : null}
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  ) : null}
+                  {isUploadingImages ? (
+                    <div className="text-muted-foreground flex items-center gap-2 text-xs">
+                      <Loader2 className="size-3 animate-spin" />
+                      Subiendo imágenes...
+                    </div>
+                  ) : null}
+                </div>
+              )}
+
+              <DialogFooter className="gap-2 sm:flex-row sm:justify-end">
                 <Button
                   type="button"
-                  onClick={handleContinueToImages}
+                  variant="secondary"
+                  onClick={() => setOpen(false)}
                   disabled={matchSave.isPending}
                 >
-                  Continuar
+                  Cancelar
                 </Button>
-              )}
-            </DialogFooter>
+                {step === 2 ? (
+                  <>
+                    <Button
+                      type="button"
+                      variant="outline"
+                      onClick={handleBackToPlacements}
+                      disabled={matchSave.isPending || isUploadingImages}
+                    >
+                      Volver
+                    </Button>
+                    <Button
+                      type="submit"
+                      disabled={matchSave.isPending || isUploadingImages}
+                    >
+                      {matchSave.isPending && (
+                        <Loader2 className="size-4 animate-spin" />
+                      )}
+                      Finalizar
+                    </Button>
+                  </>
+                ) : (
+                  <Button
+                    type="button"
+                    onClick={handleContinueToImages}
+                    disabled={matchSave.isPending}
+                  >
+                    Continuar
+                  </Button>
+                )}
+              </DialogFooter>
 
-            {errorMessage ? (
-              <p className="bg-destructive/10 text-destructive rounded-md px-3 py-2 text-sm">
-                {errorMessage}
-              </p>
-            ) : null}
-          </form>
+              {errorMessage ? (
+                <p className="bg-destructive/10 text-destructive rounded-md px-3 py-2 text-sm">
+                  {errorMessage}
+                </p>
+              ) : null}
+            </form>
+          </ScrollArea>
         </DialogContent>
       </Dialog>
     </div>
