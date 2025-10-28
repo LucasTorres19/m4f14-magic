@@ -1,3 +1,4 @@
+/* eslint-disable @next/next/no-img-element */
 "use client";
 
 import {
@@ -6,6 +7,7 @@ import {
   GripVertical,
   Loader2,
   Save,
+  Trash2,
 } from "lucide-react";
 import {
   useCallback,
@@ -37,11 +39,13 @@ import {
   DialogTitle,
   DialogTrigger,
 } from "@/components/ui/dialog";
+import { Label } from "@/components/ui/label";
 import {
   Popover,
   PopoverContent,
   PopoverTrigger,
 } from "@/components/ui/popover";
+import { UploadDropzone } from "@/components/uploadthing";
 
 import { cn } from "@/lib/utils";
 import { api } from "@/trpc/react";
@@ -66,6 +70,14 @@ type SuggestedPlayer = {
   id: number;
   name: string;
   backgroundColor: string;
+};
+
+const MAX_MATCH_IMAGES = 6;
+
+type UploadedMatchImage = {
+  key: string;
+  url: string;
+  name: string | null;
 };
 
 type PlayerNameComboboxProps = {
@@ -323,19 +335,26 @@ export default function SaveMatch() {
   );
 
   const [open, setOpen] = useState(false);
+  const [step, setStep] = useState<1 | 2>(1);
   const [orderedPlayers, setOrderedPlayers] =
     useState<OrderedPlayer[]>(initialOrder);
   const [draggingId, setDraggingId] = useState<string | null>(null);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
+  const [uploadedImages, setUploadedImages] = useState<UploadedMatchImage[]>(
+    [],
+  );
+  const [isUploadingImages, setIsUploadingImages] = useState(false);
 
   const [activePointer, setActivePointer] = useState<{
     pointerId: number;
     playerId: string;
   } | null>(null);
   const [comboboxActive, setComboboxActive] = useState(false);
+  const remainingImageSlots = MAX_MATCH_IMAGES - uploadedImages.length;
 
   useEffect(() => {
     if (!open) {
+      setStep(1);
       setOrderedPlayers(initialOrder);
       setDraggingId(null);
       setActivePointer(null);
@@ -344,6 +363,7 @@ export default function SaveMatch() {
 
   useEffect(() => {
     if (open) {
+      setStep(1);
       setOrderedPlayers(initialOrder);
       setErrorMessage(null);
       setDraggingId(null);
@@ -362,10 +382,47 @@ export default function SaveMatch() {
     setComboboxActive(isActive);
   }, []);
 
+  const sanitizePlayers = useCallback(() => {
+    const sanitized = orderedPlayers.map((player, index) => ({
+      name: player.displayName.trim(),
+      backgroundColor: player.backgroundColor,
+      placement: index + 1,
+    }));
+
+    const hasEmptyNames = sanitized.some((player) => player.name.length === 0);
+    if (hasEmptyNames) {
+      setErrorMessage("Todos los invocadores necesitan un nombre.");
+      return null;
+    }
+
+    const hasDuplicateNames =
+      new Set(sanitized.map((player) => player.name)).size !== sanitized.length;
+    if (hasDuplicateNames) {
+      setErrorMessage("Cada invocador debe tener un nombre único.");
+      return null;
+    }
+
+    setErrorMessage(null);
+    return sanitized;
+  }, [orderedPlayers, setErrorMessage]);
+
+  const handleContinueToImages = useCallback(() => {
+    const sanitized = sanitizePlayers();
+    if (!sanitized) return;
+    setStep(2);
+  }, [sanitizePlayers, setStep]);
+
+  const handleBackToPlacements = useCallback(() => {
+    setStep(1);
+    setErrorMessage(null);
+  }, [setErrorMessage, setStep]);
+
   const matchSave = api.match.save.useMutation({
     onSuccess: () => {
       toast.success("Partida guardada");
       resetMatch(startingHp, playersCount);
+      setUploadedImages([]);
+      setIsUploadingImages(false);
     },
   });
 
@@ -381,39 +438,99 @@ export default function SaveMatch() {
     [setErrorMessage],
   );
 
+  const handleRemoveImage = useCallback(
+    (key: string) => {
+      setUploadedImages((previous) =>
+        previous.filter((image) => image.key !== key),
+      );
+      setErrorMessage(null);
+    },
+    [setErrorMessage],
+  );
+
+  const handleUploadComplete = useCallback(
+    (
+      result:
+        | {
+            url: string;
+            key: string;
+            name?: string | null;
+          }[]
+        | undefined,
+    ) => {
+      setIsUploadingImages(false);
+      if (!result || result.length === 0) {
+        return;
+      }
+
+      setUploadedImages((previous) => {
+        const existingKeys = new Set(previous.map((image) => image.key));
+        const remainingSlots = MAX_MATCH_IMAGES - previous.length;
+        if (remainingSlots <= 0) {
+          return previous;
+        }
+
+        const next = result
+          .filter((file) => !existingKeys.has(file.key))
+          .slice(0, remainingSlots)
+          .map<UploadedMatchImage>((file) => ({
+            key: file.key,
+            url: file.url,
+            name: file.name ?? null,
+          }));
+
+        if (next.length === 0) {
+          return previous;
+        }
+
+        toast.success(
+          next.length === 1
+            ? "Imágen cargada"
+            : `${next.length} imágenes cargadas`,
+        );
+        return [...previous, ...next];
+      });
+      setErrorMessage(null);
+    },
+    [setErrorMessage],
+  );
+
+  const handleUploadError = useCallback(
+    (error: Error) => {
+      setIsUploadingImages(false);
+      const message =
+        error instanceof Error && error.message.length > 0
+          ? error.message
+          : "No pudimos subir las imágenes. Intentá nuevamente.";
+      setErrorMessage(message);
+      toast.error(message);
+    },
+    [setErrorMessage],
+  );
+
   const handleSubmit = useCallback(
     async (event: FormEvent<HTMLFormElement>) => {
       event.preventDefault();
       if (matchSave.isPending) return;
+      // Wait for uploads to finish before allowing a save attempt.
+      if (isUploadingImages) {
+        setErrorMessage("Esperá a que las imágenes terminen de subir.");
+        return;
+      }
 
       try {
-        const sanitizedPlayers = orderedPlayers.map((player, index) => ({
-          name: player.displayName.trim(),
-          backgroundColor: player.backgroundColor,
-          placement: index + 1,
-        }));
-
-        const hasEmptyNames = sanitizedPlayers.some(
-          (player) => player.name.length === 0,
-        );
-        if (hasEmptyNames) {
-          setErrorMessage("Todos los invocadores necesitan un nombre.");
-          return;
-        }
-
-        const hasDuplicateNames =
-          new Set(sanitizedPlayers.map((player) => player.name)).size !==
-          sanitizedPlayers.length;
-        if (hasDuplicateNames) {
-          setErrorMessage("Cada invocador debe tener un nombre unico.");
-          return;
-        }
-
-        setErrorMessage(null);
+        const sanitizedPlayers = sanitizePlayers();
+        if (!sanitizedPlayers) return;
 
         await matchSave.mutateAsync({
           startingHp,
           players: sanitizedPlayers,
+          images: uploadedImages.map((image, index) => ({
+            url: image.url,
+            key: image.key,
+            name: image.name ?? undefined,
+            order: index,
+          })),
         });
 
         setOpen(false);
@@ -426,7 +543,7 @@ export default function SaveMatch() {
         console.error(error);
       }
     },
-    [matchSave, orderedPlayers, startingHp],
+    [isUploadingImages, matchSave, sanitizePlayers, startingHp, uploadedImages],
   );
 
   const handleDragStart = useCallback(
@@ -645,77 +762,176 @@ export default function SaveMatch() {
           <DialogHeader>
             <DialogTitle>Finalizar partida</DialogTitle>
             <DialogDescription>
-              Ajustá el podio arrastrando a los invocadores si queres cambiar la
-              posicion final.
+              {step === 1
+                ? "Ajustá el podio arrastrando a los invocadores si queres cambiar la posición final."
+                : "Subí las capturas del duelo que quieras guardar junto a la partida."}
             </DialogDescription>
           </DialogHeader>
 
           <form className="flex flex-col gap-4" onSubmit={handleSubmit}>
-            <ul className="flex flex-col gap-2">
-              {orderedWithPlacements.map((player) => (
+            <div className="text-muted-foreground flex items-center justify-between text-xs">
+              <span>Paso {step} de 2</span>
+              <span>
+                {step === 1
+                  ? "Ordená y confirmá invocadores"
+                  : "Agregá capturas"}
+              </span>
+            </div>
+
+            {step === 1 ? (
+              <ul className="flex flex-col gap-2">
+                {orderedWithPlacements.map((player) => (
+                  <li
+                    key={player.id}
+                    draggable={!comboboxActive}
+                    onDragStart={(event) => handleDragStart(event, player.id)}
+                    onDrop={(event) => handleDropItem(event, player.id)}
+                    onDragOver={(event) => handleDragOverItem(event, player.id)}
+                    onPointerDown={(event) =>
+                      handlePointerDown(event, player.id)
+                    }
+                    onPointerMove={handlePointerMove}
+                    onPointerUp={handlePointerUp}
+                    onPointerCancel={handlePointerUp}
+                    onDragEnd={handleDragEnd}
+                    data-player-id={player.id}
+                    style={{ touchAction: comboboxActive ? "auto" : "none" }}
+                    className={cn(
+                      "border-border bg-muted/50 flex cursor-grab items-center gap-3 rounded-lg border px-3 py-2 transition-colors active:cursor-grabbing",
+                      draggingId === player.id && "opacity-60",
+                    )}
+                  >
+                    <span className="w-[1ch] text-lg font-semibold">
+                      {player.placement}
+                    </span>
+
+                    <div
+                      className="text-background flex size-10 shrink-0 items-center justify-center rounded-full text-sm font-semibold"
+                      style={{ backgroundColor: player.backgroundColor }}
+                    >
+                      {player.initials}
+                    </div>
+
+                    <div className="flex grow flex-col gap-1">
+                      <PlayerNameCombobox
+                        value={player.displayName}
+                        onChange={(value) =>
+                          handleDisplayNameChange(player.id, value)
+                        }
+                        ariaLabel={`Nombre del invocador en posición ${player.placement}`}
+                        placeholder="Nombre del invocador"
+                        suggestions={playerSuggestions}
+                        onInteractionChange={handleComboboxInteractionChange}
+                      />
+                    </div>
+
+                    <GripVertical className="text-muted-foreground size-4" />
+                  </li>
+                ))}
                 <li
-                  key={player.id}
-                  draggable={!comboboxActive}
-                  onDragStart={(event) => handleDragStart(event, player.id)}
-                  onDrop={(event) => handleDropItem(event, player.id)}
-                  onDragOver={(event) => handleDragOverItem(event, player.id)}
-                  onPointerDown={(event) => handlePointerDown(event, player.id)}
+                  onDrop={handleDropToEnd}
+                  onDragOver={(event) => {
+                    event.preventDefault();
+                    event.dataTransfer.dropEffect = "move";
+                  }}
                   onPointerMove={handlePointerMove}
                   onPointerUp={handlePointerUp}
                   onPointerCancel={handlePointerUp}
-                  onDragEnd={handleDragEnd}
-                  data-player-id={player.id}
+                  data-player-id="__drop-end"
                   style={{ touchAction: comboboxActive ? "auto" : "none" }}
-                  className={cn(
-                    "border-border bg-muted/50 flex cursor-grab items-center gap-3 rounded-lg border px-3 py-2 transition-colors active:cursor-grabbing",
-                    draggingId === player.id && "opacity-60",
-                  )}
+                  className="border-border/70 text-muted-foreground flex items-center justify-center rounded-lg border border-dashed px-3 py-2 text-xs"
                 >
-                  <span className="w-[1ch] text-lg font-semibold">
-                    {player.placement}
-                  </span>
-
-                  <div
-                    className="text-background flex size-10 shrink-0 items-center justify-center rounded-full text-sm font-semibold"
-                    style={{ backgroundColor: player.backgroundColor }}
-                  >
-                    {player.initials}
-                  </div>
-
-                  <div className="flex grow flex-col gap-1">
-                    <PlayerNameCombobox
-                      value={player.displayName}
-                      onChange={(value) =>
-                        handleDisplayNameChange(player.id, value)
-                      }
-                      ariaLabel={`Nombre del invocador en posicion ${player.placement}`}
-                      placeholder="Nombre del invocador"
-                      suggestions={playerSuggestions}
-                      onInteractionChange={handleComboboxInteractionChange}
-                    />
-                  </div>
-
-                  <GripVertical className="text-muted-foreground size-4" />
+                  Soltá acá para mover al final
                 </li>
-              ))}
-              <li
-                onDrop={handleDropToEnd}
-                onDragOver={(event) => {
-                  event.preventDefault();
-                  event.dataTransfer.dropEffect = "move";
-                }}
-                onPointerMove={handlePointerMove}
-                onPointerUp={handlePointerUp}
-                onPointerCancel={handlePointerUp}
-                data-player-id="__drop-end"
-                style={{ touchAction: comboboxActive ? "auto" : "none" }}
-                className="border-border/70 text-muted-foreground flex items-center justify-center rounded-lg border border-dashed px-3 py-2 text-xs"
-              >
-                Soltá acá para mover al final
-              </li>
-            </ul>
+              </ul>
+            ) : (
+              <div className="flex flex-col gap-3">
+                <div className="flex items-baseline justify-between">
+                  <Label className="text-sm font-medium">
+                    Capturas del duelo
+                  </Label>
+                  <span className="text-muted-foreground text-xs">
+                    {uploadedImages.length}/{MAX_MATCH_IMAGES}
+                  </span>
+                </div>
+                <p className="text-muted-foreground text-xs">
+                  Podés subir hasta {MAX_MATCH_IMAGES} imágenes.{" "}
+                  {remainingImageSlots > 0
+                    ? `Te quedan ${remainingImageSlots} ${
+                        remainingImageSlots === 1 ? "espacio" : "espacios"
+                      } disponibles.`
+                    : "Alcanzaste el límite permitido."}
+                </p>
+                {remainingImageSlots > 0 ? (
+                  <UploadDropzone
+                    endpoint="imageUploader"
+                    onUploadBegin={() => {
+                      setIsUploadingImages(true);
+                      setErrorMessage(null);
+                    }}
+                    onClientUploadComplete={handleUploadComplete}
+                    onUploadError={handleUploadError}
+                    appearance={{
+                      label: "text-sm font-medium text-foreground",
+                      button:
+                        "bg-primary text-primary-foreground hover:bg-primary/90",
+                      allowedContent: "text-xs text-muted-foreground",
+                    }}
+                    className="ut-uploadthing h-auto min-h-[140px] rounded-md border border-dashed border-muted-foreground/40 bg-muted/40"
+                  />
+                ) : (
+                  <div className="border-muted-foreground/50 bg-muted/20 text-muted-foreground rounded-md border border-dashed px-3 py-4 text-xs">
+                    Eliminá alguna imagen para cargar otra.
+                  </div>
+                )}
+                {uploadedImages.length > 0 ? (
+                  <div className="grid gap-2 sm:grid-cols-2">
+                    {uploadedImages.map((image, index) => (
+                      <div
+                        key={image.key}
+                        className="border-border/70 bg-background/70 flex flex-col gap-2 rounded-md border p-2 shadow-sm"
+                      >
+                        <div className="relative overflow-hidden rounded-md">
+                          <img
+                            src={image.url}
+                            alt={image.name ?? `Captura ${index + 1}`}
+                            className="h-32 w-full object-cover"
+                          />
+                          <Button
+                            type="button"
+                            size="icon"
+                            variant="ghost"
+                            onClick={() => handleRemoveImage(image.key)}
+                            aria-label="Eliminar imágen"
+                            className="absolute right-1 top-1 size-7 rounded-full bg-background/80 text-muted-foreground hover:bg-background"
+                          >
+                            <Trash2 className="size-4" />
+                          </Button>
+                        </div>
+                        <div className="flex flex-col gap-1 text-xs">
+                          <span className="text-foreground font-medium">
+                            Imágen {index + 1}
+                          </span>
+                          {image.name ? (
+                            <span className="text-muted-foreground truncate">
+                              {image.name}
+                            </span>
+                          ) : null}
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                ) : null}
+                {isUploadingImages ? (
+                  <div className="text-muted-foreground flex items-center gap-2 text-xs">
+                    <Loader2 className="size-3 animate-spin" />
+                    Subiendo imágenes...
+                  </div>
+                ) : null}
+              </div>
+            )}
 
-            <DialogFooter>
+            <DialogFooter className="gap-2 sm:flex-row sm:justify-end">
               <Button
                 type="button"
                 variant="secondary"
@@ -724,12 +940,35 @@ export default function SaveMatch() {
               >
                 Cancelar
               </Button>
-              <Button type="submit" disabled={matchSave.isPending}>
-                {matchSave.isPending && (
-                  <Loader2 className="size-4 animate-spin" />
-                )}
-                Finalizar
-              </Button>
+              {step === 2 ? (
+                <>
+                  <Button
+                    type="button"
+                    variant="outline"
+                    onClick={handleBackToPlacements}
+                    disabled={matchSave.isPending || isUploadingImages}
+                  >
+                    Volver
+                  </Button>
+                  <Button
+                    type="submit"
+                    disabled={matchSave.isPending || isUploadingImages}
+                  >
+                    {matchSave.isPending && (
+                      <Loader2 className="size-4 animate-spin" />
+                    )}
+                    Finalizar
+                  </Button>
+                </>
+              ) : (
+                <Button
+                  type="button"
+                  onClick={handleContinueToImages}
+                  disabled={matchSave.isPending}
+                >
+                  Continuar
+                </Button>
+              )}
             </DialogFooter>
 
             {errorMessage ? (

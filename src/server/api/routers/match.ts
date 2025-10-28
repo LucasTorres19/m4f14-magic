@@ -3,7 +3,7 @@ import { eq, inArray } from "drizzle-orm";
 import { z } from "zod";
 
 import { createTRPCRouter, publicProcedure } from "@/server/api/trpc";
-import { matches, players, playersToMatches } from "@/server/db/schema";
+import { matchImages, matches, players, playersToMatches } from "@/server/db/schema";
 
 export const matchRouter = createTRPCRouter({
   save: publicProcedure
@@ -29,6 +29,39 @@ export const matchRouter = createTRPCRouter({
               message: "Each placement must be unique",
             },
           ),
+        images: z
+          .array(
+            z.object({
+              url: z.string().url(),
+              key: z.string().min(1),
+              name: z.string().optional(),
+              order: z.number().int().min(0),
+            }),
+          )
+          .max(6)
+          .superRefine((images, ctx) => {
+            const orderSet = new Set<number>();
+            const keySet = new Set<string>();
+            for (const image of images) {
+              if (orderSet.has(image.order)) {
+                ctx.addIssue({
+                  code: z.ZodIssueCode.custom,
+                  message: "Each image must have a unique order",
+                });
+                break;
+              }
+              orderSet.add(image.order);
+              if (keySet.has(image.key)) {
+                ctx.addIssue({
+                  code: z.ZodIssueCode.custom,
+                  message: "Each image must have a unique key",
+                });
+                break;
+              }
+              keySet.add(image.key);
+            }
+          })
+          .optional(),
       }),
     )
     .mutation(async ({ ctx, input }) => {
@@ -126,6 +159,20 @@ export const matchRouter = createTRPCRouter({
 
         if (playerMatchRows.length > 0) {
           await tx.insert(playersToMatches).values(playerMatchRows);
+        }
+
+        const images = input.images ?? [];
+        if (images.length > 0) {
+          const sortedImages = [...images].sort((a, b) => a.order - b.order);
+          await tx.insert(matchImages).values(
+            sortedImages.map((image, index) => ({
+              matchId: matchRow.id,
+              fileKey: image.key,
+              fileUrl: image.url,
+              originalName: image.name ?? null,
+              displayOrder: index,
+            })),
+          );
         }
         return;
       });

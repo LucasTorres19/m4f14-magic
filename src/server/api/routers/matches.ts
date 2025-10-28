@@ -2,7 +2,12 @@ import { asc, desc, eq, inArray } from "drizzle-orm";
 import { z } from "zod";
 
 import { createTRPCRouter, publicProcedure } from "@/server/api/trpc";
-import { matches, players, playersToMatches } from "@/server/db/schema";
+import {
+  matchImages,
+  matches,
+  players,
+  playersToMatches,
+} from "@/server/db/schema";
 
 export const matchesRouter = createTRPCRouter({
   findAll: publicProcedure
@@ -75,6 +80,51 @@ export const matchesRouter = createTRPCRouter({
         });
       }
 
+      const imageRows =
+        matchIds.length === 0
+          ? []
+          : await ctx.db
+              .select({
+                id: matchImages.id,
+                matchId: matchImages.matchId,
+                fileKey: matchImages.fileKey,
+                fileUrl: matchImages.fileUrl,
+                originalName: matchImages.originalName,
+                displayOrder: matchImages.displayOrder,
+              })
+              .from(matchImages)
+              .where(inArray(matchImages.matchId, matchIds))
+              .orderBy(
+                asc(matchImages.matchId),
+                asc(matchImages.displayOrder),
+                asc(matchImages.id),
+              );
+
+      const imagesByMatch = new Map<
+        number,
+        {
+          id: number;
+          fileKey: string;
+          fileUrl: string;
+          originalName: string | null;
+          displayOrder: number;
+        }[]
+      >();
+
+      for (const row of imageRows) {
+        if (!imagesByMatch.has(row.matchId)) {
+          imagesByMatch.set(row.matchId, []);
+        }
+
+        imagesByMatch.get(row.matchId)?.push({
+          id: row.id,
+          fileKey: row.fileKey,
+          fileUrl: row.fileUrl,
+          originalName: row.originalName,
+          displayOrder: row.displayOrder,
+        });
+      }
+
       return matchRows.map((match) => ({
         id: match.id,
         startingHp: match.startingHp,
@@ -88,6 +138,16 @@ export const matchesRouter = createTRPCRouter({
               name: player.name,
               backgroundColor: player.backgroundColor,
               placement: player.placement,
+            })) ?? [],
+        images:
+          imagesByMatch
+            .get(match.id)
+            ?.map((image) => ({
+              id: image.id,
+              key: image.fileKey,
+              url: image.fileUrl,
+              name: image.originalName,
+              order: image.displayOrder,
             })) ?? [],
       }));
     }),
