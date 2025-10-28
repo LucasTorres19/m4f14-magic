@@ -21,7 +21,7 @@ export default function RootLayout({
 }: Readonly<{ children: React.ReactNode }>) {
   return (
     <html lang="es" className={`${geist.variable} dark`}>
-      <body className="overflow-hidden">
+      <body className={`font-sans antialiased`}>
         <TRPCReactProvider>{children}</TRPCReactProvider>
       </body>
     </html>
