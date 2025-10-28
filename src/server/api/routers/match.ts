@@ -19,11 +19,15 @@ export const matchRouter = createTRPCRouter({
           .array()
           .refine(
             (arr) => new Set(arr.map((u) => u.name)).size === arr.length,
-            { message: "Each name must be unique" },
+            {
+              message: "Each name must be unique",
+            },
           )
           .refine(
             (arr) => new Set(arr.map((u) => u.placement)).size === arr.length,
-            { message: "Each placement must be unique" },
+            {
+              message: "Each placement must be unique",
+            },
           ),
       }),
     )

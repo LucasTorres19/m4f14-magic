@@ -1,22 +1,22 @@
 "use client";
 
-import * as React from "react";
-import { useSettings } from "@/app/_stores/use-settings";
 import { useCurrentMatch } from "@/app/_stores/use-current-match";
+import { useSettings } from "@/app/_stores/use-settings";
+import { Button } from "@/components/ui/button";
 import {
   Dialog,
+  DialogClose,
   DialogContent,
   DialogDescription,
   DialogFooter,
   DialogHeader,
   DialogTitle,
   DialogTrigger,
-  DialogClose,
 } from "@/components/ui/dialog";
-import { Label } from "@/components/ui/label";
 import { Input } from "@/components/ui/input";
-import { Button } from "@/components/ui/button";
+import { Label } from "@/components/ui/label";
 import { randomHexColor } from "@/utils/random";
+import * as React from "react";
 
 type SettingsDialogProps = {
   trigger: React.ReactNode;
@@ -49,8 +49,6 @@ export default function SettingsDialog({
   const settingsSet = useSettings((s) => s.set);
   const startingHpStore = useSettings((s) => s.startingHp);
   const playersCountStore = useSettings((s) => s.playersCount);
-
-  const resetMatch = useCurrentMatch((s) => s.resetMatch);
 
   const [localOpen, setLocalOpen] = React.useState(false);
   const controlled = typeof open === "boolean";

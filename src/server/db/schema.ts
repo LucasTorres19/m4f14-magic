@@ -3,9 +3,8 @@
 
 import { sql } from "drizzle-orm";
 import {
-  index,
-  sqliteTableCreator,
   primaryKey,
+  sqliteTableCreator,
   uniqueIndex,
 } from "drizzle-orm/sqlite-core";
 

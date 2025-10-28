@@ -1,6 +1,13 @@
 "use client";
 
 import {
+  Check,
+  ChevronsUpDown,
+  GripVertical,
+  Loader2,
+  Save,
+} from "lucide-react";
+import {
   useCallback,
   useEffect,
   useMemo,
@@ -10,15 +17,17 @@ import {
   type PointerEvent as ReactPointerEvent,
 } from "react";
 import { useShallow } from "zustand/react/shallow";
-import {
-  GripVertical,
-  Loader2,
-  Save,
-  ChevronsUpDown,
-  Check,
-} from "lucide-react";
 
 import { Button } from "@/components/ui/button";
+import {
+  Command,
+  CommandEmpty,
+  CommandGroup,
+  CommandInput,
+  CommandItem,
+  CommandList,
+  CommandSeparator,
+} from "@/components/ui/command";
 import {
   Dialog,
   DialogContent,
@@ -33,21 +42,12 @@ import {
   PopoverContent,
   PopoverTrigger,
 } from "@/components/ui/popover";
-import {
-  Command,
-  CommandEmpty,
-  CommandGroup,
-  CommandInput,
-  CommandItem,
-  CommandList,
-  CommandSeparator,
-} from "@/components/ui/command";
 
+import { cn } from "@/lib/utils";
+import { api } from "@/trpc/react";
+import { toast } from "sonner";
 import { useCurrentMatch } from "../_stores/use-current-match";
 import { useSettings } from "../_stores/use-settings";
-import { api } from "@/trpc/react";
-import { cn } from "@/lib/utils";
-import { toast } from "sonner";
 
 type RankedPlayer = {
   id: string;
@@ -181,7 +181,7 @@ function PlayerNameCombobox({
             <CommandEmpty>
               {hasSearchText ? (
                 <span className="text-sm">
-                  No encontramos "{trimmedSearch}".
+                  No encontramos &quot;{trimmedSearch}&quot;.
                 </span>
               ) : (
                 <span className="text-sm">Sin sugerencias guardadas.</span>
@@ -229,7 +229,7 @@ function PlayerNameCombobox({
                     onSelect={(selectedValue) => handleSelect(selectedValue)}
                   >
                     <span className="flex-1 truncate">
-                      Usar "{trimmedSearch}"
+                      Usar &quot;{trimmedSearch}&quot;
                     </span>
                   </CommandItem>
                 </CommandGroup>
@@ -262,19 +262,11 @@ function computeInitialRanking(
 
     const elimA = eliminationOrder.get(a.id);
     const elimB = eliminationOrder.get(b.id);
-
     const scoreA =
-      elimA === undefined
-        ? aliveA
-          ? Number.POSITIVE_INFINITY
-          : Number.NEGATIVE_INFINITY
-        : elimA;
+      elimA ?? (aliveA ? Number.POSITIVE_INFINITY : Number.NEGATIVE_INFINITY);
+
     const scoreB =
-      elimB === undefined
-        ? aliveB
-          ? Number.POSITIVE_INFINITY
-          : Number.NEGATIVE_INFINITY
-        : elimB;
+      (elimB ?? aliveB) ? Number.POSITIVE_INFINITY : Number.NEGATIVE_INFINITY;
 
     if (scoreA !== scoreB) return scoreB - scoreA;
 
@@ -580,12 +572,10 @@ export default function SaveMatch() {
       );
       if (!targetElement) return;
 
-      const dropTarget = targetElement.closest(
-        "[data-player-id]",
-      ) as HTMLElement | null;
-      if (!dropTarget) return;
+      const dropTarget = targetElement.closest("[data-player-id]");
+      if (!dropTarget || !(dropTarget instanceof HTMLElement)) return;
 
-      const targetId = dropTarget.dataset.playerId ?? null;
+      const targetId = dropTarget.dataset?.playerId ?? null;
       if (!targetId || targetId === activePointer.playerId) return;
 
       if (targetId === "__drop-end") {

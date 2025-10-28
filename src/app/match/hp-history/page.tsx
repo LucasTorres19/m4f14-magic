@@ -1,14 +1,14 @@
 "use client";
 
 import { useCurrentMatch } from "@/app/_stores/use-current-match";
+import { useSettings } from "@/app/_stores/use-settings";
+import { Button } from "@/components/ui/button";
+import { ScrollArea } from "@/components/ui/scroll-area";
 import { cn } from "@/lib/utils";
+import { Triangle, X } from "lucide-react";
+import Link from "next/link";
 import { useLayoutEffect, useRef, type ComponentProps } from "react";
 import { useShallow } from "zustand/react/shallow";
-import { Triangle, X } from "lucide-react";
-import { ScrollArea } from "@/components/ui/scroll-area";
-import Link from "next/link";
-import { Button } from "@/components/ui/button";
-import { useSettings } from "@/app/_stores/use-settings";
 
 function Pill(props: ComponentProps<"div">) {
   return (
@@ -29,19 +29,18 @@ export default function HistoryPage() {
   const startingHp = useSettings((s) => s.startingHp);
   const containerRef = useRef<HTMLDivElement | null>(null);
 
-  const getViewport = () =>
-    containerRef.current?.querySelector<HTMLDivElement>(
-      "[data-radix-scroll-area-viewport]",
-    ) ?? null;
-
-  const scrollToBottom = (behavior: ScrollBehavior = "auto") => {
-    const vp = getViewport();
-    if (!vp) return;
-
-    queueMicrotask(() => vp.scrollTo({ top: vp.scrollHeight, behavior }));
-  };
-
   useLayoutEffect(() => {
+    const getViewport = () =>
+      containerRef.current?.querySelector<HTMLDivElement>(
+        "[data-radix-scroll-area-viewport]",
+      ) ?? null;
+
+    const scrollToBottom = (behavior: ScrollBehavior = "auto") => {
+      const vp = getViewport();
+      if (!vp) return;
+
+      queueMicrotask(() => vp.scrollTo({ top: vp.scrollHeight, behavior }));
+    };
     scrollToBottom("auto");
   }, []);
 

@@ -1,7 +1,7 @@
 "use client";
 
 import { Button } from "@/components/ui/button";
-import { Sparkles, Layers, Users, LibraryBig, Dices } from "lucide-react";
+import { Dices, Layers, LibraryBig, Sparkles, Users } from "lucide-react";
 import Link from "next/link";
 
 export function MagicMenu() {

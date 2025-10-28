@@ -1,9 +1,9 @@
 import "@/styles/globals.css";
 
-import { type Metadata } from "next";
-import { Geist } from "next/font/google";
 import { Toaster } from "@/components/ui/sonner";
 import { TRPCReactProvider } from "@/trpc/react";
+import { type Metadata } from "next";
+import { Geist } from "next/font/google";
 
 export const metadata: Metadata = {
   title: "Mafia Magic",

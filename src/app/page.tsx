@@ -1,12 +1,10 @@
-import { HydrateClient } from "@/trpc/server";
-import { Button } from "@/components/ui/button";
-import Link from "next/link";
 import { MagicMenu } from "@/components/magic-menu";
+import { HydrateClient } from "@/trpc/server";
 
 export default async function Home() {
   return (
     <HydrateClient>
-      <MagicMenu/>
+      <MagicMenu />
     </HydrateClient>
   );
 }

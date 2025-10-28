@@ -1,21 +1,21 @@
 "use client";
 
-import * as React from "react";
-import { Button } from "@/components/ui/button";
-import { RotateCcw } from "lucide-react";
-import { useSettings } from "@/app/_stores/use-settings";
 import { useCurrentMatch } from "@/app/_stores/use-current-match";
+import { useSettings } from "@/app/_stores/use-settings";
 import {
   AlertDialog,
-  AlertDialogTrigger,
+  AlertDialogAction,
+  AlertDialogCancel,
   AlertDialogContent,
-  AlertDialogHeader,
-  AlertDialogTitle,
   AlertDialogDescription,
   AlertDialogFooter,
-  AlertDialogCancel,
-  AlertDialogAction,
+  AlertDialogHeader,
+  AlertDialogTitle,
+  AlertDialogTrigger,
 } from "@/components/ui/alert-dialog";
+import { Button } from "@/components/ui/button";
+import { RotateCcw } from "lucide-react";
+import * as React from "react";
 
 type ResetMatchButtonProps = {
   trigger?: React.ReactNode;

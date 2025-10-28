@@ -1,19 +1,7 @@
 "use client";
+import ResetButton from "@/components/ResetButton";
+import SettingsDialog from "@/components/SettingsDialog";
 import { Button } from "@/components/ui/button";
-import { useCurrentMatch, type Player } from "../_stores/use-current-match";
-import {
-  RotateCcw,
-  Home,
-  History,
-  Minus,
-  Plus,
-  Settings,
-  Wrench,
-} from "lucide-react";
-import { useLongPress } from "@uidotdev/usehooks";
-import { useRef } from "react";
-import { cn } from "@/lib/utils";
-import type { CSSProperties } from "react";
 import {
   Sheet,
   SheetContent,
@@ -22,9 +10,13 @@ import {
   SheetTitle,
   SheetTrigger,
 } from "@/components/ui/sheet";
+import { cn } from "@/lib/utils";
+import { useLongPress } from "@uidotdev/usehooks";
+import { History, Home, Minus, Plus, RotateCcw, Settings } from "lucide-react";
 import Link from "next/link";
-import SettingsDialog from "@/components/SettingsDialog";
-import ResetButton from "@/components/ResetButton";
+import type { CSSProperties } from "react";
+import { useRef } from "react";
+import { useCurrentMatch, type Player } from "../_stores/use-current-match";
 import SaveMatch from "./save-match";
 
 function Grid(n: number) {

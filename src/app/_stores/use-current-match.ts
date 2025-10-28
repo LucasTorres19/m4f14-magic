@@ -1,8 +1,8 @@
 // use-current-match.ts
+import { randomHexColor } from "@/utils/random";
 import { create } from "zustand";
 import { persist } from "zustand/middleware";
 import { BASE_SETTINGS } from "./use-settings";
-import { randomHexColor } from "@/utils/random";
 
 export interface Player {
   id: string;
