@@ -53,7 +53,7 @@ function PlayerCurrentMatch({ player, flipped = false }: { player: Player; flipp
   const renderBtn = (opts: { side: "left" | "right"; type: "minus" | "plus" }) => {
     const isLeft = opts.side === "left";
     const padSideClass = isLeft ? "pr-12" : "pl-12";
-    const common = `group h-full grow rounded-none ${padSideClass}`;
+    const common = `relative group h-full grow rounded-none ${padSideClass}`;
     if (opts.type === "minus") {
       return (
         <Button
@@ -63,6 +63,14 @@ function PlayerCurrentMatch({ player, flipped = false }: { player: Player; flipp
           variant="ghost"
           onClick={() => updateHp(player.id, -1)}
         >
+           <span
+              className={cn(
+                "text-background text-1xl absolute top-0",
+                flipped ? "right-2/3 rotate-180" : "left-2/3"
+              )}
+            >
+            {player.displayName}
+          </span>
           <Minus
             className={cn(
               "group-active:text-background size-8",
@@ -70,6 +78,7 @@ function PlayerCurrentMatch({ player, flipped = false }: { player: Player; flipp
             )}
             strokeWidth={4}
           />
+         
           <span className={cn("text-background text-5xl", flipped && "rotate-180")}>
             {player.hpUpdated < 0 ? `${Math.abs(player.hpUpdated)}` : ""}
           </span>
