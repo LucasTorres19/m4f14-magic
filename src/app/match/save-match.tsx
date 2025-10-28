@@ -3,7 +3,6 @@
 import {
   useCallback,
   useEffect,
-  useId,
   useMemo,
   useState,
   type DragEvent,
@@ -11,10 +10,15 @@ import {
   type PointerEvent as ReactPointerEvent,
 } from "react";
 import { useShallow } from "zustand/react/shallow";
-import { GripVertical, Loader2, Save } from "lucide-react";
+import {
+  GripVertical,
+  Loader2,
+  Save,
+  ChevronsUpDown,
+  Check,
+} from "lucide-react";
 
 import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
 import {
   Dialog,
   DialogContent,
@@ -24,6 +28,20 @@ import {
   DialogTitle,
   DialogTrigger,
 } from "@/components/ui/dialog";
+import {
+  Popover,
+  PopoverContent,
+  PopoverTrigger,
+} from "@/components/ui/popover";
+import {
+  Command,
+  CommandEmpty,
+  CommandGroup,
+  CommandInput,
+  CommandItem,
+  CommandList,
+  CommandSeparator,
+} from "@/components/ui/command";
 
 import { useCurrentMatch } from "../_stores/use-current-match";
 import { useSettings } from "../_stores/use-settings";
@@ -49,42 +67,178 @@ type SuggestedPlayer = {
   backgroundColor: string;
 };
 
-type PlayerNameInputProps = {
+type PlayerNameComboboxProps = {
   value: string;
   onChange: (value: string) => void;
   placeholder: string;
   ariaLabel: string;
   suggestions: SuggestedPlayer[];
+  onInteractionChange?: (isActive: boolean) => void;
 };
 
-function PlayerNameInput({
+function PlayerNameCombobox({
   value,
   onChange,
   placeholder,
   ariaLabel,
   suggestions,
-}: PlayerNameInputProps) {
-  const generatedId = useId();
-  const datalistId = `player-suggestions-${generatedId.replace(/:/g, "")}`;
+  onInteractionChange,
+}: PlayerNameComboboxProps) {
+  const [open, setOpen] = useState(false);
+  const [search, setSearch] = useState(value);
+
+  useEffect(() => {
+    setSearch(value);
+  }, [value]);
+
+  useEffect(() => {
+    onInteractionChange?.(open);
+  }, [open, onInteractionChange]);
+
+  useEffect(() => {
+    return () => {
+      onInteractionChange?.(false);
+    };
+  }, [onInteractionChange]);
+
+  const normalizedSuggestions = useMemo(() => {
+    const seen = new Set<string>();
+    return suggestions.filter((player) => {
+      const key = player.name.toLowerCase();
+      if (seen.has(key)) return false;
+      seen.add(key);
+      return true;
+    });
+  }, [suggestions]);
+
+  const stopPropagation = useCallback((event: React.SyntheticEvent) => {
+    event.stopPropagation();
+  }, []);
+
+  const handleSelect = useCallback(
+    (name: string) => {
+      const trimmed = name.trim();
+      onChange(trimmed);
+      setSearch(trimmed);
+      setOpen(false);
+    },
+    [onChange],
+  );
+
+  const currentValue = value.trim();
+  const trimmedSearch = search.trim();
+  const hasSearchText = trimmedSearch.length > 0;
 
   return (
-    <>
-      <Input
-        list={datalistId}
-        value={value}
-        onChange={(event) => onChange(event.target.value)}
-        aria-label={ariaLabel}
-        placeholder={placeholder}
-        className="h-8 w-full px-2 text-sm"
-      />
-      <datalist className="max-h-80" id={datalistId}>
-        {suggestions.map((player) => (
-          <option key={player.id} value={player.name}>
-            {player.name}
-          </option>
-        ))}
-      </datalist>
-    </>
+    <Popover
+      open={open}
+      onOpenChange={(nextOpen) => {
+        setOpen(nextOpen);
+        if (!nextOpen && hasSearchText) {
+          onChange(trimmedSearch);
+        }
+      }}
+    >
+      <PopoverTrigger asChild>
+        <Button
+          type="button"
+          variant="outline"
+          role="combobox"
+          aria-label={ariaLabel}
+          aria-expanded={open}
+          className="border-input h-8 w-full justify-between rounded-md px-2 text-left text-sm font-normal"
+        >
+          {currentValue.length > 0 ? (
+            <span className="truncate">{currentValue}</span>
+          ) : (
+            <span className="text-muted-foreground">{placeholder}</span>
+          )}
+          <ChevronsUpDown className="ml-2 size-3.5 shrink-0 opacity-50" />
+        </Button>
+      </PopoverTrigger>
+      <PopoverContent
+        className="p-0"
+        align="start"
+        style={{ width: "var(--radix-popover-trigger-width)" }}
+      >
+        <Command
+          onPointerDown={stopPropagation}
+          onPointerMove={stopPropagation}
+          onPointerUp={stopPropagation}
+          onTouchStart={stopPropagation}
+          onTouchMove={stopPropagation}
+        >
+          <CommandInput
+            value={search}
+            onValueChange={(searchValue) => {
+              setSearch(searchValue);
+              onChange(searchValue);
+            }}
+            placeholder={placeholder}
+            aria-label={ariaLabel}
+          />
+          <CommandList>
+            <CommandEmpty>
+              {hasSearchText ? (
+                <span className="text-sm">
+                  No encontramos "{trimmedSearch}".
+                </span>
+              ) : (
+                <span className="text-sm">Sin sugerencias guardadas.</span>
+              )}
+            </CommandEmpty>
+            {normalizedSuggestions.length > 0 ? (
+              <CommandGroup heading="Invocadores">
+                {normalizedSuggestions.map((player) => {
+                  const displayName = player.name;
+                  const isSelected =
+                    currentValue.length > 0 &&
+                    currentValue.toLowerCase() === displayName.toLowerCase();
+
+                  return (
+                    <CommandItem
+                      key={player.id}
+                      value={displayName}
+                      onSelect={(selectedValue) => handleSelect(selectedValue)}
+                    >
+                      <span
+                        aria-hidden
+                        className="mr-2 inline-block size-2 rounded-full"
+                        style={{ backgroundColor: player.backgroundColor }}
+                      />
+                      <span className="flex-1 truncate">{displayName}</span>
+                      <Check
+                        className={cn(
+                          "size-4 opacity-0",
+                          isSelected && "opacity-100",
+                        )}
+                      />
+                    </CommandItem>
+                  );
+                })}
+              </CommandGroup>
+            ) : null}
+            {hasSearchText ? (
+              <>
+                {normalizedSuggestions.length > 0 ? (
+                  <CommandSeparator className="my-1" />
+                ) : null}
+                <CommandGroup heading="Personalizado">
+                  <CommandItem
+                    value={trimmedSearch}
+                    onSelect={(selectedValue) => handleSelect(selectedValue)}
+                  >
+                    <span className="flex-1 truncate">
+                      Usar "{trimmedSearch}"
+                    </span>
+                  </CommandItem>
+                </CommandGroup>
+              </>
+            ) : null}
+          </CommandList>
+        </Command>
+      </PopoverContent>
+    </Popover>
   );
 }
 
@@ -185,6 +339,7 @@ export default function SaveMatch() {
     pointerId: number;
     playerId: string;
   } | null>(null);
+  const [comboboxActive, setComboboxActive] = useState(false);
 
   useEffect(() => {
     if (!open) {
@@ -202,6 +357,17 @@ export default function SaveMatch() {
       setActivePointer(null);
     }
   }, [open, initialOrder]);
+
+  useEffect(() => {
+    if (comboboxActive) {
+      setActivePointer(null);
+      setDraggingId(null);
+    }
+  }, [comboboxActive]);
+
+  const handleComboboxInteractionChange = useCallback((isActive: boolean) => {
+    setComboboxActive(isActive);
+  }, []);
 
   const matchSave = api.match.save.useMutation({
     onSuccess: () => {
@@ -272,6 +438,11 @@ export default function SaveMatch() {
 
   const handleDragStart = useCallback(
     (event: DragEvent<HTMLLIElement>, id: string) => {
+      if (comboboxActive) {
+        event.preventDefault();
+        return;
+      }
+
       const target = event.target as HTMLElement | null;
       if (
         target?.closest(
@@ -286,7 +457,7 @@ export default function SaveMatch() {
       event.dataTransfer.setData("text/plain", id);
       setDraggingId(id);
     },
-    [],
+    [comboboxActive],
   );
 
   const reorderPlayers = useCallback(
@@ -332,16 +503,18 @@ export default function SaveMatch() {
 
   const handleDragOverItem = useCallback(
     (event: DragEvent<HTMLLIElement>, targetId: string) => {
+      if (comboboxActive) return;
       event.preventDefault();
       event.dataTransfer.dropEffect = "move";
       if (!draggingId || draggingId === targetId) return;
       reorderPlayers(draggingId, targetId);
     },
-    [draggingId, reorderPlayers],
+    [draggingId, reorderPlayers, comboboxActive],
   );
 
   const handleDropItem = useCallback(
     (event: DragEvent<HTMLLIElement>, targetId: string) => {
+      if (comboboxActive) return;
       event.preventDefault();
       const droppedId = event.dataTransfer.getData("text/plain") || draggingId;
       if (droppedId && droppedId !== targetId) {
@@ -349,11 +522,12 @@ export default function SaveMatch() {
       }
       setDraggingId(null);
     },
-    [draggingId, reorderPlayers],
+    [draggingId, reorderPlayers, comboboxActive],
   );
 
   const handleDropToEnd = useCallback(
     (event: DragEvent<HTMLLIElement>) => {
+      if (comboboxActive) return;
       event.preventDefault();
       event.dataTransfer.dropEffect = "move";
       const droppedId = event.dataTransfer.getData("text/plain") || draggingId;
@@ -361,11 +535,13 @@ export default function SaveMatch() {
       reorderPlayers(droppedId, null);
       setDraggingId(null);
     },
-    [draggingId, reorderPlayers],
+    [draggingId, reorderPlayers, comboboxActive],
   );
 
   const handlePointerDown = useCallback(
     (event: ReactPointerEvent<HTMLLIElement>, playerId: string) => {
+      if (comboboxActive) return;
+
       const target = event.target as HTMLElement | null;
       if (
         target?.closest(
@@ -385,11 +561,12 @@ export default function SaveMatch() {
       setActivePointer({ pointerId: event.pointerId, playerId });
       setDraggingId(playerId);
     },
-    [],
+    [comboboxActive],
   );
 
   const handlePointerMove = useCallback(
     (event: ReactPointerEvent<HTMLLIElement>) => {
+      if (comboboxActive) return;
       if (!activePointer || activePointer.pointerId !== event.pointerId) return;
       if (event.pointerType === "mouse") return;
       if (typeof window === "undefined" || typeof document === "undefined")
@@ -418,11 +595,12 @@ export default function SaveMatch() {
 
       reorderPlayers(activePointer.playerId, targetId);
     },
-    [activePointer, reorderPlayers],
+    [activePointer, reorderPlayers, comboboxActive],
   );
 
   const handlePointerUp = useCallback(
     (event: ReactPointerEvent<HTMLLIElement>) => {
+      if (comboboxActive) return;
       if (!activePointer || activePointer.pointerId !== event.pointerId) return;
       if (event.pointerType === "mouse") return;
 
@@ -437,7 +615,7 @@ export default function SaveMatch() {
       setActivePointer(null);
       setDraggingId(null);
     },
-    [activePointer],
+    [activePointer, comboboxActive],
   );
 
   const handleDragEnd = useCallback(() => {
@@ -486,7 +664,7 @@ export default function SaveMatch() {
               {orderedWithPlacements.map((player) => (
                 <li
                   key={player.id}
-                  draggable
+                  draggable={!comboboxActive}
                   onDragStart={(event) => handleDragStart(event, player.id)}
                   onDrop={(event) => handleDropItem(event, player.id)}
                   onDragOver={(event) => handleDragOverItem(event, player.id)}
@@ -496,9 +674,9 @@ export default function SaveMatch() {
                   onPointerCancel={handlePointerUp}
                   onDragEnd={handleDragEnd}
                   data-player-id={player.id}
-                  style={{ touchAction: "none" }}
+                  style={{ touchAction: comboboxActive ? "auto" : "none" }}
                   className={cn(
-                    "border-border bg-muted/50 flex cursor-grab touch-none items-center gap-3 rounded-lg border px-3 py-2 transition-colors active:cursor-grabbing",
+                    "border-border bg-muted/50 flex cursor-grab items-center gap-3 rounded-lg border px-3 py-2 transition-colors active:cursor-grabbing",
                     draggingId === player.id && "opacity-60",
                   )}
                 >
@@ -514,7 +692,7 @@ export default function SaveMatch() {
                   </div>
 
                   <div className="flex grow flex-col gap-1">
-                    <PlayerNameInput
+                    <PlayerNameCombobox
                       value={player.displayName}
                       onChange={(value) =>
                         handleDisplayNameChange(player.id, value)
@@ -522,6 +700,7 @@ export default function SaveMatch() {
                       ariaLabel={`Nombre del invocador en posicion ${player.placement}`}
                       placeholder="Nombre del invocador"
                       suggestions={playerSuggestions}
+                      onInteractionChange={handleComboboxInteractionChange}
                     />
                   </div>
 
@@ -538,8 +717,8 @@ export default function SaveMatch() {
                 onPointerUp={handlePointerUp}
                 onPointerCancel={handlePointerUp}
                 data-player-id="__drop-end"
-                style={{ touchAction: "none" }}
-                className="border-border/70 text-muted-foreground flex touch-none items-center justify-center rounded-lg border border-dashed px-3 py-2 text-xs"
+                style={{ touchAction: comboboxActive ? "auto" : "none" }}
+                className="border-border/70 text-muted-foreground flex items-center justify-center rounded-lg border border-dashed px-3 py-2 text-xs"
               >
                 Soltá acá para mover al final
               </li>
