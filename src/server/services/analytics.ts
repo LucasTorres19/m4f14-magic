@@ -1,11 +1,7 @@
 import { eq, sql } from "drizzle-orm";
 
 import { db } from "@/server/db";
-import {
-  matches,
-  players,
-  playersToMatches,
-} from "@/server/db/schema";
+import { matches, players, playersToMatches } from "@/server/db/schema";
 
 const DAY_IN_MS = 24 * 60 * 60 * 1000;
 const DAYS_IN_WEEK = 7;
@@ -25,7 +21,6 @@ export type AnalyticsSnapshot = {
     totalPlayers: number;
     matchesThisWeek: number;
     activePlayersThisWeek: number;
-    averagePlayersPerMatch: number;
   };
   matchesPerDay: { day: string; matches: number }[];
   weeklyTopPlayers: {
@@ -34,7 +29,6 @@ export type AnalyticsSnapshot = {
     wins: number;
     backgroundColor: string;
   }[];
-  startingHpDistribution: { startingHp: number; matches: number }[];
 };
 
 export const getAnalyticsSnapshot = async (
@@ -86,13 +80,6 @@ export const getAnalyticsSnapshot = async (
       .map((participant) => participant.playerId),
   ).size;
 
-  const averagePlayersPerMatch =
-    totalMatches === 0
-      ? 0
-      : Number(
-          (participantRows.length / totalMatches).toFixed(2),
-        );
-
   const matchesPerDayBuckets = new Map<string, number>();
   for (let index = 0; index < MATCH_DAY_BUCKET; index++) {
     const day = new Date(matchesRangeStart.getTime() + index * DAY_IN_MS);
@@ -104,10 +91,7 @@ export const getAnalyticsSnapshot = async (
       return;
     }
     const key = dateKey(match.createdAt);
-    matchesPerDayBuckets.set(
-      key,
-      (matchesPerDayBuckets.get(key) ?? 0) + 1,
-    );
+    matchesPerDayBuckets.set(key, (matchesPerDayBuckets.get(key) ?? 0) + 1);
   });
 
   const matchesPerDay = Array.from(matchesPerDayBuckets.entries()).map(
@@ -123,10 +107,7 @@ export const getAnalyticsSnapshot = async (
   >();
 
   participantRows.forEach((participant) => {
-    if (
-      participant.placement !== 1 ||
-      participant.matchCreatedAt < weekStart
-    ) {
+    if (participant.placement !== 1 || participant.matchCreatedAt < weekStart) {
       return;
     }
 
@@ -159,25 +140,14 @@ export const getAnalyticsSnapshot = async (
     startingHpTotals.set(match.startingHp, current + 1);
   });
 
-  const startingHpDistribution = Array.from(
-    startingHpTotals.entries(),
-  )
-    .map(([startingHp, count]) => ({
-      startingHp,
-      matches: count,
-    }))
-    .sort((a, b) => a.startingHp - b.startingHp);
-
   return {
     totals: {
       totalMatches,
       totalPlayers,
       matchesThisWeek,
       activePlayersThisWeek,
-      averagePlayersPerMatch,
     },
     matchesPerDay,
     weeklyTopPlayers,
-    startingHpDistribution,
   };
 };

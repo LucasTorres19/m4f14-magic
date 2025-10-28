@@ -55,13 +55,6 @@ const weeklyWinsConfig: ChartConfig = {
   },
 };
 
-const startingHpConfig: ChartConfig = {
-  matches: {
-    label: "Partidas",
-    color: "hsla(var(--secondary), 0.9)",
-  },
-};
-
 const buildMatchesPerDayData = (snapshot: AnalyticsSnapshot) =>
   snapshot.matchesPerDay.map((bucket) => {
     const date = new Date(`${bucket.day}T00:00:00`);
@@ -79,32 +72,45 @@ const buildWeeklyWinsData = (snapshot: AnalyticsSnapshot) =>
     color: player.backgroundColor,
   }));
 
-const buildStartingHpData = (snapshot: AnalyticsSnapshot) =>
-  snapshot.startingHpDistribution.map((entry) => ({
-    startingHp: entry.startingHp,
-    matches: entry.matches,
-  }));
-
 type AnalyticsDashboardProps = {
   analytics: AnalyticsSnapshot;
 };
 
+type Metric = {
+  title: string;
+  value: string;
+  description: string;
+};
+
+function MetricCard({ metric }: { metric: Metric }) {
+  return (
+    <Card
+      key={metric.title}
+      className="border-primary/40 bg-card/75 shadow-xl backdrop-blur transition-transform duration-200 hover:-translate-y-1"
+    >
+      <CardHeader className="gap-4 text-center sm:text-left">
+        <div className="flex flex-wrap items-center justify-center gap-4 sm:justify-between">
+          <CardTitle className="text-muted-foreground text-xs uppercase tracking-[0.3em] sm:tracking-[0.4em]">
+            {metric.title}
+          </CardTitle>
+          <BarChart3 className="text-primary/70 size-4" />
+        </div>
+        <p className="text-foreground text-3xl font-semibold tracking-tight md:text-4xl">
+          {metric.value}
+        </p>
+        <CardDescription className="text-muted-foreground text-xs leading-relaxed">
+          {metric.description}
+        </CardDescription>
+      </CardHeader>
+    </Card>
+  );
+}
+
 export function AnalyticsDashboard({ analytics }: AnalyticsDashboardProps) {
   const matchesPerDayData = buildMatchesPerDayData(analytics);
   const weeklyWinsData = buildWeeklyWinsData(analytics);
-  const startingHpData = buildStartingHpData(analytics);
 
-  const metrics = [
-    {
-      title: "Duelos registrados",
-      value: numberFormatter.format(analytics.totals.totalMatches),
-      description: "Total de enfrentamientos preservados en el grimorio.",
-    },
-    {
-      title: "Magos enlistados",
-      value: numberFormatter.format(analytics.totals.totalPlayers),
-      description: "Invocadores únicos que participaron en partidas.",
-    },
+  const weeklyMetrics: Metric[] = [
     {
       title: "Duelo semanal",
       value: numberFormatter.format(analytics.totals.matchesThisWeek),
@@ -115,13 +121,18 @@ export function AnalyticsDashboard({ analytics }: AnalyticsDashboardProps) {
       value: numberFormatter.format(analytics.totals.activePlayersThisWeek),
       description: "Invocadores que disputaron al menos un duelo esta semana.",
     },
+  ];
+
+  const totalMetrics: Metric[] = [
     {
-      title: "Compañeros por duelo",
-      value: analytics.totals.averagePlayersPerMatch.toLocaleString("es-AR", {
-        minimumFractionDigits: 1,
-        maximumFractionDigits: 1,
-      }),
-      description: "Promedio de participantes en cada enfrentamiento.",
+      title: "Duelos registrados",
+      value: numberFormatter.format(analytics.totals.totalMatches),
+      description: "Total de enfrentamientos preservados en el grimorio.",
+    },
+    {
+      title: "Magos enlistados",
+      value: numberFormatter.format(analytics.totals.totalPlayers),
+      description: "Invocadores únicos que participaron en partidas.",
     },
   ];
 
@@ -158,26 +169,13 @@ export function AnalyticsDashboard({ analytics }: AnalyticsDashboardProps) {
 
       <section className="mb-12 space-y-6">
         <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-3">
-          {metrics.map((metric) => (
-            <Card
-              key={metric.title}
-              className="border-primary/40 bg-card/75 shadow-xl backdrop-blur transition-transform duration-200 hover:-translate-y-1"
-            >
-              <CardHeader className="gap-4 text-center sm:text-left">
-                <div className="flex flex-wrap items-center justify-center gap-4 sm:justify-between">
-                  <CardTitle className="text-muted-foreground text-xs uppercase tracking-[0.3em] sm:tracking-[0.4em]">
-                    {metric.title}
-                  </CardTitle>
-                  <BarChart3 className="text-primary/70 size-4" />
-                </div>
-                <p className="text-foreground text-3xl font-semibold tracking-tight md:text-4xl">
-                  {metric.value}
-                </p>
-                <CardDescription className="text-muted-foreground text-xs leading-relaxed">
-                  {metric.description}
-                </CardDescription>
-              </CardHeader>
-            </Card>
+          {weeklyMetrics.map((metric, i) => (
+            <MetricCard key={i} metric={metric} />
+          ))}
+        </div>
+        <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-3">
+          {totalMetrics.map((metric, i) => (
+            <MetricCard key={i} metric={metric} />
           ))}
         </div>
       </section>
@@ -285,20 +283,6 @@ export function AnalyticsDashboard({ analytics }: AnalyticsDashboardProps) {
                   </span>
                   invocadores consultaron el oráculo esta semana.
                 </li>
-                <li>
-                  Promedio de{" "}
-                  <span className="text-foreground font-semibold">
-                    {analytics.totals.averagePlayersPerMatch.toLocaleString(
-                      "es-AR",
-                      {
-                        minimumFractionDigits: 1,
-                        maximumFractionDigits: 1,
-                      },
-                    )}{" "}
-                    magos
-                  </span>{" "}
-                  por enfrentamiento.
-                </li>
               </ul>
             </CardContent>
           </Card>
@@ -358,55 +342,10 @@ export function AnalyticsDashboard({ analytics }: AnalyticsDashboardProps) {
 
           <Card className="border-primary/40 bg-card/80 shadow-xl backdrop-blur">
             <CardHeader>
-              <CardTitle className="text-foreground text-lg font-semibold tracking-wide">
-                Rituales de vida inicial
-              </CardTitle>
-              <CardDescription>
-                Distribución de puntos de vida inicial utilizados en las
-                partidas.
-              </CardDescription>
+              <CardTitle className="text-foreground text-lg font-semibold tracking-wide"></CardTitle>
+              <CardDescription></CardDescription>
+              <CardContent className="px-3 pb-6 md:px-0"></CardContent>
             </CardHeader>
-            <CardContent className="px-3 pb-6 md:px-0">
-              {startingHpData.length > 0 ? (
-                <ChartContainer
-                  config={startingHpConfig}
-                  className="min-h-40 w-full sm:h-[280px] md:h-64"
-                >
-                  <BarChart data={startingHpData}>
-                    <CartesianGrid strokeDasharray="4 4" vertical={false} />
-                    <XAxis
-                      dataKey="startingHp"
-                      tickLine={false}
-                      axisLine={false}
-                      tickMargin={12}
-                      label={{
-                        value: "Vida inicial",
-                        position: "insideBottom",
-                        offset: -6,
-                        style: { fill: "var(--muted-foreground)" },
-                      }}
-                    />
-                    <YAxis
-                      allowDecimals={false}
-                      width={46}
-                      tickLine={false}
-                      axisLine={false}
-                      tickMargin={8}
-                    />
-                    <ChartTooltip
-                      content={<ChartTooltipContent indicator="line" />}
-                    />
-                    <Bar
-                      dataKey="matches"
-                      radius={[10, 10, 0, 0]}
-                      fill="var(--color-matches)"
-                    />
-                  </BarChart>
-                </ChartContainer>
-              ) : (
-                <EmptyChartState message="Todavía no hay rituales registrados para revelar la distribución de vida inicial." />
-              )}
-            </CardContent>
           </Card>
         </div>
       </section>
@@ -415,7 +354,7 @@ export function AnalyticsDashboard({ analytics }: AnalyticsDashboardProps) {
 }
 
 const EmptyChartState = ({ message }: { message: string }) => (
-  <div className="text-muted-foreground flex min-h-40 h-[260px] w-full flex-col items-center justify-center gap-3 px-6 text-center text-sm sm:h-[280px] md:h-64">
+  <div className="text-muted-foreground flex min-h-40 w-full flex-col items-center justify-center gap-3 px-6 text-center text-sm sm:h-[280px] md:h-64">
     <Sparkles className="text-primary size-6 animate-pulse" />
     <p>{message}</p>
   </div>
