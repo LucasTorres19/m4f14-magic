@@ -124,7 +124,7 @@ export default function SettingsDialog({
     <Dialog open={isOpen} onOpenChange={setOpen}>
       <DialogTrigger asChild>{trigger}</DialogTrigger>
 
-      <DialogContent className="sm:max-w-md">
+      <DialogContent className="max-h-[90vh] sm:max-w-md overflow-y-scroll overflow-x-hidden">
         <DialogHeader>
           <DialogTitle>Nueva partida</DialogTitle>
           <DialogDescription>
@@ -168,7 +168,7 @@ export default function SettingsDialog({
 
           {/* Nombres y colores opcionales */}
           <div className="flex flex-col gap-4">
-            <Label className="col-span-4 text-center">Nombres de jugadores (opcional)</Label>
+            <Label className="col-span-4 text-center">Configuracion de los magistas</Label>
             {players.map((p, i) => (
               <div className="flex flex-row gap-2" key={p.id}>
                 <div className="flex flex-col gap-2">
@@ -210,7 +210,7 @@ export default function SettingsDialog({
               Cancelar
             </Button>
           </DialogClose>
-          <Button type="button" onClick={onSave} className="ml-3">
+          <Button type="button" onClick={onSave} className="sm:ml-3">
             Guardar y jugar
           </Button>
         </DialogFooter>
