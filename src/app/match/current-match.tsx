@@ -70,7 +70,7 @@ function PlayerCurrentMatch({ player, flipped = false }: { player: Player; flipp
             )}
             strokeWidth={4}
           />
-          <span className="text-background text-5xl">
+          <span className={cn("text-background text-5xl", flipped && "rotate-180")}>
             {player.hpUpdated < 0 ? `${Math.abs(player.hpUpdated)}` : ""}
           </span>
         </Button>
@@ -91,7 +91,7 @@ function PlayerCurrentMatch({ player, flipped = false }: { player: Player; flipp
           )}
           strokeWidth={4}
         />
-        <span className="text-background text-5xl">
+        <span className={cn("text-background text-5xl", flipped && "rotate-180")}>
           {player.hpUpdated > 0 ? `${Math.abs(player.hpUpdated)}` : ""}
         </span>
       </Button>
@@ -164,7 +164,7 @@ export default function CurrentMatch() {
               size="icon"
               className="pointer-events-auto h-full w-full rounded-full shadow-lg"
             >
-              <Settings className="size-4 transition-transform hover:animate-spin" />
+              <Settings className="size-8 transition-transform hover:animate-spin" />
             </Button>
           </SheetTrigger>
           <SheetContent hideClose side="bottom" className="gap-0 px-2 py-4">
