@@ -1,7 +1,7 @@
 "use client";
 import { Button } from "@/components/ui/button";
 import { useCurrentMatch, type Player } from "../_stores/use-current-match";
-import { Home, History, Minus, Plus, Settings } from "lucide-react";
+import { RotateCcw,Home, History, Minus, Plus, Settings } from "lucide-react";
 import { useLongPress } from "@uidotdev/usehooks";
 import { useRef } from "react";
 import { cn } from "@/lib/utils";
@@ -15,6 +15,8 @@ import {
   SheetTrigger,
 } from "@/components/ui/sheet";
 import Link from "next/link";
+import SettingsDialog from "@/components/SettingsDialog";
+import ResetButton from "@/components/ResetButton";
 
 function Grid(n: number) {
   const cols = Math.max(1, Math.ceil(n / 2));
@@ -173,12 +175,29 @@ export default function CurrentMatch() {
               </SheetDescription>
             </SheetHeader>
             <div className="relative flex items-center justify-center">
-              <div className="absolute left-0">
+              <div className="absolute left-0 flex gap-2">
                 <Button size="sm" asChild>
                   <Link href="/">
                     <Home className="size-5" />
                   </Link>
                 </Button>
+
+                 <SettingsDialog
+                  trigger={
+                    <Button size="sm" className="pointer-events-auto">
+                      <Settings className="size-5" />
+                    </Button>
+                  }
+                /> 
+
+                 <ResetButton
+                    trigger={
+                      <Button size="sm" variant="destructive" className="pointer-events-auto">
+                        <RotateCcw className="size-5" />
+                      </Button>
+                    }
+                  />
+                  
               </div>
 
               <Button size="lg" asChild>

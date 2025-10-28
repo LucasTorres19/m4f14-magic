@@ -1,7 +1,9 @@
+// use-current-match.ts
 import { create } from "zustand";
 import { persist } from "zustand/middleware";
 import { BASE_SETTINGS } from "./use-settings";
 import { randomHexColor } from "@/utils/random";
+
 export interface Player {
   id: string;
   displayName: string;
@@ -14,6 +16,7 @@ export interface Player {
 interface CurrentMatchState {
   players: Player[];
   hpHistory: { playerId: string; hpUpdated: number; currentHp: number }[];
+
   updatePlayer: (
     playerId: string,
     data:
@@ -24,23 +27,22 @@ interface CurrentMatchState {
   findPlayer: (playerId: string) => Player | undefined;
 
   updateHp: (playerId: string, amount: number) => void;
-
   setHp: (playerId: string, hp: number) => void;
+
+  resetMatch: (startingHp: number, playersCount: number) => void;
 }
 
 export const useCurrentMatch = create<CurrentMatchState>()(
   persist(
     (set, get) => ({
-      players: Array.from({ length: BASE_SETTINGS.playersCount }).map(
-        (_, i) => ({
-          id: crypto.randomUUID(),
-          displayName: `P${i + 1}`,
-          hp: BASE_SETTINGS.startingHp,
-          backgroundColor: randomHexColor(),
-          hpUpdated: 0,
-          hpUpdatedTimeout: null,
-        }),
-      ),
+      players: Array.from({ length: BASE_SETTINGS.playersCount }).map((_, i) => ({
+        id: crypto.randomUUID(),
+        displayName: `P${i + 1}`,
+        hp: BASE_SETTINGS.startingHp,
+        backgroundColor: randomHexColor(),
+        hpUpdated: 0,
+        hpUpdatedTimeout: null,
+      })),
       hpHistory: [],
       updatePlayer: (playerId, data) =>
         set((state) => ({
@@ -63,30 +65,35 @@ export const useCurrentMatch = create<CurrentMatchState>()(
             hpUpdated: player.hpUpdated + amount,
             hpUpdatedTimeout: setTimeout(() => {
               set((state) => {
-                const player = state.findPlayer(playerId);
-                if (!player) return {};
-                if (player.hpUpdated == 0) return {};
+                const p = state.findPlayer(playerId);
+                if (!p || p.hpUpdated === 0) return {};
                 return {
                   hpHistory: [
                     ...state.hpHistory,
-                    {
-                      playerId,
-                      hpUpdated: player.hpUpdated,
-                      currentHp: player.hp,
-                    },
+                    { playerId, hpUpdated: p.hpUpdated, currentHp: p.hp },
                   ],
                 };
               });
-              get().updatePlayer(playerId, {
-                hpUpdated: 0,
-                hpUpdatedTimeout: null,
-              });
+              get().updatePlayer(playerId, { hpUpdated: 0, hpUpdatedTimeout: null });
             }, 500),
           };
         });
       },
 
       setHp: (playerId, hp) => get().updatePlayer(playerId, { hp }),
+
+      resetMatch: (startingHp, playersCount) =>
+        set(() => ({
+          players: Array.from({ length: playersCount }).map((_, i) => ({
+            id: crypto.randomUUID(),
+            displayName: `P${i + 1}`,
+            hp: startingHp,
+            backgroundColor: randomHexColor(),
+            hpUpdated: 0,
+            hpUpdatedTimeout: null,
+          })),
+          hpHistory: [],
+        })),
     }),
     { name: "current-match-store" },
   ),
