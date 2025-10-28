@@ -65,12 +65,16 @@ export default function SettingsDialog({
         setLocalOpen(v);
       }
     },
-    [controlled, onOpenChange]
+    [controlled, onOpenChange],
   );
 
-  const [startingHp, setStartingHp] = React.useState<number>(startingHpStore ?? 40);
-  const [playersCount, setPlayersCount] = React.useState<number>(playersCountStore ?? 4);
-  const [players, setPlayers] = React.useState<Player[]>([]); 
+  const [startingHp, setStartingHp] = React.useState<number>(
+    startingHpStore ?? 40,
+  );
+  const [playersCount, setPlayersCount] = React.useState<number>(
+    playersCountStore ?? 4,
+  );
+  const [players, setPlayers] = React.useState<Player[]>([]);
 
   React.useEffect(() => {
     if (isOpen) {
@@ -86,7 +90,7 @@ export default function SettingsDialog({
         const existing = prev[i];
         next.push({
           id: existing?.id ?? `player-${i + 1}`,
-          name: existing?.name ?? `Jugador ${i + 1}`,
+          name: existing?.name ?? `invocador ${i + 1}`,
           hp: startingHp,
           color: existing?.color ?? randomHexColor(),
         });
@@ -95,25 +99,34 @@ export default function SettingsDialog({
     });
   }, [startingHp, playersCount]);
 
-  const clamp = (v: number, min: number, max: number) => Math.max(min, Math.min(max, v));
+  const clamp = (v: number, min: number, max: number) =>
+    Math.max(min, Math.min(max, v));
   // firma gpt premiun
   const resetMatchWithPlayers = useCurrentMatch((s) => s.resetMatchWithPlayers);
 
   const onSave = () => {
-    const hp = clamp(Number.isFinite(startingHp) ? startingHp : (startingHpStore ?? 40), minHp, maxHp);
-    const count = clamp(Number.isFinite(playersCount) ? playersCount : (playersCountStore ?? 4), minPlayers, maxPlayers);
+    const hp = clamp(
+      Number.isFinite(startingHp) ? startingHp : (startingHpStore ?? 40),
+      minHp,
+      maxHp,
+    );
+    const count = clamp(
+      Number.isFinite(playersCount) ? playersCount : (playersCountStore ?? 4),
+      minPlayers,
+      maxPlayers,
+    );
 
     settingsSet("startingHp", hp);
     settingsSet("playersCount", count);
 
-    // Tomá solo tantos jugadores como 'count'
+    // Tomá solo tantos invocadores como 'count'
     const selected = players.slice(0, count).map((p, i) => ({
-        id: p.id, // si no tenés id en el modal, podés omitirlo
-        name: p.name?.trim() || `P${i + 1}`,
-        color: p.color,
+      id: p.id, // si no tenés id en el modal, podés omitirlo
+      name: p.name?.trim() || `P${i + 1}`,
+      color: p.color,
     }));
 
-    // 🔹 Resetea la partida con los jugadores definidos
+    // 🔹 Resetea la partida con los invocadores definidos
     resetMatchWithPlayers(hp, selected);
 
     onSaved?.(hp, count);
@@ -124,11 +137,11 @@ export default function SettingsDialog({
     <Dialog open={isOpen} onOpenChange={setOpen}>
       <DialogTrigger asChild>{trigger}</DialogTrigger>
 
-      <DialogContent className="max-h-[90vh] sm:max-w-md overflow-y-scroll overflow-x-hidden">
+      <DialogContent className="max-h-[90vh] overflow-x-hidden overflow-y-scroll sm:max-w-md">
         <DialogHeader>
           <DialogTitle>Nueva partida</DialogTitle>
           <DialogDescription>
-            Ajustá la vida inicial y la cantidad de jugadores.
+            Ajustá la vida inicial y la cantidad de invocadores.
           </DialogDescription>
         </DialogHeader>
 
@@ -143,14 +156,16 @@ export default function SettingsDialog({
               min={minHp}
               max={maxHp}
               value={startingHp}
-              onChange={(e) => setStartingHp(Number.parseInt(e.target.value, 10) || minHp)}
+              onChange={(e) =>
+                setStartingHp(Number.parseInt(e.target.value, 10) || minHp)
+              }
               className="col-span-2"
             />
           </div>
 
           <div className="grid grid-cols-4 items-center gap-2">
             <Label htmlFor="playersCount" className="col-span-2">
-              Jugadores
+              invocadores
             </Label>
             <Input
               id="playersCount"
@@ -168,7 +183,9 @@ export default function SettingsDialog({
 
           {/* Nombres y colores opcionales */}
           <div className="flex flex-col gap-4">
-            <Label className="col-span-4 text-center">Configuracion de los magistas</Label>
+            <Label className="col-span-4 text-center">
+              Configuracion de los magistas
+            </Label>
             {players.map((p, i) => (
               <div className="flex flex-row gap-2" key={p.id}>
                 <div className="flex flex-col gap-2">
@@ -179,13 +196,15 @@ export default function SettingsDialog({
                     value={p.name}
                     onChange={(e) =>
                       setPlayers((prev) =>
-                        prev.map((pp, idx) => (idx === i ? { ...pp, name: e.target.value } : pp))
+                        prev.map((pp, idx) =>
+                          idx === i ? { ...pp, name: e.target.value } : pp,
+                        ),
                       )
                     }
                   />
                 </div>
 
-                <div className="flex gap-2 flex-col">
+                <div className="flex flex-col gap-2">
                   <Label htmlFor={`playerColor_${i}`}>Color</Label>
                   <Input
                     id={`playerColor_${i}`}
@@ -194,7 +213,9 @@ export default function SettingsDialog({
                     className="w-[150px]"
                     onChange={(e) =>
                       setPlayers((prev) =>
-                        prev.map((pp, idx) => (idx === i ? { ...pp, color: e.target.value } : pp))
+                        prev.map((pp, idx) =>
+                          idx === i ? { ...pp, color: e.target.value } : pp,
+                        ),
                       )
                     }
                   />

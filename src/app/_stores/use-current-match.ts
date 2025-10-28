@@ -32,7 +32,7 @@ interface CurrentMatchState {
 
   resetMatch: (startingHp: number, playersCount: number) => void;
 
-  // 🔹 Nuevo: resetea con una lista concreta de jugadores (nombre + color)
+  // 🔹 Nuevo: resetea con una lista concreta de invocadores (nombre + color)
   resetMatchWithPlayers: (
     startingHp: number,
     uiPlayers: Array<{ id?: string; name?: string; color?: string }>,
@@ -45,7 +45,7 @@ export const useCurrentMatch = create<CurrentMatchState>()(
       players: Array.from({ length: BASE_SETTINGS.playersCount }).map(
         (_, i) => ({
           id: crypto.randomUUID(),
-          displayName: `P${i + 1}`,
+          displayName: `Invocador ${i + 1}`,
           hp: BASE_SETTINGS.startingHp,
           backgroundColor: randomHexColor(),
           hpUpdated: 0,
@@ -99,7 +99,7 @@ export const useCurrentMatch = create<CurrentMatchState>()(
         set(() => ({
           players: Array.from({ length: playersCount }).map((_, i) => ({
             id: crypto.randomUUID(),
-            displayName: `P${i + 1}`,
+            displayName: `Invocador ${i + 1}`,
             hp: startingHp,
             backgroundColor: randomHexColor(),
             hpUpdated: 0,
@@ -108,12 +108,12 @@ export const useCurrentMatch = create<CurrentMatchState>()(
           hpHistory: [],
         })),
 
-      // 🔹 Nuevo: usar los jugadores definidos por el usuario
+      // 🔹 Nuevo: usar los invocadores definidos por el usuario
       resetMatchWithPlayers: (startingHp, uiPlayers) =>
         set(() => ({
           players: uiPlayers.map((p, i) => ({
             id: p.id ?? crypto.randomUUID(),
-            displayName: p.name?.trim() ?? `P${i + 1}`,
+            displayName: p.name?.trim() ?? `Invocador ${i + 1}`,
             hp: startingHp,
             backgroundColor:
               p.color && /^#([0-9a-f]{3}|[0-9a-f]{6})$/i.test(p.color)

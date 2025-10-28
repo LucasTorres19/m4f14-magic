@@ -40,7 +40,7 @@ export default function ResetButton({
 
   const desc =
     description ??
-    `Esto reiniciará la partida con ${startingHp} de vida inicial y ${playersCount} jugadores. ¿Querés continuar?`;
+    `Esto reiniciará la partida con ${startingHp} de vida inicial y ${playersCount} invocadores. ¿Querés continuar?`;
 
   const handleReset = () => {
     resetMatch(startingHp, playersCount);
@@ -51,7 +51,11 @@ export default function ResetButton({
     <AlertDialog>
       <AlertDialogTrigger asChild>
         {trigger ?? (
-          <Button size="sm" variant="destructive" className="pointer-events-auto">
+          <Button
+            size="sm"
+            variant="destructive"
+            className="pointer-events-auto"
+          >
             <RotateCcw className="size-5" />
           </Button>
         )}
@@ -65,7 +69,9 @@ export default function ResetButton({
 
         <AlertDialogFooter>
           <AlertDialogCancel>{cancelLabel}</AlertDialogCancel>
-          <AlertDialogAction onClick={handleReset}>{confirmLabel}</AlertDialogAction>
+          <AlertDialogAction onClick={handleReset}>
+            {confirmLabel}
+          </AlertDialogAction>
         </AlertDialogFooter>
       </AlertDialogContent>
     </AlertDialog>

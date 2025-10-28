@@ -25,6 +25,7 @@ import {
 import Link from "next/link";
 import SettingsDialog from "@/components/SettingsDialog";
 import ResetButton from "@/components/ResetButton";
+import SaveMatch from "./save-match";
 
 function Grid(n: number) {
   const cols = Math.max(1, Math.ceil(n / 2));
@@ -247,6 +248,7 @@ export default function CurrentMatch() {
                   HISTORY
                 </Link>
               </Button>
+              <SaveMatch />
             </div>
           </SheetContent>
         </Sheet>
