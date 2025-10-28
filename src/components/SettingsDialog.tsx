@@ -16,6 +16,7 @@ import {
 import { Label } from "@/components/ui/label";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
+import { randomHexColor } from "@/utils/random";
 
 type SettingsDialogProps = {
   trigger: React.ReactNode;
@@ -26,6 +27,13 @@ type SettingsDialogProps = {
   minPlayers?: number;
   maxPlayers?: number;
   onSaved?: (hp: number, players: number) => void;
+};
+
+type Player = {
+  id: string;
+  name: string;
+  hp: number;
+  color: string;
 };
 
 export default function SettingsDialog({
@@ -47,28 +55,66 @@ export default function SettingsDialog({
   const [localOpen, setLocalOpen] = React.useState(false);
   const controlled = typeof open === "boolean";
   const isOpen = controlled ? open : localOpen;
-  const setOpen = controlled ? onOpenChange! : setLocalOpen;
+
+  // Evita la unión de tipos en setOpen y asegura callable siempre
+  const setOpen = React.useCallback(
+    (v: boolean) => {
+      if (controlled) {
+        onOpenChange?.(v);
+      } else {
+        setLocalOpen(v);
+      }
+    },
+    [controlled, onOpenChange]
+  );
 
   const [startingHp, setStartingHp] = React.useState<number>(startingHpStore ?? 40);
   const [playersCount, setPlayersCount] = React.useState<number>(playersCountStore ?? 4);
+  const [players, setPlayers] = React.useState<Player[]>([]); 
 
   React.useEffect(() => {
     if (isOpen) {
-      setStartingHp(startingHpStore);
-      setPlayersCount(playersCountStore);
+      setStartingHp(startingHpStore ?? 40);
+      setPlayersCount(playersCountStore ?? 4);
     }
   }, [isOpen, startingHpStore, playersCountStore]);
 
+  React.useEffect(() => {
+    setPlayers((prev) => {
+      const next: Player[] = [];
+      for (let i = 0; i < playersCount; i++) {
+        const existing = prev[i];
+        next.push({
+          id: existing?.id ?? `player-${i + 1}`,
+          name: existing?.name ?? `Jugador ${i + 1}`,
+          hp: startingHp,
+          color: existing?.color ?? randomHexColor(),
+        });
+      }
+      return next;
+    });
+  }, [startingHp, playersCount]);
+
   const clamp = (v: number, min: number, max: number) => Math.max(min, Math.min(max, v));
+  // firma gpt premiun
+  const resetMatchWithPlayers = useCurrentMatch((s) => s.resetMatchWithPlayers);
 
   const onSave = () => {
-    const hp = clamp(Number.isFinite(startingHp) ? startingHp : startingHpStore, minHp, maxHp);
-    const count = clamp(Number.isFinite(playersCount) ? playersCount : playersCountStore, minPlayers, maxPlayers);
+    const hp = clamp(Number.isFinite(startingHp) ? startingHp : (startingHpStore ?? 40), minHp, maxHp);
+    const count = clamp(Number.isFinite(playersCount) ? playersCount : (playersCountStore ?? 4), minPlayers, maxPlayers);
 
     settingsSet("startingHp", hp);
     settingsSet("playersCount", count);
 
-    resetMatch(hp, count);
+    // Tomá solo tantos jugadores como 'count'
+    const selected = players.slice(0, count).map((p, i) => ({
+        id: p.id, // si no tenés id en el modal, podés omitirlo
+        name: p.name?.trim() || `P${i + 1}`,
+        color: p.color,
+    }));
+
+    // 🔹 Resetea la partida con los jugadores definidos
+    resetMatchWithPlayers(hp, selected);
 
     onSaved?.(hp, count);
     setOpen(false);
@@ -82,7 +128,7 @@ export default function SettingsDialog({
         <DialogHeader>
           <DialogTitle>Nueva partida</DialogTitle>
           <DialogDescription>
-            Ajustá la vida inicial y la cantidad de jugadores.    
+            Ajustá la vida inicial y la cantidad de jugadores.
           </DialogDescription>
         </DialogHeader>
 
@@ -97,7 +143,7 @@ export default function SettingsDialog({
               min={minHp}
               max={maxHp}
               value={startingHp}
-              onChange={(e) => setStartingHp(parseInt(e.target.value, 10))}
+              onChange={(e) => setStartingHp(Number.parseInt(e.target.value, 10) || minHp)}
               className="col-span-2"
             />
           </div>
@@ -112,9 +158,49 @@ export default function SettingsDialog({
               min={minPlayers}
               max={maxPlayers}
               value={playersCount}
-              onChange={(e) => setPlayersCount(parseInt(e.target.value, 10))}
+              onChange={(e) => {
+                const n = Number.parseInt(e.target.value, 10);
+                setPlayersCount(Number.isFinite(n) ? n : minPlayers);
+              }}
               className="col-span-2"
             />
+          </div>
+
+          {/* Nombres y colores opcionales */}
+          <div className="flex flex-col gap-4">
+            <Label className="col-span-4 text-center">Nombres de jugadores (opcional)</Label>
+            {players.map((p, i) => (
+              <div className="flex flex-row gap-2" key={p.id}>
+                <div className="flex flex-col gap-2">
+                  <Label htmlFor={`playerName_${i}`}>Nombre</Label>
+                  <Input
+                    id={`playerName_${i}`}
+                    type="text"
+                    value={p.name}
+                    onChange={(e) =>
+                      setPlayers((prev) =>
+                        prev.map((pp, idx) => (idx === i ? { ...pp, name: e.target.value } : pp))
+                      )
+                    }
+                  />
+                </div>
+
+                <div className="flex gap-2 flex-col">
+                  <Label htmlFor={`playerColor_${i}`}>Color</Label>
+                  <Input
+                    id={`playerColor_${i}`}
+                    type="color"
+                    value={p.color || "#000000"} // ✅ color válido siempre
+                    className="w-[150px]"
+                    onChange={(e) =>
+                      setPlayers((prev) =>
+                        prev.map((pp, idx) => (idx === i ? { ...pp, color: e.target.value } : pp))
+                      )
+                    }
+                  />
+                </div>
+              </div>
+            ))}
           </div>
         </div>
 

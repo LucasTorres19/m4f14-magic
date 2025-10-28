@@ -9,7 +9,8 @@ export interface Player {
   displayName: string;
   hp: number;
   hpUpdated: number;
-  hpUpdatedTimeout: NodeJS.Timeout | null;
+  // Evita problemas de TS en browser
+  hpUpdatedTimeout: ReturnType<typeof setTimeout> | null;
   backgroundColor: string;
 }
 
@@ -30,20 +31,29 @@ interface CurrentMatchState {
   setHp: (playerId: string, hp: number) => void;
 
   resetMatch: (startingHp: number, playersCount: number) => void;
+
+  // 🔹 Nuevo: resetea con una lista concreta de jugadores (nombre + color)
+  resetMatchWithPlayers: (
+    startingHp: number,
+    uiPlayers: Array<{ id?: string; name?: string; color?: string }>,
+  ) => void;
 }
 
 export const useCurrentMatch = create<CurrentMatchState>()(
   persist(
     (set, get) => ({
-      players: Array.from({ length: BASE_SETTINGS.playersCount }).map((_, i) => ({
-        id: crypto.randomUUID(),
-        displayName: `P${i + 1}`,
-        hp: BASE_SETTINGS.startingHp,
-        backgroundColor: randomHexColor(),
-        hpUpdated: 0,
-        hpUpdatedTimeout: null,
-      })),
+      players: Array.from({ length: BASE_SETTINGS.playersCount }).map(
+        (_, i) => ({
+          id: crypto.randomUUID(),
+          displayName: `P${i + 1}`,
+          hp: BASE_SETTINGS.startingHp,
+          backgroundColor: randomHexColor(),
+          hpUpdated: 0,
+          hpUpdatedTimeout: null,
+        }),
+      ),
       hpHistory: [],
+
       updatePlayer: (playerId, data) =>
         set((state) => ({
           players: state.players.map((player) =>
@@ -74,7 +84,10 @@ export const useCurrentMatch = create<CurrentMatchState>()(
                   ],
                 };
               });
-              get().updatePlayer(playerId, { hpUpdated: 0, hpUpdatedTimeout: null });
+              get().updatePlayer(playerId, {
+                hpUpdated: 0,
+                hpUpdatedTimeout: null,
+              });
             }, 500),
           };
         });
@@ -89,6 +102,23 @@ export const useCurrentMatch = create<CurrentMatchState>()(
             displayName: `P${i + 1}`,
             hp: startingHp,
             backgroundColor: randomHexColor(),
+            hpUpdated: 0,
+            hpUpdatedTimeout: null,
+          })),
+          hpHistory: [],
+        })),
+
+      // 🔹 Nuevo: usar los jugadores definidos por el usuario
+      resetMatchWithPlayers: (startingHp, uiPlayers) =>
+        set(() => ({
+          players: uiPlayers.map((p, i) => ({
+            id: p.id ?? crypto.randomUUID(),
+            displayName: p.name?.trim() ?? `P${i + 1}`,
+            hp: startingHp,
+            backgroundColor:
+              p.color && /^#([0-9a-f]{3}|[0-9a-f]{6})$/i.test(p.color)
+                ? p.color
+                : randomHexColor(),
             hpUpdated: 0,
             hpUpdatedTimeout: null,
           })),
