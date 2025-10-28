@@ -1,14 +1,14 @@
 "use client"
 
 import { Button } from "@/components/ui/button"
-import { Sparkles, Scroll, History, Layers, Users,LibraryBig,Dices   } from "lucide-react"
+import { Sparkles,Layers, Users,LibraryBig,Dices   } from "lucide-react"
 import Link from "next/link"
 
 export function MagicMenu() {
   return (
     <div className="min-h-screen relative overflow-hidden bg-background">
       <div className="absolute inset-0 pointer-events-none">
-        {[...Array(8)].map((_, i) => (
+        {Array.from({length: 8 }).map((_, i) => (
           <div
             key={i}
             className="absolute flying-card"
