@@ -1,7 +1,14 @@
 "use client";
 
 import { Button } from "@/components/ui/button";
-import { Dices, Layers, LibraryBig, Sparkles, Users } from "lucide-react";
+import {
+  BarChart3,
+  Dices,
+  Layers,
+  LibraryBig,
+  Sparkles,
+  Users,
+} from "lucide-react";
 import Link from "next/link";
 
 export function MagicMenu() {
@@ -91,6 +98,20 @@ export function MagicMenu() {
               >
                 <LibraryBig className="mr-2 h-4 w-4" />
                 Historia
+              </Link>
+            </Button>
+
+            <Button
+              asChild
+              variant="outline"
+              className="bg-muted/30 hover:bg-muted/50 text-foreground border-border hover:border-primary/50 h-12 w-full text-base font-medium transition-all duration-300 hover:scale-105"
+            >
+              <Link
+                href="/analytics"
+                className="flex w-full items-center justify-center"
+              >
+                <BarChart3 className="mr-2 h-4 w-4" />
+                Oráculo
               </Link>
             </Button>
 
