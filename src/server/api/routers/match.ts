@@ -3,7 +3,13 @@ import { eq, inArray } from "drizzle-orm";
 import { z } from "zod";
 
 import { createTRPCRouter, publicProcedure } from "@/server/api/trpc";
-import { matchImages, matches, players, playersToMatches } from "@/server/db/schema";
+import {
+  commanders,
+  matchImages,
+  matches,
+  players,
+  playersToMatches,
+} from "@/server/db/schema";
 
 export const matchRouter = createTRPCRouter({
   save: publicProcedure
@@ -15,6 +21,7 @@ export const matchRouter = createTRPCRouter({
             name: z.string(),
             backgroundColor: z.string(),
             placement: z.number().positive().int(),
+            commanderId: z.number().positive().int().optional(),
           })
           .array()
           .refine(
@@ -123,6 +130,37 @@ export const matchRouter = createTRPCRouter({
           playersByName.set(inserted.name, inserted);
         }
 
+        const commanderIds = input.players
+          .map((player) => player.commanderId)
+          .filter((id): id is number => typeof id === "number");
+
+        if (commanderIds.length > 0) {
+          const uniqueCommanderIds = Array.from(new Set(commanderIds));
+          const commanderRows = await tx
+            .select({
+              id: commanders.id,
+            })
+            .from(commanders)
+            .where(inArray(commanders.id, uniqueCommanderIds));
+
+          const foundCommanderIds = new Set(
+            commanderRows.map((commander) => commander.id),
+          );
+
+          const missingCommanderIds = uniqueCommanderIds.filter(
+            (id) => !foundCommanderIds.has(id),
+          );
+
+          if (missingCommanderIds.length > 0) {
+            throw new TRPCError({
+              code: "BAD_REQUEST",
+              message: `Some commanders could not be found: ${missingCommanderIds.join(
+                ", ",
+              )}`,
+            });
+          }
+        }
+
         const [matchRow] = await tx
           .insert(matches)
           .values({ startingHp: input.startingHp })
@@ -154,6 +192,7 @@ export const matchRouter = createTRPCRouter({
             playerId: persisted.id,
             matchId: matchRow.id,
             placement: player.placement,
+            commanderId: player.commanderId ?? null,
           };
         });
 

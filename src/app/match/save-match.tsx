@@ -48,7 +48,7 @@ import {
 import { UploadDropzone } from "@/components/uploadthing";
 
 import { cn } from "@/lib/utils";
-import { api } from "@/trpc/react";
+import { api, type RouterOutputs } from "@/trpc/react";
 import { toast } from "sonner";
 
 import { ScrollArea } from "@/components/ui/scroll-area";
@@ -65,13 +65,17 @@ type RankedPlayer = {
 type OrderedPlayer = Pick<
   RankedPlayer,
   "id" | "displayName" | "backgroundColor"
->;
+> & {
+  commander: CommanderOption | null;
+};
 
 type SuggestedPlayer = {
   id: number;
   name: string;
   backgroundColor: string;
 };
+
+type CommanderOption = RouterOutputs["commanders"]["search"][number];
 
 const MAX_MATCH_IMAGES = 6;
 
@@ -256,6 +260,183 @@ function PlayerNameCombobox({
   );
 }
 
+type CommanderComboboxProps = {
+  value: CommanderOption | null;
+  onSelect: (commander: CommanderOption | null) => void;
+  placeholder: string;
+  ariaLabel: string;
+  onInteractionChange?: (isActive: boolean) => void;
+};
+
+function CommanderCombobox({
+  value,
+  onSelect,
+  placeholder,
+  ariaLabel,
+  onInteractionChange,
+}: CommanderComboboxProps) {
+  const [open, setOpen] = useState(false);
+  const [search, setSearch] = useState(value?.name ?? "");
+
+  useEffect(() => {
+    setSearch(value?.name ?? "");
+  }, [value?.name]);
+
+  useEffect(() => {
+    onInteractionChange?.(open);
+  }, [open, onInteractionChange]);
+
+  useEffect(() => {
+    return () => {
+      onInteractionChange?.(false);
+    };
+  }, [onInteractionChange]);
+
+  const trimmedSearch = search.trim();
+  const queryInput =
+    trimmedSearch.length > 0 ? { query: trimmedSearch } : undefined;
+
+  const commandersQuery = api.commanders.search.useQuery(queryInput, {
+    enabled: open,
+    staleTime: 1000 * 60 * 5,
+  });
+
+  const suggestions = commandersQuery.data ?? [];
+  const isLoading = commandersQuery.isLoading || commandersQuery.isFetching;
+
+  const stopPropagation = useCallback((event: React.SyntheticEvent) => {
+    event.stopPropagation();
+  }, []);
+
+  const handleSelect = useCallback(
+    (commander: CommanderOption | null) => {
+      onSelect(commander);
+      setSearch(commander?.name ?? "");
+      setOpen(false);
+    },
+    [onSelect],
+  );
+
+  const currentValue = value?.name?.trim() ?? "";
+
+  return (
+    <Popover
+      open={open}
+      onOpenChange={(nextOpen) => {
+        setOpen(nextOpen);
+        if (!nextOpen && value?.name) {
+          setSearch(value.name);
+        }
+      }}
+    >
+      <PopoverTrigger asChild>
+        <Button
+          type="button"
+          variant="outline"
+          role="combobox"
+          aria-label={ariaLabel}
+          aria-expanded={open}
+          className="border-input h-8 w-full justify-between rounded-md px-2 text-left text-sm font-normal"
+        >
+          {currentValue.length > 0 ? (
+            <span className="truncate">{currentValue}</span>
+          ) : (
+            <span className="text-muted-foreground">{placeholder}</span>
+          )}
+          <ChevronsUpDown className="ml-2 size-3.5 shrink-0 opacity-50" />
+        </Button>
+      </PopoverTrigger>
+      <PopoverContent
+        className="p-0"
+        align="start"
+        style={{ width: "var(--radix-popover-trigger-width)" }}
+      >
+        <Command
+          onPointerDown={stopPropagation}
+          onPointerMove={stopPropagation}
+          onPointerUp={stopPropagation}
+          onTouchStart={stopPropagation}
+          onTouchMove={stopPropagation}
+        >
+          <CommandInput
+            value={search}
+            onValueChange={(nextValue) => {
+              setSearch(nextValue);
+              if (
+                value &&
+                value?.name?.localeCompare(nextValue, undefined, {
+                  sensitivity: "accent",
+                }) !== 0
+              ) {
+                onSelect(null);
+              }
+            }}
+            placeholder={placeholder}
+            aria-label={ariaLabel}
+          />
+          <CommandList>
+            <CommandEmpty>
+              {isLoading ? (
+                <span className="text-sm text-muted-foreground">
+                  Buscando comandantes...
+                </span>
+              ) : trimmedSearch.length > 0 ? (
+                <span className="text-sm">
+                  No encontramos &quot;{trimmedSearch}&quot;.
+                </span>
+              ) : (
+                <span className="text-sm">No hay comandantes guardados.</span>
+              )}
+            </CommandEmpty>
+
+            {suggestions.length > 0 ? (
+              <CommandGroup heading="Comandantes">
+                {suggestions
+                  .filter((option) => !!option.name)
+                  .map((option) => {
+                    const isSelected = value?.id === option.id;
+                    return (
+                      <CommandItem
+                        key={option.id}
+                        value={option.name!}
+                        title={option.description ?? option.name!}
+                        onSelect={() => handleSelect(option)}
+                      >
+                        <span className="flex-1 truncate">{option.name}</span>
+                        <Check
+                          className={cn(
+                            "size-4 opacity-0",
+                            isSelected && "opacity-100",
+                          )}
+                        />
+                      </CommandItem>
+                    );
+                  })}
+              </CommandGroup>
+            ) : null}
+
+            {value ? (
+              <>
+                {suggestions.length > 0 ? (
+                  <CommandSeparator className="my-1" />
+                ) : null}
+                <CommandGroup heading="Acciones">
+                  <CommandItem
+                    value="__clear"
+                    onSelect={() => handleSelect(null)}
+                  >
+                    Quitar comandante
+                  </CommandItem>
+                </CommandGroup>
+              </>
+            ) : null}
+          </CommandList>
+        </Command>
+      </PopoverContent>
+    </Popover>
+  );
+}
+
 function computeInitialRanking(
   players: RankedPlayer[],
   hpHistory: Array<{ playerId: string; currentHp: number }>,
@@ -291,6 +472,7 @@ function computeInitialRanking(
     id: player.id,
     displayName: player.displayName,
     backgroundColor: player.backgroundColor,
+    commander: null,
   }));
 }
 
@@ -388,6 +570,7 @@ export default function SaveMatch() {
       name: player.displayName.trim(),
       backgroundColor: player.backgroundColor,
       placement: index + 1,
+      commanderId: player.commander?.id,
     }));
 
     const hasEmptyNames = sanitized.some((player) => player.name.length === 0);
@@ -426,6 +609,17 @@ export default function SaveMatch() {
       setIsUploadingImages(false);
     },
   });
+
+  const handleCommanderChange = useCallback(
+    (id: string, commander: CommanderOption | null) => {
+      setOrderedPlayers((previous) =>
+        previous.map((player) =>
+          player.id === id ? { ...player, commander } : player,
+        ),
+      );
+    },
+    [],
+  );
 
   const handleDisplayNameChange = useCallback(
     (id: string, value: string) => {
@@ -816,17 +1010,34 @@ export default function SaveMatch() {
                         {player.initials}
                       </div>
 
-                      <div className="flex grow flex-col gap-1">
-                        <PlayerNameCombobox
-                          value={player.displayName}
-                          onChange={(value) =>
-                            handleDisplayNameChange(player.id, value)
-                          }
-                          ariaLabel={`Nombre del invocador en posición ${player.placement}`}
-                          placeholder="Nombre del invocador"
-                          suggestions={playerSuggestions}
-                          onInteractionChange={handleComboboxInteractionChange}
-                        />
+                      <div className="flex grow flex-col gap-2">
+                        <div>
+                          <PlayerNameCombobox
+                            value={player.displayName}
+                            onChange={(value) =>
+                              handleDisplayNameChange(player.id, value)
+                            }
+                            ariaLabel={`Nombre del invocador en posición ${player.placement}`}
+                            placeholder="Invocador"
+                            suggestions={playerSuggestions}
+                            onInteractionChange={
+                              handleComboboxInteractionChange
+                            }
+                          />
+                        </div>
+                        <div>
+                          <CommanderCombobox
+                            value={player.commander}
+                            onSelect={(commander) =>
+                              handleCommanderChange(player.id, commander)
+                            }
+                            ariaLabel={`Comandante seleccionado por el invocador en posición ${player.placement}`}
+                            placeholder="Comandante"
+                            onInteractionChange={
+                              handleComboboxInteractionChange
+                            }
+                          />
+                        </div>
                       </div>
 
                       <GripVertical className="text-muted-foreground size-4" />

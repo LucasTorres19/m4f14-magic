@@ -27,6 +27,19 @@ export const players = createTable("player", (d) => ({
   updatedAt: d.integer({ mode: "timestamp" }).$onUpdate(() => new Date()),
 }));
 
+export const commanders = createTable("commander", (d) => ({
+  id: d.integer({ mode: "number" }).primaryKey({ autoIncrement: true }),
+  name: d.text({ length: 256 }).unique(),
+  scryfallUri: d.text("scryfall_uri", { length: 1024 }),
+  imageUrl: d.text("image_url", { length: 1024 }),
+  description: d.text({ length: 2048 }),
+  createdAt: d
+    .integer({ mode: "timestamp" })
+    .default(sql`(unixepoch())`)
+    .notNull(),
+  updatedAt: d.integer({ mode: "timestamp" }).$onUpdate(() => new Date()),
+}));
+
 export const matches = createTable("match", (d) => ({
   id: d.integer({ mode: "number" }).primaryKey({ autoIncrement: true }),
   startingHp: d.integer({ mode: "number" }).notNull(),
@@ -64,6 +77,7 @@ export const playersToMatches = createTable(
       .integer("match_id")
       .notNull()
       .references(() => matches.id),
+    commanderId: d.integer("commander_id").references(() => commanders.id),
 
     placement: d.integer().notNull(),
   }),
