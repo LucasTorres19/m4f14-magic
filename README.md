@@ -17,3 +17,4 @@ Pagina oficial de LIMTG (Liga Interna Magic: The Gathering)
 - [ ] Estadísticas  
 - [ ] ABM jugadores  
 - [ ] ABM decks (por ahora con link de Moxfield)
+- [ ] Hacer la home
