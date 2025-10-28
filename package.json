@@ -34,6 +34,7 @@
     "@trpc/react-query": "^11.0.0",
     "@trpc/server": "^11.0.0",
     "@uidotdev/usehooks": "^2.4.1",
+    "@uploadthing/react": "^7.3.3",
     "class-variance-authority": "^0.7.1",
     "clsx": "^2.1.1",
     "cmdk": "^1.1.1",
@@ -49,6 +50,7 @@
     "sonner": "^2.0.7",
     "superjson": "^2.2.1",
     "tailwind-merge": "^3.3.1",
+    "uploadthing": "^7.7.4",
     "zod": "^3.24.2",
     "zustand": "^5.0.8"
   },
