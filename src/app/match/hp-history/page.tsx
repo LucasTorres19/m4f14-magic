@@ -10,6 +10,7 @@ import { Triangle, X } from "lucide-react";
 import Link from "next/link";
 import { useLayoutEffect, useRef, type ComponentProps } from "react";
 import { useShallow } from "zustand/react/shallow";
+import FlyingCards from "@/components/Flying-cards";
 
 function Pill(props: ComponentProps<"div">) {
   return (
@@ -46,7 +47,8 @@ export default function HistoryPage() {
   }, []);
 
   return (
-    <main className="relative flex min-h-screen flex-col gap-2 overflow-y-hidden py-4">
+    <main className="relative flex min-h-screen flex-col gap-2 overflow-y-hidden py-4 bg-background  overflow-hidden">
+      <FlyingCards />
       <div
         className="grid h-10 w-full gap-2"
         style={{
