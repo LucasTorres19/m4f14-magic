@@ -8,8 +8,7 @@ import Link from "next/link"
 import { api } from "@/trpc/react"
 import FlyingCards from "@/components/Flying-cards"
 import Image from "next/image"
-import { Swords,Trophy   } from 'lucide-react';
-
+import { Swords,Trophy,Medal,Flame } from 'lucide-react';
 
 type Commander = {
   id: number
@@ -20,6 +19,8 @@ type Commander = {
   scryfallUri?: string | null
   matchCount: number
   wins: string | number | null
+  otpPlayerId?: number | null
+  otpPlayerName?: string | null
 }
 
 export default function ComandantesPage() {
@@ -28,13 +29,15 @@ export default function ComandantesPage() {
     limit: 50,
   })
 
-  const list = useMemo<Commander[]>(() => (data ?? []) as Commander[], [data])
+    const list = useMemo(() => {
+    return (data ?? []).map((c: Commander) => ({
+        ...c,
+        matchCount: Number(c.matchCount ?? 0),
+        wins: Number(c.wins ?? 0),
+    }))
+    }, [data])
 
-    const pct = (wins?: number | string | null, total?: number | string | null) => {
-    const w = Number(wins ?? 0)
-    const t = Number(total ?? 0)
-    return t > 0 ? Math.round((w / t) * 100) : 0
-    }
+    const pct = (wins?: number, total?: number) => total && total > 0 ? Math.round(((wins ?? 0) / total) * 100) : 0
 
   const [lightbox, setLightbox] = useState<{ src: string; alt: string } | null>(null)
 
@@ -158,7 +161,7 @@ export default function ComandantesPage() {
                         )} 
                     </div>
            
-                    <div className="flex gap-2 mt-5">
+                    <div className="flex gap-2 mt-5 flex-wrap">
                         <span className="text-xs py-1 rounded-full bg-primary/10 text-primary flex w-fit items-center px-3">
                             <Swords className="mr-2" width={20}/>  {commander.matchCount} combates 
                         </span>
@@ -166,6 +169,14 @@ export default function ComandantesPage() {
                        <span className="text-xs py-1 rounded-full bg-primary/10 text-primary flex w-fit items-center px-3">
                         <Trophy className="mr-2" width={20} />
                             {pct(commander.wins, commander.matchCount)}% Winrate
+                        </span>
+
+                        <span className="otp-badge">
+                            <Medal width={20} />
+                            <span className="label">
+                                Mas jugado por {commander.otpPlayerName ?? "—"}
+                            </span>
+                            <span aria-hidden className="heat" />
                         </span>
 
                     </div>

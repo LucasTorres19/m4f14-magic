@@ -6,7 +6,7 @@ import { z } from "zod";
 import { createTRPCRouter, publicProcedure } from "@/server/api/trpc";
 
 import { type db } from "@/server/db";
-import { commanders,playersToMatches} from "@/server/db/schema";
+import { players,commanders,playersToMatches} from "@/server/db/schema";
 
 const COMMANDER_SEARCH_LIMIT = 20;
 const MIN_QUERY_LENGTH_FOR_API = 2;
@@ -185,25 +185,59 @@ export const commandersRouter = createTRPCRouter({
       const trimmed = input?.query?.trim() ?? "";
       const limit = input?.limit ?? COMMANDER_SEARCH_LIMIT;
 
-      const selection = {
-        id: commanders.id,
-        name: commanders.name,
-        imageUrl: commanders.imageUrl,
-        description: commanders.description,
-        scryfallUri: commanders.scryfallUri,
-        matchCount: count(playersToMatches.commanderId).as("matchCount"),
-        wins: sum(
-          sql<number>`CASE WHEN ${playersToMatches.placement} = 1 THEN 1 ELSE 0 END`,
-        ).as("wins"),
-      };
+      const agg = ctx.db
+        .select({
+          commanderId: playersToMatches.commanderId,
+          matchCount: count(playersToMatches.commanderId).as("matchCount"),
+          wins: sum(
+            sql<number>`CASE WHEN ${playersToMatches.placement} = 1 THEN 1 ELSE 0 END`,
+          ).as("wins"),
+        })
+        .from(playersToMatches)
+        .groupBy(playersToMatches.commanderId)
+        .as("agg");
+
+      const otpBase = ctx.db
+        .select({
+          commanderId: playersToMatches.commanderId,
+          playerId: playersToMatches.playerId,
+          cnt: count(sql`1`).as("cnt"),
+          rn: sql<number>`
+            row_number() over (
+              partition by ${playersToMatches.commanderId}
+              order by count(1) desc
+            )
+          `.as("rn"),
+        })
+        .from(playersToMatches)
+        .groupBy(playersToMatches.commanderId, playersToMatches.playerId)
+        .as("otpBase");
+
+      const otp = ctx.db
+        .select({
+          commanderId: otpBase.commanderId,
+          otpPlayerId: otpBase.playerId,
+        })
+        .from(otpBase)
+        .where(eq(otpBase.rn, 1))
+        .as("otp");
 
       let q = ctx.db
-        .select(selection)
+        .select({
+          id: commanders.id,
+          name: commanders.name,
+          imageUrl: commanders.imageUrl,
+          description: commanders.description,
+          scryfallUri: commanders.scryfallUri,
+          matchCount: agg.matchCount,
+          wins: agg.wins,
+          otpPlayerId: otp.otpPlayerId,
+          otpPlayerName: players.name,
+        })
         .from(commanders)
-        .innerJoin(
-          playersToMatches,
-          eq(playersToMatches.commanderId, commanders.id),
-        )
+        .innerJoin(agg, eq(agg.commanderId, commanders.id))
+        .leftJoin(otp, eq(otp.commanderId, commanders.id))
+        .leftJoin(players, eq(players.id, otp.otpPlayerId))
         .$dynamic();
 
       if (trimmed.length > 0) {
@@ -211,23 +245,13 @@ export const commandersRouter = createTRPCRouter({
         q = q.where(like(sql`lower(${commanders.name})`, pattern));
       }
 
-      let qb = q
-        .groupBy(
-          commanders.id,
-          commanders.name,
-          commanders.imageUrl,
-          commanders.description,
-          commanders.scryfallUri,
-        )
-        .limit(limit);
-
       if (input?.sortByMatches) {
-        qb = qb.orderBy(sql`matchCount DESC`, asc(commanders.name));
+        q = q.orderBy(sql`matchCount DESC`, asc(commanders.name));
       } else {
-        qb = qb.orderBy(asc(commanders.name));
+        q = q.orderBy(asc(commanders.name));
       }
 
-      const rows = await qb;
+      const rows = await q.limit(limit);
       return rows;
     }),
 });
