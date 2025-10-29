@@ -1,4 +1,4 @@
-import { asc, like, sql, eq, count,sum } from "drizzle-orm";
+import { asc, count, eq, like, sql, sum } from "drizzle-orm";
 
 import * as Scry from "scryfall-sdk";
 import { z } from "zod";
@@ -6,7 +6,7 @@ import { z } from "zod";
 import { createTRPCRouter, publicProcedure } from "@/server/api/trpc";
 
 import { type db } from "@/server/db";
-import { players,commanders,playersToMatches} from "@/server/db/schema";
+import { commanders, players, playersToMatches } from "@/server/db/schema";
 
 const COMMANDER_SEARCH_LIMIT = 20;
 const MIN_QUERY_LENGTH_FOR_API = 2;
@@ -21,6 +21,7 @@ type CommanderInsert = {
 
 function extractImageUrl(card: Scry.Card): string | null {
   const directImage =
+    card.image_uris?.border_crop ??
     card.image_uris?.normal ??
     card.image_uris?.large ??
     card.image_uris?.png ??
@@ -34,6 +35,7 @@ function extractImageUrl(card: Scry.Card): string | null {
   if (Array.isArray(card.card_faces)) {
     for (const face of card.card_faces) {
       const faceImage =
+        face.image_uris?.border_crop ??
         face.image_uris?.normal ??
         face.image_uris?.large ??
         face.image_uris?.png ??
@@ -175,11 +177,13 @@ export const commandersRouter = createTRPCRouter({
     }),
   list: publicProcedure
     .input(
-      z.object({
-        query: z.string().optional(),
-        limit: z.number().int().positive().max(100).optional(),
-        sortByMatches: z.boolean().optional(),
-      }).optional(),
+      z
+        .object({
+          query: z.string().optional(),
+          limit: z.number().int().positive().max(100).optional(),
+          sortByMatches: z.boolean().optional(),
+        })
+        .optional(),
     )
     .query(async ({ ctx, input }) => {
       const trimmed = input?.query?.trim() ?? "";
