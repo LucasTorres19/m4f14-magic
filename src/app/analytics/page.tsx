@@ -12,7 +12,7 @@ import LastWeekChampions, {
 } from "./last-week-champions";
 import LastWeekMatches, { LastWeekMatchesSkeleton } from "./last-week-matches";
 import { MetricCard, MetricSkeleton, type Metric } from "./metric";
-import OracleInsights from "./oracle-insights";
+import OracleInsights, { OracleInsightsSkeleton } from "./oracle-insights";
 import StreakChampion, { StreakChampionSkeleton } from "./streak-champion";
 
 export default async function AnalyticsPage() {
@@ -132,7 +132,9 @@ export default async function AnalyticsPage() {
           <Suspense fallback={<LastWeekMatchesSkeleton />}>
             <LastWeekMatches />
           </Suspense>
-          <OracleInsights />
+          <Suspense fallback={<OracleInsightsSkeleton />}>
+            <OracleInsights />
+          </Suspense>
         </div>
 
         <div className="grid gap-6 lg:grid-cols-2">
