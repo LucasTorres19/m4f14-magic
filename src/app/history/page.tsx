@@ -201,7 +201,7 @@ const MatchCard = ({ match, gradient }: MatchCardProps) => {
           </div>
         </header>
 
-        <div className="grid gap-6 lg:grid-cols-[minmax(0,1.4fr)_minmax(0,1.8fr)]">
+        <div className="grid gap-6">
           <MatchGallery matchId={match.id} images={match.images} />
 
           <div className="grid gap-4 sm:grid-cols-2">
