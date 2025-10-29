@@ -15,6 +15,9 @@ export interface Player {
 export type CurrentMatchState = {
   players: Player[];
   hpHistory: { playerId: string; hpUpdated: number; currentHp: number }[];
+  currentPlayerIndex: number;
+  timerRemaining: number;
+  isTimerPaused: boolean;
 };
 
 export type CurrentMatchActions = {
@@ -37,6 +40,12 @@ export type CurrentMatchActions = {
     startingHp: number,
     uiPlayers: Array<{ id?: string; name?: string; color?: string }>,
   ) => void;
+
+  nextTurn: () => void;
+  pauseTimer: () => void;
+  resumeTimer: () => void;
+  resetTimer: (timeLimit: number) => void;
+  updateTimer: (remaining: number) => void;
 };
 
 export type CurrentMatchStore = CurrentMatchState & CurrentMatchActions;
@@ -44,6 +53,9 @@ export type CurrentMatchStore = CurrentMatchState & CurrentMatchActions;
 const defaultInitState: CurrentMatchState = {
   players: [],
   hpHistory: [],
+  currentPlayerIndex: 0,
+  timerRemaining: 0,
+  isTimerPaused: false,
 };
 
 export const initCurrentMatchStore = (
@@ -59,6 +71,9 @@ export const initCurrentMatchStore = (
       hpUpdatedTimeout: null,
     })),
     hpHistory: [],
+    currentPlayerIndex: 0,
+    timerRemaining: settings.timerLimit,
+    isTimerPaused: false,
   };
 };
 
@@ -121,6 +136,9 @@ export const createCurrentMatchStore = (
               hpUpdatedTimeout: null,
             })),
             hpHistory: [],
+            currentPlayerIndex: 0,
+            timerRemaining: 0, // Will be initialized by Timer component
+            isTimerPaused: false,
           })),
 
         // 🔹 Nuevo: usar los invocadores definidos por el usuario
@@ -138,7 +156,34 @@ export const createCurrentMatchStore = (
               hpUpdatedTimeout: null,
             })),
             hpHistory: [],
+            currentPlayerIndex: 0,
+            timerRemaining: 0, // Will be initialized by Timer component
+            isTimerPaused: false,
           })),
+
+        nextTurn: () =>
+          set((state) => {
+            const nextIndex =
+              (state.currentPlayerIndex + 1) % state.players.length;
+            return {
+              currentPlayerIndex: nextIndex,
+              timerRemaining: state.isTimerPaused ? state.timerRemaining : 0,
+              isTimerPaused: true, // Pause the timer when starting a new turn
+            };
+          }),
+
+        pauseTimer: () =>
+          set((state) => ({ isTimerPaused: !state.isTimerPaused })),
+
+        resumeTimer: () => set(() => ({ isTimerPaused: false })),
+
+        resetTimer: (timeLimit: number) =>
+          set(() => ({
+            timerRemaining: timeLimit,
+            isTimerPaused: false,
+          })),
+
+        updateTimer: (remaining) => set(() => ({ timerRemaining: remaining })),
       }),
       { name: "current-match-store", skipHydration: true },
     ),

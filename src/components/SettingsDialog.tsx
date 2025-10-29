@@ -50,6 +50,7 @@ export default function SettingsDialog({
   const settingsSet = useSettings((s) => s.set);
   const startingHpStore = useSettings((s) => s.startingHp);
   const playersCountStore = useSettings((s) => s.playersCount);
+  const timerLimitStore = useSettings((s) => s.timerLimit);
 
   const [localOpen, setLocalOpen] = React.useState(false);
   const controlled = typeof open === "boolean";
@@ -74,13 +75,17 @@ export default function SettingsDialog({
     playersCountStore ?? 4,
   );
   const [players, setPlayers] = React.useState<Player[]>([]);
+  const [timerLimit, setTimerLimit] = React.useState<number>(
+    timerLimitStore ?? 120,
+  );
 
   React.useEffect(() => {
     if (isOpen) {
       setStartingHp(startingHpStore ?? 40);
       setPlayersCount(playersCountStore ?? 4);
+      setTimerLimit(timerLimitStore ?? 120);
     }
-  }, [isOpen, startingHpStore, playersCountStore]);
+  }, [isOpen, startingHpStore, playersCountStore, timerLimitStore]);
 
   React.useEffect(() => {
     setPlayers((prev) => {
@@ -114,9 +119,15 @@ export default function SettingsDialog({
       minPlayers,
       maxPlayers,
     );
+    const timer = clamp(
+      Number.isFinite(timerLimit) ? timerLimit : (timerLimitStore ?? 120),
+      10,
+      600,
+    );
 
     settingsSet("startingHp", hp);
     settingsSet("playersCount", count);
+    settingsSet("timerLimit", timer);
 
     // Tomá solo tantos invocadores como 'count'
     const selected = players.slice(0, count).map((p, i) => ({
@@ -176,6 +187,23 @@ export default function SettingsDialog({
                 const n = Number.parseInt(e.target.value, 10);
                 setPlayersCount(Number.isFinite(n) ? n : minPlayers);
               }}
+              className="col-span-2"
+            />
+          </div>
+
+          <div className="grid grid-cols-4 items-center gap-2">
+            <Label htmlFor="timerLimit" className="col-span-2">
+              Tiempo límite (segundos)
+            </Label>
+            <Input
+              id="timerLimit"
+              type="number"
+              min={10}
+              max={600}
+              value={timerLimit}
+              onChange={(e) =>
+                setTimerLimit(Number.parseInt(e.target.value, 10) || 120)
+              }
               className="col-span-2"
             />
           </div>

@@ -1,6 +1,9 @@
 "use client";
+import FlyingCards from "@/components/Flying-cards";
 import ResetButton from "@/components/ResetButton";
 import SettingsDialog from "@/components/SettingsDialog";
+import Timer from "@/components/Timer";
+import TimerSettingsDialog from "@/components/TimerSettingsDialog";
 import { Button } from "@/components/ui/button";
 import {
   Sheet,
@@ -12,14 +15,21 @@ import {
 } from "@/components/ui/sheet";
 import { cn } from "@/lib/utils";
 import { useLongPress } from "@uidotdev/usehooks";
-import { History, Home, Minus, Plus, RotateCcw, Settings } from "lucide-react";
+import {
+  History,
+  Home,
+  Minus,
+  Plus,
+  RotateCcw,
+  Settings,
+  Timer as TimerIcon,
+} from "lucide-react";
 import Link from "next/link";
 import type { CSSProperties } from "react";
-import { useRef } from "react";
+import { useRef, useState } from "react";
+import { useCurrentMatch } from "../_stores/current-match-provider";
 import { type Player } from "../_stores/current-match-store";
 import SaveMatch from "./save-match";
-import { useCurrentMatch } from "../_stores/current-match-provider";
-import FlyingCards from "@/components/Flying-cards";
 
 function Grid(n: number) {
   const cols = Math.max(1, Math.ceil(n / 2));
@@ -149,6 +159,7 @@ export default function CurrentMatch() {
   const players = useCurrentMatch((s) => s.players);
   const n = players.length;
   const { cols, rows } = Grid(n);
+  const [isTimerVisible, setIsTimerVisible] = useState(true);
 
   const GAP = "0.75rem";
   const PAD = "0.75rem";
@@ -176,10 +187,16 @@ export default function CurrentMatch() {
   };
 
   return (
-    <div className="relative grid h-dvh w-full gap-3 p-3 bg-background min-h-screen overflow-hidden" style={styleGrid}>
-        
+    <div
+      className="relative grid h-dvh w-full gap-3 p-3 bg-background min-h-screen overflow-hidden"
+      style={styleGrid}
+    >
+      <Timer
+        isVisible={isTimerVisible}
+        onVisibilityChange={setIsTimerVisible}
+      />
       <FlyingCards />
-      
+
       {players.map((player, idx) => (
         <PlayerCurrentMatch
           player={player}
@@ -237,6 +254,14 @@ export default function CurrentMatch() {
                     </Button>
                   }
                 />
+                <TimerSettingsDialog
+                  trigger={
+                    <Button size="sm" variant="outline">
+                      <TimerIcon className="size-5" />
+                    </Button>
+                  }
+                  onShowTimer={() => setIsTimerVisible(true)}
+                />
               </div>
 
               <Button size="lg" asChild>
@@ -245,6 +270,7 @@ export default function CurrentMatch() {
                   HISTORY
                 </Link>
               </Button>
+
               <SaveMatch />
             </div>
           </SheetContent>
