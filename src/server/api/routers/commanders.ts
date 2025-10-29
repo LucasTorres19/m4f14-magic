@@ -1,4 +1,4 @@
-import { asc, like, sql } from "drizzle-orm";
+import { asc, like, sql, eq } from "drizzle-orm";
 
 import Scry from "scryfall-sdk";
 import { z } from "zod";
@@ -6,7 +6,7 @@ import { z } from "zod";
 import { createTRPCRouter, publicProcedure } from "@/server/api/trpc";
 
 import { type db } from "@/server/db";
-import { commanders } from "@/server/db/schema";
+import { commanders,playersToMatches} from "@/server/db/schema";
 
 const COMMANDER_SEARCH_LIMIT = 20;
 const MIN_QUERY_LENGTH_FOR_API = 2;
@@ -171,5 +171,56 @@ export const commandersRouter = createTRPCRouter({
       }
 
       return localResults;
+    }),
+});
+
+export const commandersLocalRouter = createTRPCRouter({
+  list: publicProcedure
+    .input(
+      z
+        .object({
+          query: z.string().optional(),
+          limit: z.number().int().positive().max(100).optional(),
+        })
+        .optional(),
+    )
+    .query(async ({ ctx, input }) => {
+      const trimmed = input?.query?.trim() ?? "";
+      const limit = input?.limit ?? COMMANDER_SEARCH_LIMIT;
+
+      const selection = {
+        id: commanders.id,
+        name: commanders.name,
+        imageUrl: commanders.imageUrl,
+        description: commanders.description,
+        scryfallUri: commanders.scryfallUri,
+      };
+
+      let q = ctx.db
+        .select(selection)
+        .from(commanders)
+        .innerJoin(
+          playersToMatches,
+          eq(playersToMatches.commanderId, commanders.id),
+        )
+        .$dynamic();
+
+      if (trimmed.length > 0) {
+        const pattern = `%${trimmed.toLowerCase()}%`;
+        q = q.where(like(sql`lower(${commanders.name})`, pattern));
+      }
+
+      const rows = await q
+        .groupBy(
+          commanders.id,
+          commanders.name,
+          commanders.imageUrl,
+          commanders.description,
+          commanders.scryfallUri,
+        )
+        .orderBy(asc(commanders.name))
+        .limit(limit);
+
+      return rows;
     }),
 });
