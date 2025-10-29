@@ -11,8 +11,8 @@ Pagina oficial de LIMTG (Liga Interna Magic: The Gathering)
   - [x] Guardar partida
   - [x] Cambiar los colores de los invocadores
   - [ ] Cargar perfiles
-  - [ ] Timer integrado en el contador de vidas
-    - [ ] Cuando queden 10 segundos arranque alguna musica, puede ser algo como el soundtrack del C4 del counter y explote
+  - [x] Timer integrado en el contador de vidas
+    - [x] Cuando queden 10 segundos arranque alguna musica, puede ser algo como el soundtrack del C4 del counter y explote
 - [x] Historial de partidas
 - [x] Estadísticas
 - [ ] ABM invocadores

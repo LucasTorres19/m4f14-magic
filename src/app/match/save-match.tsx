@@ -489,12 +489,9 @@ export default function SaveMatch() {
     })),
   );
 
-  const { startingHp, playersCount } = useSettings(
-    useShallow((state) => ({
-      startingHp: state.startingHp,
-      playersCount: state.playersCount,
-    })),
-  );
+  const settings = useSettings((state) => state);
+  const startingHp = settings.startingHp;
+  const playersCount = settings.playersCount;
 
   const playersQuery = api.players.findAll.useQuery(undefined, {
     staleTime: 1000 * 60 * 5,
@@ -608,7 +605,7 @@ export default function SaveMatch() {
   const matchSave = api.match.save.useMutation({
     onSuccess: () => {
       toast.success("Partida guardada");
-      resetMatch(startingHp, playersCount);
+      resetMatch(startingHp, playersCount, settings);
       setUploadedImages([]);
       setIsUploadingImages(false);
     },

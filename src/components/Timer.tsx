@@ -44,6 +44,7 @@ export default function Timer({
   const [internalIsVisible, setInternalIsVisible] = useState(true);
   const [hasBeeped, setHasBeeped] = useState(false);
   const [exploding, setExploding] = useState(false);
+  const hasPrimedRef = useRef(false);
   const dragStartRef = useRef({ x: 0, y: 0, offsetX: 0, offsetY: 0 });
 
   const isVisible = externalIsVisible ?? internalIsVisible;
@@ -116,9 +117,14 @@ export default function Timer({
     }
   };
 
-  // Play beep + explosion when timer reaches 0
+  // Mark as primed when timer first becomes > 0 to avoid initial explosion
   useEffect(() => {
-    if (isExpired && !hasBeeped) {
+    if (timerRemaining > 0) hasPrimedRef.current = true;
+  }, [timerRemaining]);
+
+  // Play beep + explosion when timer reaches 0 (only after primed)
+  useEffect(() => {
+    if (isExpired && !hasBeeped && hasPrimedRef.current) {
       playBeep({ freq: 1700, durationMs: 300, volume: 0.25 });
       playExplosion();
       setExploding(true);
@@ -129,14 +135,14 @@ export default function Timer({
     }
   }, [isExpired, hasBeeped]);
 
-  // C4-style accelerating beeps when under 1/4 of total time
+  // C4-style accelerating beeps when under last 10 seconds
   useEffect(() => {
-    const quarter = Math.max(1, Math.floor(timerLimit / 4));
+    const threshold = 10; // seconds
     const shouldBeep =
       !isTimerPaused &&
       !isExpired &&
       timerRemaining > 0 &&
-      timerRemaining <= quarter;
+      timerRemaining <= threshold;
 
     if (!shouldBeep) {
       if (beepTimeoutRef.current) {
@@ -147,8 +153,8 @@ export default function Timer({
     }
 
     // schedule next beep with interval shrinking as we approach 0
-    // interval maps linearly: remaining quarter..0 -> 800ms..150ms
-    const t = timerRemaining / quarter; // 1..0
+    // interval maps linearly: remaining 10..0 -> 800ms..150ms
+    const t = timerRemaining / threshold; // 1..0
     const interval = Math.round(150 + t * (800 - 150));
     const freq = 1200;
 

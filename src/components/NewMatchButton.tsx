@@ -1,22 +1,22 @@
 "use client";
 
-import { useState, useCallback } from "react";
-import { useRouter } from "next/navigation";
-import Link from "next/link";
-import { Dices } from "lucide-react";
-import { Button } from "@/components/ui/button";
 import { useCurrentMatch } from "@/app/_stores/current-match-provider";
 import { useSettings } from "@/app/_stores/settings-provider";
+import { Button } from "@/components/ui/button";
+import { Dices } from "lucide-react";
+import Link from "next/link";
+import { useRouter } from "next/navigation";
+import { useCallback, useState } from "react";
 
 import {
   AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
   AlertDialogContent,
-  AlertDialogHeader,
-  AlertDialogTitle,
   AlertDialogDescription,
   AlertDialogFooter,
-  AlertDialogCancel,
-  AlertDialogAction,
+  AlertDialogHeader,
+  AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
 
 const STORAGE_KEY = "current-match-store";
@@ -38,8 +38,9 @@ function hasExistingMatch(): boolean {
     if (!isRecord(parsed)) return false;
 
     const maybeEnvelope = parsed;
-    const maybeState =
-      isRecord(maybeEnvelope.state) ? maybeEnvelope.state : maybeEnvelope;
+    const maybeState = isRecord(maybeEnvelope.state)
+      ? maybeEnvelope.state
+      : maybeEnvelope;
 
     if (!isRecord(maybeState)) return false;
 
@@ -55,17 +56,15 @@ export function NewMatchButton() {
   const [confirmOpen, setConfirmOpen] = useState(false);
 
   const resetMatch = useCurrentMatch((s) => s.resetMatch);
-
-  const startingHp = useSettings((s) => s.startingHp);
-  const playersCount = useSettings((s) => s.playersCount);
+  const settings = useSettings((s) => s);
 
   const newGame = useCallback(() => {
     try {
-      resetMatch(startingHp, playersCount);
+      resetMatch(settings.startingHp, settings.playersCount, settings);
     } finally {
       router.push("/match");
     }
-  }, [resetMatch, startingHp, playersCount, router]);
+  }, [resetMatch, settings, router]);
 
   const handleClick = () => {
     if (hasExistingMatch()) {
@@ -96,8 +95,8 @@ export function NewMatchButton() {
           <AlertDialogHeader>
             <AlertDialogTitle>¿Empezar una nueva partida?</AlertDialogTitle>
             <AlertDialogDescription>
-              Tenés una partida guardada. Si empezás una nueva, se
-              reiniciarán los puntos de vida y el historial.
+              Tenés una partida guardada. Si empezás una nueva, se reiniciarán
+              los puntos de vida y el historial.
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>

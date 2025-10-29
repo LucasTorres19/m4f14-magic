@@ -24,7 +24,6 @@ type ResetMatchButtonProps = {
   description?: string;
   confirmLabel?: string;
   cancelLabel?: string;
-  onReset?: (hp: number, players: number) => void;
 };
 
 export default function ResetButton({
@@ -33,10 +32,10 @@ export default function ResetButton({
   description,
   confirmLabel = "Reiniciar",
   cancelLabel = "Cancelar",
-  onReset,
 }: ResetMatchButtonProps) {
-  const startingHp = useSettings((s) => s.startingHp);
-  const playersCount = useSettings((s) => s.playersCount);
+  const settings = useSettings((s) => s);
+  const startingHp = settings.startingHp;
+  const playersCount = settings.playersCount;
   const resetMatch = useCurrentMatch((s) => s.resetMatch);
 
   const desc =
@@ -44,8 +43,7 @@ export default function ResetButton({
     `Esto reiniciará la partida con ${startingHp} de vida inicial y ${playersCount} invocadores. ¿Querés continuar?`;
 
   const handleReset = () => {
-    resetMatch(startingHp, playersCount);
-    onReset?.(startingHp, playersCount);
+    resetMatch(startingHp, playersCount, settings);
   };
 
   return (

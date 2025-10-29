@@ -33,12 +33,17 @@ export type CurrentMatchActions = {
   updateHp: (playerId: string, amount: number) => void;
   setHp: (playerId: string, hp: number) => void;
 
-  resetMatch: (startingHp: number, playersCount: number) => void;
+  resetMatch: (
+    startingHp: number,
+    playersCount: number,
+    settings: SettingsState,
+  ) => void;
 
   // 🔹 Nuevo: resetea con una lista concreta de invocadores (nombre + color)
   resetMatchWithPlayers: (
     startingHp: number,
     uiPlayers: Array<{ id?: string; name?: string; color?: string }>,
+    settings: SettingsState,
   ) => void;
 
   nextTurn: () => void;
@@ -73,7 +78,7 @@ export const initCurrentMatchStore = (
     hpHistory: [],
     currentPlayerIndex: 0,
     timerRemaining: settings.timerLimit,
-    isTimerPaused: false,
+    isTimerPaused: true,
   };
 };
 
@@ -125,7 +130,7 @@ export const createCurrentMatchStore = (
 
         setHp: (playerId, hp) => get().updatePlayer(playerId, { hp }),
 
-        resetMatch: (startingHp, playersCount) =>
+        resetMatch: (startingHp, playersCount, settings?: SettingsState) =>
           set(() => ({
             players: Array.from({ length: playersCount }).map((_, i) => ({
               id: crypto.randomUUID(),
@@ -137,12 +142,16 @@ export const createCurrentMatchStore = (
             })),
             hpHistory: [],
             currentPlayerIndex: 0,
-            timerRemaining: 0, // Will be initialized by Timer component
-            isTimerPaused: false,
+            timerRemaining: settings?.timerLimit ?? 120,
+            isTimerPaused: true,
           })),
 
         // 🔹 Nuevo: usar los invocadores definidos por el usuario
-        resetMatchWithPlayers: (startingHp, uiPlayers) =>
+        resetMatchWithPlayers: (
+          startingHp,
+          uiPlayers,
+          settings?: SettingsState,
+        ) =>
           set(() => ({
             players: uiPlayers.map((p, i) => ({
               id: p.id ?? crypto.randomUUID(),
@@ -157,8 +166,8 @@ export const createCurrentMatchStore = (
             })),
             hpHistory: [],
             currentPlayerIndex: 0,
-            timerRemaining: 0, // Will be initialized by Timer component
-            isTimerPaused: false,
+            timerRemaining: settings?.timerLimit ?? 120,
+            isTimerPaused: true,
           })),
 
         nextTurn: () =>

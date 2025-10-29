@@ -137,7 +137,11 @@ export default function SettingsDialog({
     }));
 
     // 🔹 Resetea la partida con los invocadores definidos
-    resetMatchWithPlayers(hp, selected);
+    resetMatchWithPlayers(hp, selected, {
+      startingHp: hp,
+      playersCount: count,
+      timerLimit: timer,
+    });
 
     onSaved?.(hp, count);
     setOpen(false);
