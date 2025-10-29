@@ -21,15 +21,32 @@ import {
 
 const STORAGE_KEY = "current-match-store";
 
+function isRecord(v: unknown): v is Record<string, unknown> {
+  return typeof v === "object" && v !== null;
+}
+function hasNonEmptyPlayers(v: unknown): boolean {
+  return Array.isArray(v) && v.length > 0;
+}
+
 function hasExistingMatch(): boolean {
   try {
     const raw = localStorage.getItem(STORAGE_KEY);
     if (!raw) return false;
-    const parsed = JSON.parse(raw);
-    const state = parsed?.state ?? parsed;
-    return Array.isArray(state?.players) && state.players.length > 0;
+
+    const parsed: unknown = JSON.parse(raw);
+
+    if (!isRecord(parsed)) return false;
+
+    const maybeEnvelope = parsed;
+    const maybeState =
+      isRecord(maybeEnvelope.state) ? maybeEnvelope.state : maybeEnvelope;
+
+    if (!isRecord(maybeState)) return false;
+
+    const players = maybeState.players;
+    return hasNonEmptyPlayers(players);
   } catch {
-    return true;
+    return false;
   }
 }
 
