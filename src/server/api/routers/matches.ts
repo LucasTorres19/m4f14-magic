@@ -3,6 +3,7 @@ import { z } from "zod";
 
 import { createTRPCRouter, publicProcedure } from "@/server/api/trpc";
 import {
+  commanders,
   matchImages,
   matches,
   players,
@@ -45,9 +46,14 @@ export const matchesRouter = createTRPCRouter({
           playerId: players.id,
           name: players.name,
           backgroundColor: players.backgroundColor,
+          commanderId: playersToMatches.commanderId,
+          commanderName: commanders.name,
+          commanderImageUrl: commanders.imageUrl,
+          commanderArtImageUrl: commanders.artImageUrl,
         })
         .from(playersToMatches)
         .innerJoin(players, eq(players.id, playersToMatches.playerId))
+        .leftJoin(commanders, eq(commanders.id, playersToMatches.commanderId))
         .where(inArray(playersToMatches.matchId, matchIds))
         .orderBy(
           asc(playersToMatches.matchId),
@@ -61,6 +67,12 @@ export const matchesRouter = createTRPCRouter({
           name: string;
           backgroundColor: string;
           placement: number;
+          commander: {
+            id: number;
+            name: string | null;
+            imageUrl: string | null;
+            artImageUrl: string | null;
+          } | null;
         }[]
       >();
 
@@ -71,12 +83,22 @@ export const matchesRouter = createTRPCRouter({
 
         const safeName = row.name ?? "Invocador desconocido";
         const safeColor = row.backgroundColor ?? "#1f2937";
+        const commander =
+          row.commanderId != null
+            ? {
+                id: row.commanderId,
+                name: row.commanderName ?? null,
+                imageUrl: row.commanderImageUrl ?? null,
+                artImageUrl: row.commanderArtImageUrl,
+              }
+            : null;
 
         playersByMatch.get(row.matchId)?.push({
           playerId: row.playerId,
           name: safeName,
           backgroundColor: safeColor,
           placement: row.placement,
+          commander,
         });
       }
 
@@ -131,24 +153,28 @@ export const matchesRouter = createTRPCRouter({
         createdAt: match.createdAt,
         updatedAt: match.updatedAt,
         players:
-          playersByMatch
-            .get(match.id)
-            ?.map((player) => ({
-              id: player.playerId,
-              name: player.name,
-              backgroundColor: player.backgroundColor,
-              placement: player.placement,
-            })) ?? [],
+          playersByMatch.get(match.id)?.map((player) => ({
+            id: player.playerId,
+            name: player.name,
+            backgroundColor: player.backgroundColor,
+            placement: player.placement,
+            commander: player.commander
+              ? {
+                  id: player.commander.id,
+                  name: player.commander.name,
+                  imageUrl: player.commander.imageUrl,
+                  artImageUrl: player.commander.artImageUrl,
+                }
+              : null,
+          })) ?? [],
         images:
-          imagesByMatch
-            .get(match.id)
-            ?.map((image) => ({
-              id: image.id,
-              key: image.fileKey,
-              url: image.fileUrl,
-              name: image.originalName,
-              order: image.displayOrder,
-            })) ?? [],
+          imagesByMatch.get(match.id)?.map((image) => ({
+            id: image.id,
+            key: image.fileKey,
+            url: image.fileUrl,
+            name: image.originalName,
+            order: image.displayOrder,
+          })) ?? [],
       }));
     }),
 });
