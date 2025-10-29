@@ -77,6 +77,7 @@ async function fetchCommandersFromApi(query: string) {
     query.length > 0 ? `${query} is:commander` : "is:commander";
 
   try {
+    Scry.setAgent("mafia-magic", "1.0.0");
     const response = await Scry.Cards.search(searchQuery)
       .cancelAfterPage()
       .waitForAll();
