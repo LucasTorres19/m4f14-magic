@@ -15,6 +15,7 @@ type Database = typeof db;
 type CommanderInsert = {
   name: string;
   imageUrl: string | null;
+  artImageUrl: string | null;
   description: string | null;
   scryfallUri: string | null;
 };
@@ -41,6 +42,24 @@ function extractImageUrl(card: Scry.Card): string | null {
         face.image_uris?.png ??
         face.image_uris?.small ??
         null;
+      if (faceImage) {
+        return faceImage;
+      }
+    }
+  }
+
+  return null;
+}
+function extractArtImageUrl(card: Scry.Card): string | null {
+  const directImage = card.image_uris?.art_crop ?? null;
+
+  if (directImage) {
+    return directImage;
+  }
+
+  if (Array.isArray(card.card_faces)) {
+    for (const face of card.card_faces) {
+      const faceImage = face.image_uris?.art_crop ?? null;
       if (faceImage) {
         return faceImage;
       }
@@ -100,6 +119,7 @@ async function upsertCommanders(db: Database, entries: CommanderInsert[]) {
       target: commanders.name,
       set: {
         imageUrl: sql`excluded.image_url`,
+        artImageUrl: sql`excluded.art_image_url`,
         description: sql`excluded.description`,
         scryfallUri: sql`excluded.scryfall_uri`,
       },
@@ -158,6 +178,7 @@ export const commandersRouter = createTRPCRouter({
             deduped.set(name, {
               name,
               imageUrl: extractImageUrl(card),
+              artImageUrl: extractArtImageUrl(card),
               description: extractDescription(card),
               scryfallUri: card.scryfall_uri ?? null,
             });

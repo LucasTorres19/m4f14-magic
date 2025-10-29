@@ -14,11 +14,11 @@ import {
  *
  * @see https://orm.drizzle.team/docs/goodies#multi-project-schema
  */
-export const createTable = sqliteTableCreator((name) => `mafia-magic_${name}`);
+export const createTable = sqliteTableCreator((name) => `mafia_magic_${name}`);
 
 export const players = createTable("player", (d) => ({
   id: d.integer({ mode: "number" }).primaryKey({ autoIncrement: true }),
-  name: d.text({ length: 256 }).unique(),
+  name: d.text({ length: 256 }).notNull().unique(),
   backgroundColor: d.text({ length: 256 }).notNull(),
   createdAt: d
     .integer({ mode: "timestamp" })
@@ -32,6 +32,7 @@ export const commanders = createTable("commander", (d) => ({
   name: d.text({ length: 256 }).unique(),
   scryfallUri: d.text("scryfall_uri", { length: 1024 }),
   imageUrl: d.text("image_url", { length: 1024 }),
+  artImageUrl: d.text("art_image_url", { length: 1024 }),
   description: d.text({ length: 2048 }),
   createdAt: d
     .integer({ mode: "timestamp" })
@@ -81,13 +82,8 @@ export const playersToMatches = createTable(
 
     placement: d.integer().notNull(),
   }),
-  (t) => ({
-    // Ensures one row per (player, match)
-    pk: primaryKey({ columns: [t.playerId, t.matchId] }),
-    // Also enforce only one placement per match
-    uqMatchPlacement: uniqueIndex("uq_match_placement").on(
-      t.matchId,
-      t.placement,
-    ),
-  }),
+  (t) => [
+    primaryKey({ columns: [t.playerId, t.matchId] }),
+    uniqueIndex("mafia_magic_uq_match_placement").on(t.matchId, t.placement),
+  ],
 );
