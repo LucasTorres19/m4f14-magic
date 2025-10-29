@@ -100,8 +100,13 @@ export function MagicMenu() {
               variant="outline"
               className="bg-muted/30 hover:bg-muted/50 text-foreground border-border hover:border-primary/50 h-12 w-full text-base font-medium transition-all duration-300 hover:scale-105"
             >
-              <Crown className="mr-2 h-4 w-4" />
-              Comandantes
+              <Link
+                href="/commanders"
+                className="flex w-full items-center justify-center"
+              >
+                <Crown className="mr-2 h-4 w-4" />
+                Comandantes
+              </Link>
             </Button>
 
             <Button
