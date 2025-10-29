@@ -143,7 +143,7 @@ export default function ComandantesPage() {
 
             {list.length === 0 && (
               <div className="text-center py-20">
-                <p className="text-muted-foreground text-lg">No hay comandantes en tu base local.</p>
+                <p className="text-muted-foreground text-lg">No hay comandantes cargados.</p>
               </div>
             )}
           </>
