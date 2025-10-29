@@ -36,7 +36,18 @@ export default async function AnalyticsPage() {
         .innerJoin(matches, eq(playersToMatches.matchId, matches.id))
         .where(gte(matches.createdAt, lastWeek))
         .then((r) => r.at(0)?.count.toString() ?? "0"),
-      description: "Invocadores que disputaron al menos un duelo esta semana.",
+      description:
+        "Invocadores que disputaron al menos un duelo en los últimos 7 días.",
+    },
+    {
+      title: "Comandantes activos",
+      value: db
+        .select({ count: countDistinct(playersToMatches.commanderId) })
+        .from(playersToMatches)
+        .innerJoin(matches, eq(playersToMatches.matchId, matches.id))
+        .where(gte(matches.createdAt, lastWeek))
+        .then((r) => r.at(0)?.count.toString() ?? "0"),
+      description: "Compandantes que fueron invocados en los últimos 7 días.",
     },
   ];
 
@@ -55,7 +66,15 @@ export default async function AnalyticsPage() {
         .select({ count: countDistinct(playersToMatches.playerId) })
         .from(playersToMatches)
         .then((r) => r.at(0)?.count.toString() ?? "0"),
-      description: "Invocadores únicos que participaron en partidas.",
+      description: "Total de invocadores únicos que participaron en partidas.",
+    },
+    {
+      title: "Comandantes jugados",
+      value: db
+        .select({ count: countDistinct(playersToMatches.commanderId) })
+        .from(playersToMatches)
+        .then((r) => r.at(0)?.count.toString() ?? "0"),
+      description: "Total de comandantes únicos que participaron en partidas.",
     },
   ];
 
