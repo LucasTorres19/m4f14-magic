@@ -164,14 +164,16 @@ function PlayerNameCombobox({
           role="combobox"
           aria-label={ariaLabel}
           aria-expanded={open}
-          className="border-input h-8 w-full justify-between rounded-md px-2 text-left text-sm font-normal"
+          className="border-input h-8 w-full justify-between rounded-md px-2 text-left text-sm font-normal grid grid-cols-[1fr_14px]"
         >
           {currentValue.length > 0 ? (
             <span className="truncate">{currentValue}</span>
           ) : (
-            <span className="text-muted-foreground">{placeholder}</span>
+            <span className="text-muted-foreground truncate">
+              {placeholder}
+            </span>
           )}
-          <ChevronsUpDown className="ml-2 size-3.5 shrink-0 opacity-50" />
+          <ChevronsUpDown className="size-3.5 shrink-0 opacity-50" />
         </Button>
       </PopoverTrigger>
       <PopoverContent
@@ -336,14 +338,16 @@ function CommanderCombobox({
           role="combobox"
           aria-label={ariaLabel}
           aria-expanded={open}
-          className="border-input h-8 w-full justify-between rounded-md px-2 text-left text-sm font-normal"
+          className="border-input h-8 w-full justify-between rounded-md px-2 text-left text-sm font-normal grid grid-cols-[1fr_14px]"
         >
           {currentValue.length > 0 ? (
             <span className="truncate">{currentValue}</span>
           ) : (
-            <span className="text-muted-foreground">{placeholder}</span>
+            <span className="text-muted-foreground truncate">
+              {placeholder}
+            </span>
           )}
-          <ChevronsUpDown className="ml-2 size-3.5 shrink-0 opacity-50" />
+          <ChevronsUpDown className="size-3.5 shrink-0 opacity-50" />
         </Button>
       </PopoverTrigger>
       <PopoverContent
@@ -999,7 +1003,7 @@ export default function SaveMatch() {
                         draggingId === player.id && "opacity-60",
                       )}
                     >
-                      <span className="w-[1ch] text-lg font-semibold">
+                      <span className="w-[1ch] text-lg font-semibold shrink-0">
                         {player.placement}
                       </span>
 
@@ -1040,7 +1044,7 @@ export default function SaveMatch() {
                         </div>
                       </div>
 
-                      <GripVertical className="text-muted-foreground size-4" />
+                      <GripVertical className="text-muted-foreground size-4 shrink-0" />
                     </li>
                   ))}
                   <li
