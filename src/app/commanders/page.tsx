@@ -84,10 +84,10 @@ export default function ComandantesPage() {
                 Volver al menú
               </Button>
             </Link>
-            <h1 className="text-4xl md:text-5xl font-bold mb-2">Colección de Comandantes</h1>
+            <h1 className="text-2xl md:text-5xl font-bold mb-2">Colección de Comandantes</h1>
             <p className="text-muted-foreground">Gestiona tu colección de comandantes.</p>
           </div>
-          <div className="text-right">
+          <div className="text-right hidden md:block">
             <p className="text-sm text-muted-foreground tracking-widest flex">
               <Crown className="mr-2 h-4 w-4" /> GRANDES LÍDERES
             </p>
@@ -149,8 +149,8 @@ export default function ComandantesPage() {
                                 <Image
                                 src={"https://artgame.scryfall.com/scryfall.svg"}
                                 alt={"Scryfall link"}
-                                width={30}
-                                height={30}
+                                width={20}
+                                height={20}
                                 className="object-cover cursor-pointer"
                                 unoptimized 
                                 />
