@@ -123,19 +123,30 @@ export default function ComandantesPage() {
                       alt={commander.name ?? "Commander"}
                       fill
                       sizes="(max-width: 768px) 100vw, (max-width: 1200px) 50vw, 25vw"
-                      className="object-cover transition-transform group-hover:scale-105"
+                      className="object-cover"
                       unoptimized 
                     />
                   </button>
 
                   <div className="p-4 space-y-2">
-                    <h3 className="font-bold text-lg leading-tight">{commander.name}</h3>
-                    <div className="flex gap-1">{getColorBadges(commander.colors)}</div>
-                    {commander.description && (
-                      <p className="text-sm text-muted-foreground line-clamp-2">
-                        {commander.description}
-                      </p>
-                    )}
+                    
+                    <div className="flex justify-between items-center">
+                    
+                        <h3 className="font-bold text-lg leading-tight">{commander.name}</h3>
+        
+                        {commander.scryfallUri && (
+                            <Link href={commander.scryfallUri ?? ""} target="_blank">
+                                <Image
+                                src={"https://artgame.scryfall.com/scryfall.svg"}
+                                alt={"Scryfall link"}
+                                width={30}
+                                height={30}
+                                className="object-cover cursor-pointer"
+                                unoptimized 
+                                />
+                            </Link>
+                        )} 
+                    </div>
                   </div>
                 </Card>
               ))}
