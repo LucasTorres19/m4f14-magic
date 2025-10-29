@@ -1,7 +1,6 @@
 import { matchRouter } from "@/server/api/routers/match";
 import { matchesRouter } from "@/server/api/routers/matches";
 import { commandersRouter } from "@/server/api/routers/commanders";
-import { commandersLocalRouter } from "@/server/api/routers/commanders";
 import { playersRouter } from "@/server/api/routers/players";
 import { createCallerFactory, createTRPCRouter } from "@/server/api/trpc";
 
@@ -15,7 +14,6 @@ export const appRouter = createTRPCRouter({
   matches: matchesRouter,
   commanders: commandersRouter,
   players: playersRouter,
-  commandersLocal:commandersLocalRouter
 });
 
 // export type definition of API

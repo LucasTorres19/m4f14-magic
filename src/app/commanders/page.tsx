@@ -19,7 +19,7 @@ type Commander = {
 }
 
 export default function ComandantesPage() {
-  const { data, isLoading, isError } = api.commandersLocal.list.useQuery({
+  const { data, isLoading, isError } = api.commanders.list.useQuery({
     query: "",
     limit: 50,
   })

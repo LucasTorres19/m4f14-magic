@@ -173,9 +173,6 @@ export const commandersRouter = createTRPCRouter({
 
       return localResults;
     }),
-});
-
-export const commandersLocalRouter = createTRPCRouter({
   list: publicProcedure
     .input(
       z
