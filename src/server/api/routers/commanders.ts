@@ -1,6 +1,6 @@
 import { asc, like, sql } from "drizzle-orm";
 
-import Scry from "scryfall-sdk";
+import * as Scry from "scryfall-sdk";
 import { z } from "zod";
 
 import { createTRPCRouter, publicProcedure } from "@/server/api/trpc";
