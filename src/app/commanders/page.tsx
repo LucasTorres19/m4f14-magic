@@ -7,6 +7,8 @@ import { ArrowLeft, Crown, X } from "lucide-react"
 import Link from "next/link"
 import { api } from "@/trpc/react"
 import FlyingCards from "@/components/Flying-cards"
+import Image from "next/image"
+
 type Commander = {
   id: number
   name: string | null
@@ -47,7 +49,7 @@ export default function ComandantesPage() {
     return (colors ?? "")
       .split("")
       .map((color, i) => {
-        const style = colorMap[color] || { bg: "bg-gray-500", text: "text-white" }
+        const style = colorMap[color] ?? { bg: "bg-gray-500", text: "text-white" }
         return (
           <span
             key={`${color}-${i}`}
@@ -61,7 +63,7 @@ export default function ComandantesPage() {
 
   return (
     <div className="min-h-screen bg-background text-foreground relative overflow-hidden">
-      < FlyingCards />
+      <FlyingCards />
 
       <div className="relative z-10 container mx-auto px-4 py-8 max-w-7xl">
         <div className="flex items-center justify-between mb-8">
@@ -83,14 +85,14 @@ export default function ComandantesPage() {
         </div>
 
         {isLoading && (
-            <div
-                className="flex items-center justify-center gap-3 py-20 text-muted-foreground"
-                role="status"
-                aria-live="polite"
-                aria-busy="true"
-            >
-                <Crown className="w-20 h-20 animate-spin origin-center" />
-            </div>
+          <div
+            className="flex items-center justify-center gap-3 py-20 text-muted-foreground"
+            role="status"
+            aria-live="polite"
+            aria-busy="true"
+          >
+            <Crown className="w-20 h-20 animate-spin origin-center" />
+          </div>
         )}
 
         {isError && (
@@ -103,23 +105,26 @@ export default function ComandantesPage() {
               {list.map((commander) => (
                 <Card
                   key={commander.id}
-                  className="overflow-hidden group  hover: transition-all"
+                  className="overflow-hidden group hover:ring-2 hover:ring-primary transition-all"
                 >
                   <button
                     type="button"
                     onClick={() =>
                       setLightbox({
-                        src: commander.imageUrl || "/placeholder.svg",
+                        src: commander.imageUrl ?? "/placeholder.svg",
                         alt: commander.name ?? "Commander",
                       })
                     }
                     className="relative aspect-5/7 overflow-hidden bg-muted w-full cursor-zoom-in"
                     aria-label={`Abrir ${commander.name ?? "imagen"} en grande`}
                   >
-                    <img
-                      src={commander.imageUrl || "/placeholder.svg"}
+                    <Image
+                      src={commander.imageUrl ?? "/placeholder.svg"}
                       alt={commander.name ?? "Commander"}
-                      className="w-full h-full object-cover transition-transform group-hover:scale-105"
+                      fill
+                      sizes="(max-width: 768px) 100vw, (max-width: 1200px) 50vw, 25vw"
+                      className="object-cover transition-transform group-hover:scale-105"
+                      unoptimized 
                     />
                   </button>
 
@@ -153,13 +158,17 @@ export default function ComandantesPage() {
           aria-modal="true"
         >
           <div
-            className="relative max-w-[95vw] max-h-[90vh] rounded-xl overflow-hidden shadow-2xl"
+            className="relative w-[95vw] h-[90vh] max-w-[95vw] max-h-[90vh] rounded-xl overflow-hidden shadow-2xl"
             onClick={(e) => e.stopPropagation()}
           >
-            <img
-              src={lightbox.src}
-              alt={lightbox.alt}
-              className="max-w-[95vw] max-h-[90vh] object-contain"
+            <Image
+              src={lightbox.src ?? "/placeholder.svg"}
+              alt={lightbox.alt ?? "Commander"}
+              fill
+              className="object-contain"
+              sizes="100vw"
+              priority
+              unoptimized 
             />
             <button
               type="button"
