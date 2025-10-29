@@ -11,6 +11,7 @@ import {
 } from "lucide-react";
 import Link from "next/link";
 import FlyingCards from "./Flying-cards";
+import { NewMatchButton } from "./NewMatchButton";
 
 export function MagicMenu() {
   return (
@@ -42,15 +43,8 @@ export function MagicMenu() {
 
         <div className="w-full max-w-md">
           <div className="ornate-border bg-card/80 space-y-4 rounded-lg p-8 backdrop-blur-sm">
-            <Button className="bg-primary hover:bg-primary/90 text-primary-foreground ornate-border magical-glow h-14 w-full text-lg font-semibold transition-all duration-300 hover:scale-105">
-              <Link
-                href="/match"
-                className="flex w-full items-center justify-center"
-              >
-                <Dices className="mr-2 h-5 w-5" />
-                Nuevo
-              </Link>
-            </Button>
+            
+            <NewMatchButton />
 
             <Button className="bg-secondary hover:bg-secondary/90 text-secondary-foreground border-secondary/50 h-14 w-full border-2 text-lg font-semibold transition-all duration-300 hover:scale-105">
               <Link
