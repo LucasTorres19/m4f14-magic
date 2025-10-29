@@ -1,4 +1,4 @@
-import { asc, like, sql, eq } from "drizzle-orm";
+import { asc, like, sql, eq, count,sum } from "drizzle-orm";
 
 import * as Scry from "scryfall-sdk";
 import { z } from "zod";
@@ -175,12 +175,11 @@ export const commandersRouter = createTRPCRouter({
     }),
   list: publicProcedure
     .input(
-      z
-        .object({
-          query: z.string().optional(),
-          limit: z.number().int().positive().max(100).optional(),
-        })
-        .optional(),
+      z.object({
+        query: z.string().optional(),
+        limit: z.number().int().positive().max(100).optional(),
+        sortByMatches: z.boolean().optional(),
+      }).optional(),
     )
     .query(async ({ ctx, input }) => {
       const trimmed = input?.query?.trim() ?? "";
@@ -192,6 +191,10 @@ export const commandersRouter = createTRPCRouter({
         imageUrl: commanders.imageUrl,
         description: commanders.description,
         scryfallUri: commanders.scryfallUri,
+        matchCount: count(playersToMatches.commanderId).as("matchCount"),
+        wins: sum(
+          sql<number>`CASE WHEN ${playersToMatches.placement} = 1 THEN 1 ELSE 0 END`,
+        ).as("wins"),
       };
 
       let q = ctx.db
@@ -208,7 +211,7 @@ export const commandersRouter = createTRPCRouter({
         q = q.where(like(sql`lower(${commanders.name})`, pattern));
       }
 
-      const rows = await q
+      let qb = q
         .groupBy(
           commanders.id,
           commanders.name,
@@ -216,9 +219,15 @@ export const commandersRouter = createTRPCRouter({
           commanders.description,
           commanders.scryfallUri,
         )
-        .orderBy(asc(commanders.name))
         .limit(limit);
 
+      if (input?.sortByMatches) {
+        qb = qb.orderBy(sql`matchCount DESC`, asc(commanders.name));
+      } else {
+        qb = qb.orderBy(asc(commanders.name));
+      }
+
+      const rows = await qb;
       return rows;
     }),
 });

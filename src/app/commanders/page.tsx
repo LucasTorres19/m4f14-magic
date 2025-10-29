@@ -8,6 +8,8 @@ import Link from "next/link"
 import { api } from "@/trpc/react"
 import FlyingCards from "@/components/Flying-cards"
 import Image from "next/image"
+import { Swords,Trophy   } from 'lucide-react';
+
 
 type Commander = {
   id: number
@@ -16,6 +18,8 @@ type Commander = {
   imageUrl: string | null
   description: string | null
   scryfallUri?: string | null
+  matchCount: number
+  wins: string | number | null
 }
 
 export default function ComandantesPage() {
@@ -24,7 +28,13 @@ export default function ComandantesPage() {
     limit: 50,
   })
 
-  const list = useMemo<Commander[]>(() => data ?? [], [data])
+  const list = useMemo<Commander[]>(() => (data ?? []) as Commander[], [data])
+
+    const pct = (wins?: number | string | null, total?: number | string | null) => {
+    const w = Number(wins ?? 0)
+    const t = Number(total ?? 0)
+    return t > 0 ? Math.round((w / t) * 100) : 0
+    }
 
   const [lightbox, setLightbox] = useState<{ src: string; alt: string } | null>(null)
 
@@ -105,7 +115,7 @@ export default function ComandantesPage() {
               {list.map((commander) => (
                 <Card
                   key={commander.id}
-                  className="overflow-hidden group hover:ring-2 hover:ring-primary transition-all"
+                  className="overflow-hidden group hover:ring-2 hover:ring-primary transition-all pb-0 pt-0"
                 >
                   <button
                     type="button"
@@ -147,6 +157,19 @@ export default function ComandantesPage() {
                             </Link>
                         )} 
                     </div>
+           
+                    <div className="flex gap-2 mt-5">
+                        <span className="text-xs py-1 rounded-full bg-primary/10 text-primary flex w-fit items-center px-3">
+                            <Swords className="mr-2" width={20}/>  {commander.matchCount} combates 
+                        </span>
+
+                       <span className="text-xs py-1 rounded-full bg-primary/10 text-primary flex w-fit items-center px-3">
+                        <Trophy className="mr-2" width={20} />
+                            {pct(commander.wins, commander.matchCount)}% Winrate
+                        </span>
+
+                    </div>
+
                   </div>
                 </Card>
               ))}
