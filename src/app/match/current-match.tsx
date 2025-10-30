@@ -1,5 +1,4 @@
 "use client";
-import FlyingCards from "@/components/Flying-cards";
 import ResetButton from "@/components/ResetButton";
 import SettingsDialog from "@/components/SettingsDialog";
 import Timer from "@/components/Timer";
@@ -188,14 +187,13 @@ export default function CurrentMatch() {
 
   return (
     <div
-      className="relative grid h-dvh w-full gap-3 p-3 bg-background min-h-screen overflow-hidden"
+      className="relative grid h-dvh w-full gap-3 p-3 min-h-screen overflow-hidden"
       style={styleGrid}
     >
       <Timer
         isVisible={isTimerVisible}
         onVisibilityChange={setIsTimerVisible}
       />
-      <FlyingCards />
 
       {players.map((player, idx) => (
         <PlayerCurrentMatch
@@ -224,7 +222,6 @@ export default function CurrentMatch() {
               </SheetDescription>
             </SheetHeader>
             <div className="relative flex items-center justify-center gap-3">
-
               <Button size="lg" asChild>
                 <Link href="/">
                   <Home className="size-5" />

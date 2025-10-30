@@ -1,33 +1,13 @@
 "use client";
 
 import { Button } from "@/components/ui/button";
-import {
-  BarChart3,
-  Dices,
-  Crown,
-  LibraryBig,
-  Sparkles,
-  Users,
-} from "lucide-react";
+import { BarChart3, Crown, LibraryBig, Sparkles, Users } from "lucide-react";
 import Link from "next/link";
-import FlyingCards from "./Flying-cards";
 import { NewMatchButton } from "./NewMatchButton";
 
 export function MagicMenu() {
   return (
-    <div className="bg-background relative min-h-screen overflow-hidden">
-      
-      <FlyingCards />
-
-      <div className="absolute inset-0 opacity-30">
-        <div className="bg-primary/20 float-animation absolute top-20 left-20 h-96 w-96 rounded-full blur-[120px]" />
-        <div
-          className="bg-accent/20 float-animation absolute right-20 bottom-20 h-96 w-96 rounded-full blur-[120px]"
-          style={{ animationDelay: "2s" }}
-        />
-        <div className="bg-secondary/10 absolute top-1/2 left-1/2 h-[600px] w-[600px] -translate-x-1/2 -translate-y-1/2 rounded-full blur-[150px]" />
-      </div>
-
+    <div className="relative">
       <div className="border-primary/40 absolute top-0 left-0 h-32 w-32 border-t-2 border-l-2" />
       <div className="border-primary/40 absolute top-0 right-0 h-32 w-32 border-t-2 border-r-2" />
       <div className="border-primary/40 absolute bottom-0 left-0 h-32 w-32 border-b-2 border-l-2" />
@@ -43,7 +23,6 @@ export function MagicMenu() {
 
         <div className="w-full max-w-md">
           <div className="ornate-border bg-card/80 space-y-4 rounded-lg p-8 backdrop-blur-sm">
-            
             <NewMatchButton />
 
             <Button className="bg-secondary hover:bg-secondary/90 text-secondary-foreground border-secondary/50 h-14 w-full border-2 text-lg font-semibold transition-all duration-300 hover:scale-105">
@@ -61,8 +40,7 @@ export function MagicMenu() {
                 <div className="border-border w-full border-t" />
               </div>
               <div className="relative flex justify-center">
-                <span className="bg-card text-muted-foreground px-4 text-sm">
-                </span>
+                <span className="bg-card text-muted-foreground px-4 text-sm"></span>
               </div>
             </div>
 

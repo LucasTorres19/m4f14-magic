@@ -1,6 +1,7 @@
 import "@/styles/globals.css";
 
 import { ourFileRouter } from "@/app/api/uploadthing/core";
+import FlyingCards from "@/components/Flying-cards";
 import { Toaster } from "@/components/ui/sonner";
 import { TRPCReactProvider } from "@/trpc/react";
 import { NextSSRPlugin } from "@uploadthing/react/next-ssr-plugin";
@@ -26,7 +27,7 @@ export default function RootLayout({
 }: Readonly<{ children: React.ReactNode }>) {
   return (
     <html lang="es" className={`${geist.variable} dark`}>
-      <body className={`font-sans antialiased`}>
+      <body className={`font-sans antialiased bg-background min-h-screen`}>
         <NextSSRPlugin
           /**
            * The `extractRouterConfig` will extract **only** the route configs
@@ -38,7 +39,10 @@ export default function RootLayout({
         />
         <TRPCReactProvider>
           <SettingsPovider>
-            <CurrentMatchPovider>{children}</CurrentMatchPovider>
+            <CurrentMatchPovider>
+              <FlyingCards />
+              {children}
+            </CurrentMatchPovider>
           </SettingsPovider>
         </TRPCReactProvider>
         <Toaster />
