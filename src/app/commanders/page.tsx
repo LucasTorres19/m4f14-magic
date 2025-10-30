@@ -98,7 +98,7 @@ export default function ComandantesPage() {
   type SortDir = "asc" | "desc";
 
   const [sortKey, setSortKey] = useState<SortKey>("winrate");
-  const [sortDir, setSortDir] = useState<SortDir>("asc");
+  const [sortDir, setSortDir] = useState<SortDir>("desc");
 
   const collator = useMemo(
     () => new Intl.Collator("es", { sensitivity: "base" }),

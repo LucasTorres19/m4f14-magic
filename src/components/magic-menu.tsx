@@ -62,7 +62,6 @@ export function MagicMenu() {
               </div>
               <div className="relative flex justify-center">
                 <span className="bg-card text-muted-foreground px-4 text-sm">
-                  Opciones
                 </span>
               </div>
             </div>

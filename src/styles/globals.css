@@ -436,3 +436,33 @@
     .cebolla-badge, .cebolla-badge .tear, .cebolla-badge .blue-heat,
     .cebolla-badge::before, .cebolla-badge::after { animation: none !important; }
   }
+
+
+@keyframes fc-float-kf {
+  0%   { transform: translate3d(0, 0, 0); }
+  50%  { transform: translate3d(0, -14px, 0); }
+  100% { transform: translate3d(0, 0, 0); }
+}
+@keyframes fc-drift-kf {
+  0%   { transform: translate3d(0, 0, 0); }
+  50%  { transform: translate3d(14px, 0, 0); }
+  100% { transform: translate3d(0, 0, 0); }
+}
+
+.fc-float { animation-timing-function: ease-in-out; animation-iteration-count: infinite; }
+.fc-drift { animation-timing-function: ease-in-out; animation-iteration-count: infinite; }
+
+.motion-safe\:animate-fc-float { animation-name: fc-float-kf; }
+.motion-safe\:animate-fc-drift { animation-name: fc-drift-kf; }
+
+
+.animate-fc-float { animation-name: fc-float-kf; }
+.animate-fc-drift { animation-name: fc-drift-kf; }
+
+@media (prefers-reduced-motion: reduce) {
+  .fc-float, .fc-drift,
+  .animate-fc-float, .animate-fc-drift,
+  .motion-safe\:animate-fc-float, .motion-safe\:animate-fc-drift {
+    animation: none !important;
+  }
+}

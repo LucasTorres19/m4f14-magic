@@ -1,23 +1,105 @@
 "use client";
-import * as React from "react";
 
-export default function FlyingCards() {
+import Image from "next/image";
+import { useMemo } from "react";
+import { api } from "@/trpc/react";
+
+type Props = { limit?: number; count?: number; query?: string };
+
+const rnd = (min: number, max: number) => min + Math.random() * (max - min);
+const pickSign = () => (Math.random() < 0.5 ? -1 : 1);
+
+const DX_MIN = 120, DX_MAX = 280;
+const DY_MIN = 80,  DY_MAX = 220;
+
+export default function FlyingCards({ limit = 24, count = 16, query = "" }: Props) {
+  const { data } = api.commanders.list.useQuery({ query, limit });
+
+  const images = useMemo(() => {
+    const rows = (data ?? []) as Array<{ imageUrl: string | null }>;
+    return rows.map((r) => r.imageUrl ?? "/placeholder.svg").filter(Boolean);
+  }, [data]);
+
+  const items = useMemo(() => {
+    const srcs = images.length > 0 ? images : ["/placeholder.svg"];
+    return Array.from({ length: count }).map((_, i) => {
+      const dx = pickSign() * rnd(DX_MIN, DX_MAX);
+      const dy = pickSign() * rnd(DY_MIN, DY_MAX);
+      return {
+        key: i,
+        left: `${Math.random() * 100}%`,
+        top: `${Math.random() * 100}%`,
+        dur: `${rnd(16, 28)}s`,
+        delay: `${rnd(0, 6)}s`,
+        angle: rnd(-18, 18),
+        dx, dy,
+        src: srcs[i % srcs.length]!,
+      };
+    });
+  }, [images, count]);
+
+  if (images.length === 0) return null;
 
   return (
-      <div className="pointer-events-none absolute inset-0">
-        {Array.from({ length: 16 }).map((_, i) => (
+    <div className="pointer-events-none absolute inset-0 overflow-visible">
+      {items.map((it) => (
+        <div
+          key={it.key}
+          className="absolute will-change-transform"
+          style={{
+            left: it.left,
+            top: it.top,
+            ["--dx" as any]: `${it.dx}px`,
+            ["--dy" as any]: `${it.dy}px`,
+            animation: `fc-orbit ${it.dur} ease-in-out infinite`,
+            animationDelay: it.delay,
+          }}
+        >
           <div
-            key={i}
-            className="flying-card absolute"
+            className="relative md:h-32 md:w-24 h-28 w-20 rounded-lg drop-shadow-lg"
             style={{
-              left: `${Math.random() * 100}%`,
-              top: `${Math.random() * 100}%`,
-              animationDuration: `${15 + Math.random() * 10}s`,
+              ["--baseR" as any]: `${it.angle}deg`,
+              ["--tiltA" as any]: `${pickSign() * rnd(0, 10)}deg`,
+              transform: `rotate(var(--baseR))`,
+              overflow: "hidden",
+              zIndex: it.key,
+              animation: `fc-tilt ${rnd(4, 8)}s ease-in-out infinite`,
+              animationDelay: it.delay,
             }}
           >
-            <div className="from-card/60 to-card/40 border-primary/30 ornate-border h-28 w-20 rounded-lg border-2 bg-linear-to-br opacity-40 shadow-lg backdrop-blur-sm md:h-32 md:w-24" />
+            <div className="relative h-full w-full">
+              <Image
+                src={it.src}
+                alt=""
+                fill
+                className="rounded-lg object-cover"
+                unoptimized
+                style={{
+                  filter: "grayscale(1) saturate(0.25) brightness(0.9) contrast(0.9)",
+                }}
+              />
+              <div className="absolute inset-0 rounded-lg pointer-events-none bg-black/75" />
+            </div>
           </div>
-        ))}
-      </div>
+        </div>
+      ))}
+
+      <style jsx>{`
+        @keyframes fc-orbit {
+          0%   { transform: translate3d(0, 0, 0) scale(1); }
+          25%  { transform: translate3d(calc(var(--dx) * 0.5), calc(var(--dy) * 0.35), 0) scale(1.02); }
+          50%  { transform: translate3d(var(--dx), var(--dy), 0) scale(1); }
+          75%  { transform: translate3d(calc(var(--dx) * 0.5), calc(var(--dy) * 0.65), 0) scale(0.98); }
+          100% { transform: translate3d(0, 0, 0) scale(1); }
+        }
+
+        @keyframes fc-tilt {
+          0%   { transform: rotate(calc(var(--baseR) - var(--tiltA))); }
+          50%  { transform: rotate(calc(var(--baseR) + var(--tiltA))); }
+          100% { transform: rotate(calc(var(--baseR) - var(--tiltA))); }
+        }
+
+      `}</style>
+    </div>
   );
 }
