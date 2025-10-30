@@ -94,6 +94,48 @@ export default function ComandantesPage() {
       })
   }
 
+  type SortKey = "name" | "matches" | "winrate";
+  type SortDir = "asc" | "desc";
+
+  const [sortKey, setSortKey] = useState<SortKey>("name");
+  const [sortDir, setSortDir] = useState<SortDir>("desc");
+
+  const collator = useMemo(
+    () => new Intl.Collator("es", { sensitivity: "base" }),
+    []
+  );
+
+  const safe = (s: string | null | undefined) => s ?? "";
+  const winrate = (w: number, t: number) => (t > 0 ? (w / t) * 100 : 0);
+
+  const sorted = useMemo(() => {
+    const arr = [...list];
+    arr.sort((a, b) => {
+      if (sortKey === "name") {
+        const cmp = collator.compare(safe(a.name), safe(b.name));
+        return sortDir === "asc" ? cmp : -cmp;
+      }
+
+      let va = 0, vb = 0;
+      if (sortKey === "matches") {
+        va = a.matchCount; vb = b.matchCount;
+      } else {
+        va = winrate(a.wins, a.matchCount);
+        vb = winrate(b.wins, b.matchCount);
+      }
+
+      if (va === vb) {
+        const byName = collator.compare(safe(a.name), safe(b.name));
+        if (byName !== 0) return byName;
+        return a.id - b.id;
+      }
+
+      const cmp = va < vb ? -1 : 1;
+      return sortDir === "asc" ? cmp : -cmp;
+    });
+    return arr;
+  }, [list, sortKey, sortDir, collator]);
+
   return (
     <div className="min-h-screen bg-background text-foreground relative overflow-hidden">
       <FlyingCards />
@@ -132,10 +174,35 @@ export default function ComandantesPage() {
           <div className="text-center py-20 text-destructive">Error al cargar los comandantes.</div>
         )}
 
-        {!isLoading && !isError && (
+        {!isLoading && !isError && (     
           <>
+            <div className="mb-4 flex items-center justify-end gap-2">
+              <label htmlFor="sortKey" className="text-sm text-muted-foreground">Ordenar por:</label>
+              <select
+                id="sortKey"
+                className="h-9 rounded-md border bg-background px-3 text-sm"
+                value={sortKey}
+                onChange={(e) => setSortKey(e.target.value as SortKey)}
+              >
+                <option value="name">Nombre</option>
+                <option value="matches">Partidas</option>
+                <option value="winrate">Winrate</option>
+              </select>
+
+              <Button
+                type="button"
+                variant="outline"
+                size="sm"
+                onClick={() => setSortDir((d) => (d === "asc" ? "desc" : "asc"))}
+                className="ml-2"
+                title={sortDir === "asc" ? "Ascendente" : "Descendente"}
+              >
+                {sortDir === "asc" ? "↑" : "↓"}
+              </Button>
+            </div>
+
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
-              {list.map((commander) => (
+              {sorted.map((commander) => (
                 <Card
                   key={commander.id}
                   className="overflow-hidden group hover:ring-2 hover:ring-primary transition-all pb-0 pt-0"
@@ -220,7 +287,7 @@ export default function ComandantesPage() {
               ))}
             </div>
 
-            {list.length === 0 && (
+            {sorted.length === 0 && (
               <div className="text-center py-20">
                 <p className="text-muted-foreground text-lg">No hay comandantes cargados.</p>
               </div>
