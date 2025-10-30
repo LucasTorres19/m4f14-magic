@@ -1,10 +1,17 @@
 "use client";
 
 import Image from "next/image";
-import { useMemo } from "react";
+import { useMemo, type CSSProperties } from "react";
 import { api } from "@/trpc/react";
 
 type Props = { limit?: number; count?: number; query?: string };
+
+type CSSVars = CSSProperties & {
+  "--dx"?: string | number;
+  "--dy"?: string | number;
+  "--baseR"?: string | number;
+  "--tiltA"?: string | number;
+};
 
 const rnd = (min: number, max: number) => min + Math.random() * (max - min);
 const pickSign = () => (Math.random() < 0.5 ? -1 : 1);
@@ -42,47 +49,46 @@ export default function FlyingCards({ limit = 24, count = 16, query = "" }: Prop
 
   return (
     <div className="pointer-events-none absolute inset-0 overflow-visible">
-      {items.map((it) => (
-        <div
-          key={it.key}
-          className="absolute will-change-transform"
-          style={{
-            left: it.left,
-            top: it.top,
-            ["--dx" as any]: `${it.dx}px`,
-            ["--dy" as any]: `${it.dy}px`,
-            animation: `fc-orbit ${it.dur} ease-in-out infinite`,
-            animationDelay: it.delay,
-          }}
-        >
-          <div
-            className="relative md:h-32 md:w-24 h-28 w-20 rounded-lg drop-shadow-lg"
-            style={{
-              ["--baseR" as any]: `${it.angle}deg`,
-              ["--tiltA" as any]: `${pickSign() * rnd(0, 10)}deg`,
-              transform: `rotate(var(--baseR))`,
-              overflow: "hidden",
-              zIndex: it.key,
-              animation: `fc-tilt ${rnd(4, 8)}s ease-in-out infinite`,
-              animationDelay: it.delay,
-            }}
-          >
-            <div className="relative h-full w-full">
-              <Image
-                src={it.src}
-                alt=""
-                fill
-                className="rounded-lg object-cover"
-                unoptimized
-                style={{
-                  filter: "grayscale(1) saturate(0.25) brightness(0.9) contrast(0.9)",
-                }}
-              />
-              <div className="absolute inset-0 rounded-lg pointer-events-none bg-black/75" />
+      {items.map((it) => {
+        const orbitStyle: CSSVars = {
+          left: it.left,
+          top: it.top,
+          "--dx": `${it.dx}px`,
+          "--dy": `${it.dy}px`,
+          animation: `fc-orbit ${it.dur} ease-in-out infinite`,
+          animationDelay: it.delay,
+        };
+
+        const cardStyle: CSSVars = {
+          "--baseR": `${it.angle}deg`,
+          "--tiltA": `${pickSign() * rnd(0, 10)}deg`,
+          transform: `rotate(var(--baseR))`,
+          overflow: "hidden",
+          zIndex: it.key,
+          animation: `fc-tilt ${rnd(4, 8)}s ease-in-out infinite`,
+          animationDelay: it.delay,
+        };
+
+        return (
+          <div key={it.key} className="absolute will-change-transform" style={orbitStyle}>
+            <div className="relative md:h-32 md:w-24 h-28 w-20 rounded-lg drop-shadow-lg" style={cardStyle}>
+              <div className="relative h-full w-full">
+                <Image
+                  src={it.src}
+                  alt=""
+                  fill
+                  className="rounded-lg object-cover"
+                  unoptimized
+                  style={{
+                    filter: "grayscale(1) saturate(0.25) brightness(0.9) contrast(0.9)",
+                  }}
+                />
+                <div className="absolute inset-0 rounded-lg pointer-events-none bg-black/75" />
+              </div>
             </div>
           </div>
-        </div>
-      ))}
+        );
+      })}
 
       <style jsx>{`
         @keyframes fc-orbit {
@@ -92,13 +98,11 @@ export default function FlyingCards({ limit = 24, count = 16, query = "" }: Prop
           75%  { transform: translate3d(calc(var(--dx) * 0.5), calc(var(--dy) * 0.65), 0) scale(0.98); }
           100% { transform: translate3d(0, 0, 0) scale(1); }
         }
-
         @keyframes fc-tilt {
           0%   { transform: rotate(calc(var(--baseR) - var(--tiltA))); }
           50%  { transform: rotate(calc(var(--baseR) + var(--tiltA))); }
           100% { transform: rotate(calc(var(--baseR) - var(--tiltA))); }
         }
-
       `}</style>
     </div>
   );
