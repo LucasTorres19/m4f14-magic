@@ -21,6 +21,65 @@ const DX_MIN = 120,
 const DY_MIN = 80,
   DY_MAX = 220;
 
+type FlyingCardProps = {
+  it: {
+    key: number;
+    left: string;
+    top: string;
+    dur: string;
+    delay: string;
+    angle: number;
+    dx: number;
+    dy: number;
+    src: string;
+  };
+};
+
+function FlyingCard({ it }: FlyingCardProps) {
+  const orbitStyle: CSSVars = {
+    left: it.left,
+    top: it.top,
+    "--dx": `${it.dx}px`,
+    "--dy": `${it.dy}px`,
+    animation: `fc-orbit ${it.dur} ease-in-out infinite`,
+    animationDelay: it.delay,
+  };
+
+  const cardStyle: CSSVars = {
+    "--baseR": `${it.angle}deg`,
+    "--tiltA": `${pickSign() * rnd(0, 10)}deg`,
+    transform: `rotate(var(--baseR))`,
+    overflow: "hidden",
+    zIndex: it.key,
+    animation: `fc-tilt ${rnd(4, 8)}s ease-in-out infinite`,
+    animationDelay: it.delay,
+  };
+
+  return (
+    <div className="absolute will-change-transform" style={orbitStyle}>
+      <div
+        className="relative md:h-32 md:w-24 h-28 w-20 rounded-lg drop-shadow-lg"
+        style={cardStyle}
+      >
+        <div className="relative h-full w-full">
+          <Image
+            src={it.src}
+            alt=""
+            fill
+            className="rounded-lg object-cover"
+            unoptimized
+            style={{
+              filter:
+                "grayscale(1) saturate(0.25) brightness(0.9) contrast(0.9)",
+            }}
+          />
+          <div className="absolute inset-0 rounded-lg pointer-events-none bg-black/75" />
+        </div>
+      </div>
+    </div>
+  );
+}
+
 export default function FlyingCards({
   limit = 24,
   count = 16,
@@ -43,7 +102,7 @@ export default function FlyingCards({
         left: `${Math.random() * 100}%`,
         top: `${Math.random() * 100}%`,
         dur: `${rnd(16, 28)}s`,
-        delay: `${rnd(0, 6)}s`,
+        delay: `0s`,
         angle: rnd(-18, 18),
         dx,
         dy,
@@ -62,54 +121,9 @@ export default function FlyingCards({
         style={{ animationDelay: "2s" }}
       />
       <div className="bg-secondary/10 opacity-30 absolute top-1/2 left-1/2 h-[600px] w-[600px] -translate-x-1/2 -translate-y-1/2 rounded-full blur-[150px]" />
-      {items.map((it) => {
-        const orbitStyle: CSSVars = {
-          left: it.left,
-          top: it.top,
-          "--dx": `${it.dx}px`,
-          "--dy": `${it.dy}px`,
-          animation: `fc-orbit ${it.dur} ease-in-out infinite`,
-          animationDelay: it.delay,
-        };
-
-        const cardStyle: CSSVars = {
-          "--baseR": `${it.angle}deg`,
-          "--tiltA": `${pickSign() * rnd(0, 10)}deg`,
-          transform: `rotate(var(--baseR))`,
-          overflow: "hidden",
-          zIndex: it.key,
-          animation: `fc-tilt ${rnd(4, 8)}s ease-in-out infinite`,
-          animationDelay: it.delay,
-        };
-
-        return (
-          <div
-            key={it.key}
-            className="absolute will-change-transform"
-            style={orbitStyle}
-          >
-            <div
-              className="relative md:h-32 md:w-24 h-28 w-20 rounded-lg drop-shadow-lg"
-              style={cardStyle}
-            >
-              <div className="relative h-full w-full">
-                <Image
-                  src={it.src}
-                  alt=""
-                  fill
-                  className="rounded-lg object-cover"
-                  unoptimized
-                  style={{
-                    filter:
-                      "grayscale(1) saturate(0.25) brightness(0.9) contrast(0.9)",
-                  }}
-                />
-                <div className="absolute inset-0 rounded-lg pointer-events-none bg-black/75" />
-              </div>
-            </div>
-          </div>
-        );
-      })}
+      {items.map((it) => (
+        <FlyingCard key={it.key} it={it} />
+      ))}
 
       <style jsx>{`
         @keyframes fc-orbit {
