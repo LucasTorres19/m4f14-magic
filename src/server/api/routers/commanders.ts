@@ -217,6 +217,9 @@ export const commandersRouter = createTRPCRouter({
           wins: sum(
             sql<number>`CASE WHEN ${playersToMatches.placement} = 1 THEN 1 ELSE 0 END`,
           ).as("wins"),
+          podiums: sum(
+            sql<number>`CASE WHEN ${playersToMatches.placement} IN (1,2,3) THEN 1 ELSE 0 END`,
+          ).as("podiums"),
         })
         .from(playersToMatches)
         .groupBy(playersToMatches.commanderId)
@@ -258,6 +261,7 @@ export const commandersRouter = createTRPCRouter({
           wins: agg.wins,
           otpPlayerId: otp.otpPlayerId,
           otpPlayerName: players.name,
+          podiums: agg.podiums,
         })
         .from(commanders)
         .innerJoin(agg, eq(agg.commanderId, commanders.id))

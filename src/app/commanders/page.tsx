@@ -8,7 +8,7 @@ import Link from "next/link"
 import { api } from "@/trpc/react"
 import FlyingCards from "@/components/Flying-cards"
 import Image from "next/image"
-import { Swords,Trophy,Medal,Flame } from 'lucide-react';
+import { Swords,Trophy,Medal,Boxes } from 'lucide-react';
 
 type Commander = {
   id: number
@@ -21,6 +21,7 @@ type Commander = {
   wins: string | number | null
   otpPlayerId?: number | null
   otpPlayerName?: string | null
+  podiums?: number | string | null
 }
 
 export default function ComandantesPage() {
@@ -34,6 +35,7 @@ export default function ComandantesPage() {
         ...c,
         matchCount: Number(c.matchCount ?? 0),
         wins: Number(c.wins ?? 0),
+        podiums: Number(c.podiums ?? 0)
     }))
     }, [data])
 
@@ -161,15 +163,7 @@ export default function ComandantesPage() {
                         )} 
                     </div>
            
-                    <div className="flex gap-2 mt-5 flex-wrap">
-                        <span className="text-xs py-1 rounded-full bg-primary/10 text-primary flex w-fit items-center px-3">
-                            <Swords className="mr-2" width={20}/>  {commander.matchCount} combates 
-                        </span>
-
-                       <span className="text-xs py-1 rounded-full bg-primary/10 text-primary flex w-fit items-center px-3">
-                        <Trophy className="mr-2" width={20} />
-                            {pct(commander.wins, commander.matchCount)}% Winrate
-                        </span>
+                    <div className="flex gap-2 mt-5 flex-wrap gap-y-3">
 
                         <span className="otp-badge">
                             <Medal width={20} />
@@ -177,6 +171,20 @@ export default function ComandantesPage() {
                                 Mas jugado por {commander.otpPlayerName ?? "—"}
                             </span>
                             <span aria-hidden className="heat" />
+                        </span>
+
+                        <span className="text-xs py-1 rounded-full bg-primary/10 text-primary flex w-fit items-center px-3">
+                            <Swords className="mr-2" width={20}/>  {commander.matchCount} combates 
+                        </span>
+
+                        <span className="text-xs py-1 rounded-full bg-primary/10 text-primary flex w-fit items-center px-3">
+                          <Trophy className="mr-2" width={20} />
+                              {pct(commander.wins, commander.matchCount)}% Winrate
+                        </span>
+
+                        <span className="text-xs py-1 rounded-full bg-primary/10 text-primary flex w-fit items-center px-3">
+                          <Boxes className="mr-2" width={20} />
+                          {pct(commander.podiums, commander.matchCount)}% Podio
                         </span>
 
                     </div>
