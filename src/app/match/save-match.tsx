@@ -938,12 +938,12 @@ export default function SaveMatch() {
   });
 
   return (
-    <div className="absolute right-0">
+    <div className="">
       <Dialog open={open} onOpenChange={setOpen}>
         <DialogTrigger asChild>
           <Button
             variant="success"
-            size="sm"
+            size="lg"
             className="pointer-events-auto"
             disabled={matchSave.isPending}
           >
