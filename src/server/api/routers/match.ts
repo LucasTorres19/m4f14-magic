@@ -2,6 +2,7 @@ import { TRPCError } from "@trpc/server";
 import { eq, inArray } from "drizzle-orm";
 import { z } from "zod";
 
+import { MAX_MATCH_IMAGES } from "@/lib/constants";
 import { createTRPCRouter, publicProcedure } from "@/server/api/trpc";
 import {
   commanders,
@@ -45,7 +46,7 @@ export const matchRouter = createTRPCRouter({
               order: z.number().int().min(0),
             }),
           )
-          .max(6)
+          .max(MAX_MATCH_IMAGES)
           .superRefine((images, ctx) => {
             const orderSet = new Set<number>();
             const keySet = new Set<string>();
@@ -214,6 +215,119 @@ export const matchRouter = createTRPCRouter({
           );
         }
         return;
+      });
+    }),
+  addImages: publicProcedure
+    .input(
+      z.object({
+        matchId: z.number().positive().int(),
+        images: z
+          .array(
+            z.object({
+              url: z.string().url(),
+              key: z.string().min(1),
+              name: z.string().optional(),
+            }),
+          )
+          .min(1)
+          .max(MAX_MATCH_IMAGES),
+      }),
+    )
+    .mutation(async ({ ctx, input }) => {
+      return ctx.db.transaction(async (tx) => {
+        const [matchRow] = await tx
+          .select({
+            id: matches.id,
+          })
+          .from(matches)
+          .where(eq(matches.id, input.matchId))
+          .limit(1);
+
+        if (!matchRow) {
+          throw new TRPCError({
+            code: "NOT_FOUND",
+            message: "Match not found.",
+          });
+        }
+
+        const existingImages = await tx
+          .select({
+            id: matchImages.id,
+            displayOrder: matchImages.displayOrder,
+            fileKey: matchImages.fileKey,
+          })
+          .from(matchImages)
+          .where(eq(matchImages.matchId, input.matchId));
+
+        const existingCount = existingImages.length;
+
+        if (existingCount >= MAX_MATCH_IMAGES) {
+          throw new TRPCError({
+            code: "BAD_REQUEST",
+            message:
+              "Este duelo ya alcanzo la cantidad maxima de fotografias permitidas.",
+          });
+        }
+
+        if (existingCount + input.images.length > MAX_MATCH_IMAGES) {
+          const remaining = MAX_MATCH_IMAGES - existingCount;
+          throw new TRPCError({
+            code: "BAD_REQUEST",
+            message:
+              remaining === 1
+                ? "Solo queda espacio para una fotografia adicional."
+                : `Solo quedan ${remaining} fotografias disponibles para este duelo.`,
+          });
+        }
+
+        const existingKeys = new Set(
+          existingImages.map((image) => image.fileKey),
+        );
+        const duplicateKey = input.images.find((image) =>
+          existingKeys.has(image.key),
+        );
+
+        if (duplicateKey) {
+          throw new TRPCError({
+            code: "BAD_REQUEST",
+            message:
+              "Alguna de las imagenes ya fue cargada anteriormente para este duelo.",
+          });
+        }
+
+        const maxDisplayOrder = existingImages.reduce(
+          (max, image) => Math.max(max, image.displayOrder),
+          -1,
+        );
+
+        const inserted = await tx
+          .insert(matchImages)
+          .values(
+            input.images.map((image, index) => ({
+              matchId: input.matchId,
+              fileKey: image.key,
+              fileUrl: image.url,
+              originalName: image.name ?? null,
+              displayOrder: maxDisplayOrder + index + 1,
+            })),
+          )
+          .returning({
+            id: matchImages.id,
+            fileKey: matchImages.fileKey,
+            fileUrl: matchImages.fileUrl,
+            originalName: matchImages.originalName,
+            displayOrder: matchImages.displayOrder,
+          });
+
+        return {
+          images: inserted.map((image) => ({
+            id: image.id,
+            key: image.fileKey,
+            url: image.fileUrl,
+            name: image.originalName,
+            order: image.displayOrder,
+          })),
+        };
       });
     }),
 });

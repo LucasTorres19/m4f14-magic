@@ -1,3 +1,4 @@
+import { MAX_MATCH_IMAGES } from "@/lib/constants";
 import { createUploadthing, type FileRouter } from "uploadthing/next";
 
 const f = createUploadthing();
@@ -11,8 +12,8 @@ export const ourFileRouter = {
        * For full list of options and defaults, see the File Route API reference
        * @see https://docs.uploadthing.com/file-routes#route-config
        */
-      maxFileSize: "8MB",
-      maxFileCount: 6,
+      maxFileSize: "32MB",
+      maxFileCount: MAX_MATCH_IMAGES,
     },
   }).onUploadComplete(async () => {
     return;

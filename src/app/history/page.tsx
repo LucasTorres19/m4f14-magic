@@ -4,16 +4,16 @@ import { api } from "@/trpc/server";
 import type { inferRouterOutputs } from "@trpc/server";
 import { format } from "date-fns";
 import { es } from "date-fns/locale";
-import { ArrowLeft, Camera, ImageOff, Sparkles } from "lucide-react";
+import { ArrowLeft, Camera, Sparkles } from "lucide-react";
 import Image from "next/image";
 import Link from "next/link";
 
 import type { AppRouter } from "@/server/api/root";
+import { MatchGallery } from "./match-gallery";
 
 type MatchesOutput = inferRouterOutputs<AppRouter>["matches"]["findAll"];
 type MatchSummary = MatchesOutput[number];
 type PlayerSummary = MatchSummary["players"][number];
-type MatchImage = MatchSummary["images"][number];
 
 const gradientPalettes: [string, ...string[]] = [
   "from-amber-500/15 via-rose-500/10 to-purple-700/20",
@@ -201,8 +201,8 @@ const MatchCard = ({ match, gradient }: MatchCardProps) => {
           </div>
         </header>
 
-        <div className="grid gap-6">
-          <MatchGallery matchId={match.id} images={match.images} />
+        <div className="flex flex-col gap-6">
+          <MatchGallery matchId={match.id} initialImages={match.images} />
 
           <div className="grid gap-4 sm:grid-cols-2">
             {match.players.length === 0 ? (
@@ -222,73 +222,6 @@ const MatchCard = ({ match, gradient }: MatchCardProps) => {
         </div>
       </div>
     </article>
-  );
-};
-
-const MatchGallery = ({
-  matchId,
-  images,
-}: {
-  matchId: number;
-  images: MatchImage[];
-}) => {
-  if (!images || images.length === 0) {
-    return (
-      <div className="flex h-full min-h-[220px] flex-col items-center justify-center gap-3 rounded-2xl border border-dashed border-white/15 bg-background/60 p-8 text-center text-sm text-muted-foreground">
-        <ImageOff className="size-8 text-muted-foreground/70" />
-        <p>Aun no se cargaron fotografias para este duelo.</p>
-      </div>
-    );
-  }
-
-  const [primary, ...secondary] = images;
-
-  if (!primary) return null;
-  return (
-    <div className="space-y-3">
-      <div className="relative h-56 overflow-hidden rounded-2xl border border-white/12 bg-background/60 shadow-lg sm:h-72">
-        <Image
-          src={primary.url}
-          alt={
-            primary.name
-              ? `Foto principal: ${primary.name}`
-              : `Foto del duelo ${matchId}`
-          }
-          fill
-          className="object-cover"
-          sizes="(min-width: 1024px) 480px, 100vw"
-          unoptimized
-        />
-        <div className="absolute inset-0 bg-linear-to-t from-slate-950/80 via-slate-950/20 to-transparent" />
-        <div className="absolute inset-x-0 bottom-0 flex items-center justify-start gap-3 px-4 py-3 text-xs uppercase tracking-[0.3em] text-white/80">
-          <span>Registro visual</span>
-        </div>
-      </div>
-
-      {secondary.length > 0 ? (
-        <div className="-mx-1 flex items-center gap-3 overflow-x-auto pb-2">
-          {secondary.map((image) => (
-            <div
-              key={image.id}
-              className="relative h-20 w-32 shrink-0 overflow-hidden rounded-xl border border-white/10 bg-background/70"
-            >
-              <Image
-                src={image.url}
-                alt={
-                  image.name
-                    ? `Foto adicional: ${image.name}`
-                    : `Foto adicional del duelo ${matchId}`
-                }
-                fill
-                className="object-cover"
-                sizes="128px"
-                unoptimized
-              />
-            </div>
-          ))}
-        </div>
-      ) : null}
-    </div>
   );
 };
 

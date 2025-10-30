@@ -52,6 +52,7 @@ import { api, type RouterOutputs } from "@/trpc/react";
 import { toast } from "sonner";
 
 import { ScrollArea } from "@/components/ui/scroll-area";
+import { MAX_MATCH_IMAGES } from "@/lib/constants";
 import { useCurrentMatch } from "../_stores/current-match-provider";
 import { useSettings } from "../_stores/settings-provider";
 
@@ -76,8 +77,6 @@ type SuggestedPlayer = {
 };
 
 type CommanderOption = RouterOutputs["commanders"]["search"][number];
-
-const MAX_MATCH_IMAGES = 6;
 
 type UploadedMatchImage = {
   key: string;

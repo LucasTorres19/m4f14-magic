@@ -68,7 +68,7 @@ export const initCurrentMatchStore = (
 ): CurrentMatchState => {
   return {
     players: Array.from({ length: settings.playersCount }).map((_, i) => ({
-      id: crypto.randomUUID(),
+      id: `local-${i}`,
       displayName: `Invocador ${i + 1}`,
       hp: settings.startingHp,
       backgroundColor: randomHexColor(i),
@@ -133,7 +133,7 @@ export const createCurrentMatchStore = (
         resetMatch: (startingHp, playersCount, settings?: SettingsState) =>
           set(() => ({
             players: Array.from({ length: playersCount }).map((_, i) => ({
-              id: crypto.randomUUID(),
+              id: `local-${i}`,
               displayName: `Invocador ${i + 1}`,
               hp: startingHp,
               backgroundColor: randomHexColor(i),
@@ -154,7 +154,7 @@ export const createCurrentMatchStore = (
         ) =>
           set(() => ({
             players: uiPlayers.map((p, i) => ({
-              id: p.id ?? crypto.randomUUID(),
+              id: p.id ?? `local-${i}`,
               displayName: p.name?.trim() ?? `Invocador ${i + 1}`,
               hp: startingHp,
               backgroundColor:
