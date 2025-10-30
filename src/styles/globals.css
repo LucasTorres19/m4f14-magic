@@ -338,7 +338,6 @@
     100% { transform: scale(1) translateY(0) rotate(0deg) }
   }
 
-  /* Respeta prefers-reduced-motion */
   @media (prefers-reduced-motion: reduce) {
     .otp-badge,
     .otp-badge .flame,
@@ -347,4 +346,93 @@
     .otp-badge::after {
       animation: none !important;
     }
+  }
+
+  .cebolla-badge {
+    --ice: 120, 180, 255;
+    --deep: 40, 90, 200;
+    --mist: 170, 210, 255;
+    display: inline-flex;
+    align-items: center;
+    gap: 0.35rem;
+    padding: 0.2rem 0.6rem;
+    border-radius: 9999px;
+    font-size: 0.75rem;
+    line-height: 1rem;
+    color: rgb(230 245 255);
+    position: relative;
+    isolation: isolate;
+    background: linear-gradient(
+      90deg,
+      rgba(var(--mist), 0.18) 0%,
+      rgba(var(--ice), 0.16) 40%,
+      rgba(var(--deep), 0.20) 100%
+    );
+    box-shadow:
+      0 0 12px rgba(var(--ice), 0.25),
+      inset 0 0 10px rgba(var(--mist), 0.25);
+    border: 1px solid rgba(var(--ice), 0.25);
+    animation: blueGlow 1.4s ease-in-out infinite alternate;
+  }
+  .cebolla-badge .label {
+    color: rgb(225 240 255);
+  }
+  .cebolla-badge .tear {
+    filter:
+      drop-shadow(0 0 6px rgba(var(--ice), 0.7))
+      drop-shadow(0 0 12px rgba(var(--deep), 0.3));
+    animation: tearBlink 700ms infinite steps(2, end);
+  }
+  .cebolla-badge .blue-heat {
+    position: absolute;
+    inset: -6px -10px;
+    z-index: -1;
+    pointer-events: none;
+    background:
+      radial-gradient(120px 40px at 20% 50%, rgba(var(--mist), 0.18), transparent 60%),
+      radial-gradient(120px 40px at 80% 50%, rgba(var(--deep), 0.14), transparent 60%);
+    filter: blur(8px);
+    animation: blueWave 1.8s ease-in-out infinite alternate;
+  }
+  .cebolla-badge::before,
+  .cebolla-badge::after {
+    content: "";
+    position: absolute;
+    width: 10px;
+    height: 16px;
+    top: -6px;
+    border-radius: 50% 50% 50% 50% / 60% 60% 40% 40%;
+    /* background: radial-gradient(circle at 50% 30%,
+      rgba(255,255,255,0.7) 0%,
+      rgba(var(--mist), 0.9) 35%,
+      rgba(var(--ice), 0.8) 65%,
+      rgba(var(--deep), 0.0) 100%);
+    filter: blur(0.4px) drop-shadow(0 0 8px rgba(var(--ice), 0.45)); */
+    transform-origin: bottom center;
+  }
+  .cebolla-badge::before { left: 10px; animation: blueLick 1000ms infinite ease-in-out; }
+  .cebolla-badge::after  { right: 10px; animation: blueLick 1200ms infinite ease-in-out reverse; }
+
+  @keyframes blueGlow {
+    from { box-shadow: 0 0 10px rgba(var(--ice), 0.22), inset 0 0 8px rgba(var(--mist), 0.2); }
+    to   { box-shadow: 0 0 18px rgba(var(--ice), 0.38), inset 0 0 16px rgba(var(--mist), 0.32); }
+  }
+  @keyframes tearBlink {
+    0%   { transform: translateY(0) rotate(-1deg) }
+    50%  { transform: translateY(-0.5px) rotate(1deg) }
+    100% { transform: translateY(0) rotate(-1deg) }
+  }
+  @keyframes blueWave {
+    from { opacity: 0.7; transform: translateY(0) }
+    to   { opacity: 1;   transform: translateY(-1px) }
+  }
+  @keyframes blueLick {
+    0%   { transform: scale(1) translateY(0) rotate(0deg) }
+    50%  { transform: scale(1.05) translateY(-2px) rotate(-3deg) }
+    100% { transform: scale(1) translateY(0) rotate(0deg) }
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    .cebolla-badge, .cebolla-badge .tear, .cebolla-badge .blue-heat,
+    .cebolla-badge::before, .cebolla-badge::after { animation: none !important; }
   }

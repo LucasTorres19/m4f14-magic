@@ -1,4 +1,4 @@
-import { asc, count, eq, like, sql, sum } from "drizzle-orm";
+import { asc, like, sql, eq, count, sum, max } from "drizzle-orm";
 
 import * as Scry from "scryfall-sdk";
 import { z } from "zod";
@@ -198,13 +198,11 @@ export const commandersRouter = createTRPCRouter({
     }),
   list: publicProcedure
     .input(
-      z
-        .object({
-          query: z.string().optional(),
-          limit: z.number().int().positive().max(100).optional(),
-          sortByMatches: z.boolean().optional(),
-        })
-        .optional(),
+      z.object({
+        query: z.string().optional(),
+        limit: z.number().int().positive().max(100).optional(),
+        sortByMatches: z.boolean().optional(),
+      }).optional(),
     )
     .query(async ({ ctx, input }) => {
       const trimmed = input?.query?.trim() ?? "";
@@ -214,41 +212,75 @@ export const commandersRouter = createTRPCRouter({
         .select({
           commanderId: playersToMatches.commanderId,
           matchCount: count(playersToMatches.commanderId).as("matchCount"),
-          wins: sum(
-            sql<number>`CASE WHEN ${playersToMatches.placement} = 1 THEN 1 ELSE 0 END`,
-          ).as("wins"),
-          podiums: sum(
-            sql<number>`CASE WHEN ${playersToMatches.placement} IN (1,2,3) THEN 1 ELSE 0 END`,
-          ).as("podiums"),
+          wins: sum(sql<number>`
+            CASE WHEN ${playersToMatches.placement} = 1 THEN 1 ELSE 0 END
+          `).as("wins"),
+          podiums: sum(sql<number>`
+            CASE WHEN ${playersToMatches.placement} IN (1,2,3) THEN 1 ELSE 0 END
+          `).as("podiums"),
+          seconds: sum(sql<number>`
+            CASE WHEN ${playersToMatches.placement} = 2 THEN 1 ELSE 0 END
+          `).as("seconds"),
+          lastSecondAt: max(sql<number>`
+            CASE WHEN ${playersToMatches.placement} = 2 THEN ${playersToMatches.matchId} ELSE NULL END
+          `).as("lastSecondAt"),
         })
         .from(playersToMatches)
         .groupBy(playersToMatches.commanderId)
         .as("agg");
 
-      const otpBase = ctx.db
+      const otpAgg = ctx.db
         .select({
           commanderId: playersToMatches.commanderId,
           playerId: playersToMatches.playerId,
           cnt: count(sql`1`).as("cnt"),
-          rn: sql<number>`
-            row_number() over (
-              partition by ${playersToMatches.commanderId}
-              order by count(1) desc
-            )
-          `.as("rn"),
+          lastPlayed: max(playersToMatches.matchId).as("lastPlayed"),
         })
         .from(playersToMatches)
         .groupBy(playersToMatches.commanderId, playersToMatches.playerId)
-        .as("otpBase");
+        .as("otpAgg");
+
+      const otpRank = ctx.db
+        .select({
+          commanderId: otpAgg.commanderId,
+          playerId: otpAgg.playerId,
+          rn: sql<number>`
+            row_number() over (
+              partition by ${otpAgg.commanderId}
+              order by ${otpAgg.cnt} desc, ${otpAgg.lastPlayed} desc
+            )
+          `.as("rn"),
+        })
+        .from(otpAgg)
+        .as("otpRank");
 
       const otp = ctx.db
         .select({
-          commanderId: otpBase.commanderId,
-          otpPlayerId: otpBase.playerId,
+          commanderId: otpRank.commanderId,
+          otpPlayerId: otpRank.playerId,
         })
-        .from(otpBase)
-        .where(eq(otpBase.rn, 1))
+        .from(otpRank)
+        .where(eq(otpRank.rn, 1))
         .as("otp");
+
+      const cebollaRank = ctx.db
+        .select({
+          commanderId: agg.commanderId,
+          rn: sql<number>`
+            row_number() over (
+              order by ${agg.seconds} desc nulls last,
+                      ${agg.lastSecondAt} desc nulls last
+            )
+          `.as("rn"),
+        })
+        .from(agg)
+        .as("cebollaRank");
+
+      const cebolla = ctx.db
+        .select({ cebollitaCommanderId: cebollaRank.commanderId })
+        .from(cebollaRank)
+        .where(eq(cebollaRank.rn, 1))
+        .as("cebolla");
 
       let q = ctx.db
         .select({
@@ -259,14 +291,20 @@ export const commandersRouter = createTRPCRouter({
           scryfallUri: commanders.scryfallUri,
           matchCount: agg.matchCount,
           wins: agg.wins,
+          podiums: agg.podiums,
+          seconds: agg.seconds,
+          lastSecondAt: agg.lastSecondAt,
           otpPlayerId: otp.otpPlayerId,
           otpPlayerName: players.name,
-          podiums: agg.podiums,
+          isCebollita: sql<boolean>`
+            CASE WHEN ${commanders.id} = ${cebolla.cebollitaCommanderId} THEN 1 ELSE 0 END
+          `.as("isCebollita"),
         })
         .from(commanders)
         .innerJoin(agg, eq(agg.commanderId, commanders.id))
         .leftJoin(otp, eq(otp.commanderId, commanders.id))
         .leftJoin(players, eq(players.id, otp.otpPlayerId))
+        .leftJoin(cebolla, sql`1=1`)
         .$dynamic();
 
       if (trimmed.length > 0) {
@@ -274,11 +312,9 @@ export const commandersRouter = createTRPCRouter({
         q = q.where(like(sql`lower(${commanders.name})`, pattern));
       }
 
-      if (input?.sortByMatches) {
-        q = q.orderBy(sql`matchCount DESC`, asc(commanders.name));
-      } else {
-        q = q.orderBy(asc(commanders.name));
-      }
+      q = input?.sortByMatches
+        ? q.orderBy(sql`matchCount DESC`, asc(commanders.name))
+        : q.orderBy(asc(commanders.name));
 
       const rows = await q.limit(limit);
       return rows;

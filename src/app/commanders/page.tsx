@@ -8,21 +8,35 @@ import Link from "next/link"
 import { api } from "@/trpc/react"
 import FlyingCards from "@/components/Flying-cards"
 import Image from "next/image"
-import { Swords,Trophy,Medal,Boxes } from 'lucide-react';
+import { Swords,Trophy,Medal,Boxes,Droplets  } from 'lucide-react';
 
-type Commander = {
+type ApiCommander = {
   id: number
   name: string | null
-  colors?: string | null
   imageUrl: string | null
   description: string | null
-  scryfallUri?: string | null
-  matchCount: number
-  wins: string | number | null
+  scryfallUri: string | null
+  matchCount: number | string | null
+  wins: number | string | null
+  podiums: number | string | null
+  seconds: number | string | null
+  lastSecondAt: number | string | null
+  isCebollita: 0 | 1 | boolean | null
   otpPlayerId?: number | null
-  otpPlayerName?: string | null
-  podiums?: number | string | null
+  otpPlayerName?: string | null  
 }
+
+type CommanderUI = ApiCommander & {
+  matchCount: number
+  wins: number
+  podiums: number
+  seconds: number
+  lastSecondAt: number
+  isCebollita: boolean
+  otpPlayerId?: number | null 
+  otpPlayerName?: string | null    
+}
+
 
 export default function ComandantesPage() {
   const { data, isLoading, isError } = api.commanders.list.useQuery({
@@ -30,13 +44,17 @@ export default function ComandantesPage() {
     limit: 50,
   })
 
-    const list = useMemo(() => {
-    return (data ?? []).map((c: Commander) => ({
+    const list = useMemo<CommanderUI[]>(() => {
+    const rows = (data ?? []) as ApiCommander[]
+      return rows.map((c) => ({
         ...c,
         matchCount: Number(c.matchCount ?? 0),
         wins: Number(c.wins ?? 0),
-        podiums: Number(c.podiums ?? 0)
-    }))
+        podiums: Number(c.podiums ?? 0),
+        seconds: Number(c.seconds ?? 0),
+        lastSecondAt: Number(c.lastSecondAt ?? 0),
+        isCebollita: Boolean(c.isCebollita),
+      }))
     }, [data])
 
     const pct = (wins?: number, total?: number) => total && total > 0 ? Math.round(((wins ?? 0) / total) * 100) : 0
@@ -163,7 +181,7 @@ export default function ComandantesPage() {
                         )} 
                     </div>
            
-                    <div className="flex gap-2 mt-5 flex-wrap gap-y-3">
+                    <div className="flex gap-2 mt-5 flex-wrap gap-y-3 ">
 
                         <span className="otp-badge">
                             <Medal width={20} />
@@ -172,6 +190,14 @@ export default function ComandantesPage() {
                             </span>
                             <span aria-hidden className="heat" />
                         </span>
+
+                        {commander.isCebollita && (
+                          <span className="cebolla-badge">
+                            <Droplets width={16} height={16} className="tear" />
+                            <span className="label">Cebollita</span>
+                            <span aria-hidden className="blue-heat" />
+                          </span>
+                        )}
 
                         <span className="text-xs py-1 rounded-full bg-primary/10 text-primary flex w-fit items-center px-3">
                             <Swords className="mr-2" width={20}/>  {commander.matchCount} combates 
