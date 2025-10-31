@@ -29,6 +29,7 @@ type CommanderComboboxProps = {
   placeholder: string;
   ariaLabel: string;
   onInteractionChange?: (isActive: boolean) => void;
+  className?: string;
 };
 
 export function CommanderCombobox({
@@ -37,6 +38,7 @@ export function CommanderCombobox({
   placeholder,
   ariaLabel,
   onInteractionChange,
+  className,
 }: CommanderComboboxProps) {
   const [open, setOpen] = useState(false);
   const [search, setSearch] = useState(value?.name ?? "");
@@ -99,7 +101,10 @@ export function CommanderCombobox({
           role="combobox"
           aria-label={ariaLabel}
           aria-expanded={open}
-          className="border-input h-8 w-full justify-between rounded-md px-2 text-left text-sm font-normal grid grid-cols-[1fr_14px]"
+          className={cn(
+            "border-input h-8 w-full justify-between rounded-md px-2 text-left text-sm font-normal grid grid-cols-[1fr_14px]",
+            className,
+          )}
         >
           {currentValue.length > 0 ? (
             <span className="truncate">{currentValue}</span>

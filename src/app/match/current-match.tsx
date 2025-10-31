@@ -28,6 +28,7 @@ import type { CSSProperties } from "react";
 import { useRef, useState } from "react";
 import { useCurrentMatch } from "../_stores/current-match-provider";
 import { type Player } from "../_stores/current-match-store";
+import PlayersDialog from "./players-dialog";
 import SaveMatch from "./save-match";
 
 function Grid(n: number) {
@@ -58,6 +59,12 @@ function PlayerCurrentMatch({
   const minusIntervalRef = useRef<NodeJS.Timeout | null>(null);
   const plusIntervalRef = useRef<NodeJS.Timeout | null>(null);
   const updateHp = useCurrentMatch((s) => s.updateHp);
+  const commanderBackground =
+    player.commander?.artImageUrl ?? player.commander?.imageUrl ?? null;
+
+  const containerStyle: CSSProperties = {
+    backgroundColor: commanderBackground ? "" : player.backgroundColor,
+  };
 
   const minusAttrs = useLongPress(
     () => {
@@ -82,12 +89,19 @@ function PlayerCurrentMatch({
 
   return (
     <div
-      style={{ backgroundColor: player.backgroundColor }}
+      style={containerStyle}
       className={cn(
         "text-background relative flex items-stretch justify-center overflow-hidden rounded-3xl text-[clamp(2rem,10vmin,8rem)]",
         flipped && "flex-row-reverse",
       )}
     >
+      {commanderBackground ? (
+        <div
+          aria-hidden
+          className="pointer-events-none absolute inset-0 -z-20 bg-cover bg-top opacity-70"
+          style={{ backgroundImage: `url(${commanderBackground})` }}
+        />
+      ) : null}
       <Button
         {...minusAttrs}
         size="icon-lg"
@@ -98,32 +112,39 @@ function PlayerCurrentMatch({
         variant="ghost"
         onClick={() => updateHp(player.id, -1)}
       >
-        <span
-          className={cn(
-            "text-background absolute text-2xl",
-            flipped
-              ? "bottom-4 left-1/2 -translate-x-1/2 rotate-180"
-              : "top-4 left-1/2 -translate-x-1/2",
-          )}
-        >
-          {player.displayName}
-        </span>
+        {!commanderBackground && (
+          <span
+            className={cn(
+              "text-background absolute text-2xl",
+              flipped
+                ? "bottom-4 left-1/2 -translate-x-1/2 rotate-180"
+                : "top-4 left-1/2 -translate-x-1/2",
+            )}
+          >
+            {player.displayName}
+          </span>
+        )}
         <Minus
           className={cn(
             "group-active:text-background size-8",
-            player.hpUpdated < 0 ? "text-background" : "text-background/60",
+            player.hpUpdated < 0 ? "text-background" : "text-background/80",
           )}
           strokeWidth={4}
         />
 
         <span
-          className={cn("text-background text-5xl", flipped && "rotate-180")}
+          className={cn("text-background text-6xl ", flipped && "rotate-180")}
         >
           {player.hpUpdated < 0 ? `${Math.abs(player.hpUpdated)}` : ""}
         </span>
       </Button>
       <div className="pointer-events-none absolute inset-0 flex items-center justify-center">
-        <button className={cn("pointer-events-auto", flipped && "rotate-180")}>
+        <button
+          className={cn(
+            "pointer-events-auto text-background text-6xl ",
+            flipped && "rotate-180",
+          )}
+        >
           {player.hp}
         </button>
       </div>
@@ -140,7 +161,7 @@ function PlayerCurrentMatch({
         <Plus
           className={cn(
             "group-active:text-background size-8",
-            player.hpUpdated > 0 ? "text-background" : "text-background/60",
+            player.hpUpdated > 0 ? "text-background" : "text-background/80",
           )}
           strokeWidth={4}
         />
@@ -239,6 +260,8 @@ export default function CurrentMatch() {
                   </Button>
                 }
               />
+
+              <PlayersDialog />
 
               <ResetButton
                 trigger={

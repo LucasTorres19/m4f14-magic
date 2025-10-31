@@ -2,6 +2,9 @@ import { randomHexColor } from "@/utils/gen";
 import { persist } from "zustand/middleware";
 import { createStore } from "zustand/vanilla";
 import type { SettingsState } from "./settings-store";
+import type { RouterOutputs } from "@/trpc/react";
+
+type CommanderOption = RouterOutputs["commanders"]["search"][number];
 
 export interface Player {
   id: string;
@@ -10,6 +13,7 @@ export interface Player {
   hpUpdated: number;
   hpUpdatedTimeout: ReturnType<typeof setTimeout> | null;
   backgroundColor: string;
+  commander: CommanderOption | null;
 }
 
 export type CurrentMatchState = {
@@ -27,6 +31,14 @@ export type CurrentMatchActions = {
       | Partial<Omit<Player, "id">>
       | ((player: Player) => Partial<Omit<Player, "id">>),
   ) => void;
+  addPlayer: (player?: {
+    id?: string;
+    displayName?: string;
+    backgroundColor?: string;
+    hp?: number;
+    commander?: CommanderOption | null;
+  }) => void;
+  removePlayer: (playerId: string) => void;
 
   findPlayer: (playerId: string) => Player | undefined;
 
@@ -42,7 +54,12 @@ export type CurrentMatchActions = {
   // 🔹 Nuevo: resetea con una lista concreta de invocadores (nombre + color)
   resetMatchWithPlayers: (
     startingHp: number,
-    uiPlayers: Array<{ id?: string; name?: string; color?: string }>,
+    uiPlayers: Array<{
+      id?: string;
+      name?: string;
+      color?: string;
+      commander?: CommanderOption | null;
+    }>,
     settings: SettingsState,
   ) => void;
 
@@ -74,6 +91,7 @@ export const initCurrentMatchStore = (
       backgroundColor: randomHexColor(i),
       hpUpdated: 0,
       hpUpdatedTimeout: null,
+      commander: null,
     })),
     hpHistory: [],
     currentPlayerIndex: 0,
@@ -99,6 +117,57 @@ export const createCurrentMatchStore = (
                 : player,
             ),
           })),
+        addPlayer: (player) =>
+          set((state) => {
+            const nextIndex = state.players.length;
+            const baseHp = player?.hp ?? state.players[0]?.hp ?? 40;
+            const providedName = player?.displayName?.trim() ?? "";
+            const displayName =
+              providedName.length > 0
+                ? providedName
+                : `Invocador ${nextIndex + 1}`;
+            const backgroundColor =
+              player?.backgroundColor ?? randomHexColor(nextIndex);
+            const newPlayer: Player = {
+              id:
+                player?.id ??
+                `local-${Date.now().toString(16)}-${Math.random()
+                  .toString(16)
+                  .slice(2)}`,
+              displayName,
+              hp: baseHp,
+              backgroundColor,
+              hpUpdated: 0,
+              hpUpdatedTimeout: null,
+              commander: player?.commander ?? null,
+            };
+            return {
+              players: [...state.players, newPlayer],
+            };
+          }),
+        removePlayer: (playerId) =>
+          set((state) => {
+            const playerToRemove = state.players.find(
+              (player) => player.id === playerId,
+            );
+            if (!playerToRemove) return {};
+            if (playerToRemove.hpUpdatedTimeout) {
+              clearTimeout(playerToRemove.hpUpdatedTimeout);
+            }
+            const remaining = state.players.filter(
+              (player) => player.id !== playerId,
+            );
+            return {
+              players: remaining,
+              hpHistory: state.hpHistory.filter(
+                (entry) => entry.playerId !== playerId,
+              ),
+              currentPlayerIndex:
+                remaining.length === 0
+                  ? 0
+                  : Math.min(state.currentPlayerIndex, remaining.length - 1),
+            };
+          }),
 
         findPlayer: (playerId) => get().players.find((p) => p.id === playerId),
 
@@ -139,6 +208,7 @@ export const createCurrentMatchStore = (
               backgroundColor: randomHexColor(i),
               hpUpdated: 0,
               hpUpdatedTimeout: null,
+              commander: null,
             })),
             hpHistory: [],
             currentPlayerIndex: 0,
@@ -163,6 +233,7 @@ export const createCurrentMatchStore = (
                   : randomHexColor(i),
               hpUpdated: 0,
               hpUpdatedTimeout: null,
+              commander: p.commander ?? null,
             })),
             hpHistory: [],
             currentPlayerIndex: 0,

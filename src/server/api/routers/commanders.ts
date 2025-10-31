@@ -1,4 +1,4 @@
-import { asc, like, sql, eq, count, sum, max } from "drizzle-orm";
+import { asc, count, eq, like, max, sql, sum } from "drizzle-orm";
 
 import * as Scry from "scryfall-sdk";
 import { z } from "zod";
@@ -131,6 +131,7 @@ async function findLocalCommanders(db: Database, query: string, limit: number) {
     id: commanders.id,
     name: commanders.name,
     imageUrl: commanders.imageUrl,
+    artImageUrl: commanders.artImageUrl,
     description: commanders.description,
     scryfallUri: commanders.scryfallUri,
   };
@@ -198,11 +199,13 @@ export const commandersRouter = createTRPCRouter({
     }),
   list: publicProcedure
     .input(
-      z.object({
-        query: z.string().optional(),
-        limit: z.number().int().positive().max(100).optional(),
-        sortByMatches: z.boolean().optional(),
-      }).optional(),
+      z
+        .object({
+          query: z.string().optional(),
+          limit: z.number().int().positive().max(100).optional(),
+          sortByMatches: z.boolean().optional(),
+        })
+        .optional(),
     )
     .query(async ({ ctx, input }) => {
       const trimmed = input?.query?.trim() ?? "";

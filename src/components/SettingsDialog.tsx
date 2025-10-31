@@ -178,24 +178,6 @@ export default function SettingsDialog({
           </div>
 
           <div className="grid grid-cols-4 items-center gap-2">
-            <Label htmlFor="playersCount" className="col-span-2">
-              invocadores
-            </Label>
-            <Input
-              id="playersCount"
-              type="number"
-              min={minPlayers}
-              max={maxPlayers}
-              value={playersCount}
-              onChange={(e) => {
-                const n = Number.parseInt(e.target.value, 10);
-                setPlayersCount(Number.isFinite(n) ? n : minPlayers);
-              }}
-              className="col-span-2"
-            />
-          </div>
-
-          <div className="grid grid-cols-4 items-center gap-2">
             <Label htmlFor="timerLimit" className="col-span-2">
               Tiempo límite (segundos)
             </Label>
@@ -210,49 +192,6 @@ export default function SettingsDialog({
               }
               className="col-span-2"
             />
-          </div>
-
-          {/* Nombres y colores opcionales */}
-          <div className="flex flex-col gap-4">
-            <Label className="col-span-4 text-center">
-              Configuracion de los magistas
-            </Label>
-            {players.map((p, i) => (
-              <div className="flex flex-row gap-2" key={p.id}>
-                <div className="flex flex-col gap-2">
-                  <Label htmlFor={`playerName_${i}`}>Nombre</Label>
-                  <Input
-                    id={`playerName_${i}`}
-                    type="text"
-                    value={p.name}
-                    onChange={(e) =>
-                      setPlayers((prev) =>
-                        prev.map((pp, idx) =>
-                          idx === i ? { ...pp, name: e.target.value } : pp,
-                        ),
-                      )
-                    }
-                  />
-                </div>
-
-                <div className="flex flex-col gap-2">
-                  <Label htmlFor={`playerColor_${i}`}>Color</Label>
-                  <Input
-                    id={`playerColor_${i}`}
-                    type="color"
-                    value={p.color || "#000000"} // ✅ color válido siempre
-                    className="w-[150px]"
-                    onChange={(e) =>
-                      setPlayers((prev) =>
-                        prev.map((pp, idx) =>
-                          idx === i ? { ...pp, color: e.target.value } : pp,
-                        ),
-                      )
-                    }
-                  />
-                </div>
-              </div>
-            ))}
           </div>
         </div>
 

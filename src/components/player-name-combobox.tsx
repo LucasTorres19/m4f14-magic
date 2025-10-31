@@ -29,6 +29,7 @@ type PlayerNameComboboxProps = {
   ariaLabel: string;
   suggestions: SuggestedPlayer[];
   onInteractionChange?: (isActive: boolean) => void;
+  className?: string;
 };
 
 export function PlayerNameCombobox({
@@ -38,6 +39,7 @@ export function PlayerNameCombobox({
   ariaLabel,
   suggestions,
   onInteractionChange,
+  className,
 }: PlayerNameComboboxProps) {
   const [open, setOpen] = useState(false);
   const [search, setSearch] = useState(value);
@@ -101,7 +103,10 @@ export function PlayerNameCombobox({
           role="combobox"
           aria-label={ariaLabel}
           aria-expanded={open}
-          className="border-input h-8 w-full justify-between rounded-md px-2 text-left text-sm font-normal grid grid-cols-[1fr_14px]"
+          className={cn(
+            "border-input h-8 w-full justify-between rounded-md px-2 text-left text-sm font-normal grid grid-cols-[1fr_14px]",
+            className,
+          )}
         >
           {currentValue.length > 0 ? (
             <span className="truncate">{currentValue}</span>
