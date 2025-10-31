@@ -1,4 +1,5 @@
 import { asc, count, eq, max, sql, sum, desc } from "drizzle-orm";
+import { z } from "zod";
 
 import { createTRPCRouter, publicProcedure } from "@/server/api/trpc";
 import { commanders, matches, players, playersToMatches } from "@/server/db/schema";
@@ -162,4 +163,21 @@ export const playersRouter = createTRPCRouter({
       isStreakChampion: streakChampionId != null && r.id === streakChampionId,
     }));
   }),
+  updateColor: publicProcedure
+    .input(
+      z.object({
+        playerId: z.number().int().positive(),
+        color: z
+          .string()
+          .regex(/^#([0-9a-fA-F]{3}|[0-9a-fA-F]{6})$/, "Color inválido (usa HEX)."),
+      }),
+    )
+    .mutation(async ({ ctx, input }) => {
+      await ctx.db
+        .update(players)
+        .set({ backgroundColor: input.color })
+        .where(eq(players.id, input.playerId));
+
+      return { ok: true } as const;
+    }),
 });

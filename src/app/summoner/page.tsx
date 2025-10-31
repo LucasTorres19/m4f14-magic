@@ -6,6 +6,17 @@ import Image from "next/image";
 import { api } from "@/trpc/react";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
+import { Label } from "@/components/ui/label";
+import { Input } from "@/components/ui/input";
+import { toast } from "sonner";
 import { ArrowLeft, ChevronUp, ChevronDown, Users, Swords, Trophy, Boxes, Flame } from "lucide-react";
 import {
   Tooltip,
@@ -39,6 +50,21 @@ type PlayerUI = Required<Pick<ApiPlayer, "id">> & {
 
 export default function SummonerPage() {
   const { data, isLoading, isError } = api.players.listWithStats.useQuery();
+  const utils = api.useUtils();
+  const [colorDialog, setColorDialog] = useState<
+    { id: number; name: string; color: string } | null
+  >(null);
+  const [colorInput, setColorInput] = useState<string>("#000000");
+  const updateColor = api.players.updateColor.useMutation({
+    onSuccess: async () => {
+      toast.success("Color actualizado");
+      await utils.players.listWithStats.invalidate();
+      setColorDialog(null);
+    },
+    onError: (e) => {
+      toast.error(e?.message ?? "No se pudo actualizar el color");
+    },
+  });
 
   const list = useMemo<PlayerUI[]>(() => {
     const rows = (data ?? []) as ApiPlayer[];
@@ -64,7 +90,7 @@ export default function SummonerPage() {
   type SortDir = "asc" | "desc";
 
   const [sortKey, setSortKey] = useState<SortKey>("winrate");
-  const [sortDir, setSortDir] = useState<SortDir>("asc");
+  const [sortDir, setSortDir] = useState<SortDir>("desc");
 
   const collator = useMemo(
     () => new Intl.Collator("es", { sensitivity: "base" }),
@@ -115,14 +141,14 @@ export default function SummonerPage() {
                 Volver al menú
               </Button>
             </Link>
-            <h1 className="text-2xl md:text-5xl font-bold mb-2">Jugadores</h1>
+            <h1 className="text-2xl md:text-5xl font-bold mb-2">Invocadores</h1>
             <p className="text-muted-foreground">
-              Lista de jugadores guardados en la base de datos.
+
             </p>
           </div>
           <div className="text-right hidden md:block">
             <p className="text-sm text-muted-foreground tracking-widest flex">
-              <Users className="mr-2 h-4 w-4" /> INVOCADORES
+              <Users className="mr-2 h-4 w-4" /> Grandes magos
             </p>
           </div>
         </div>
@@ -190,18 +216,30 @@ export default function SummonerPage() {
                         <h3 className="font-bold text-lg leading-tight">
                           {player.name}
                         </h3>
+
                         <Tooltip>
                           <TooltipTrigger asChild>
-                            <span
-                              className="inline-flex h-6 w-6 rounded-full border"
+                            <button
+                              type="button"
+                              className="inline-flex h-6 w-6 rounded-full border cursor-pointer"
                               style={{ backgroundColor: player.backgroundColor }}
                               title={player.backgroundColor}
+                              aria-label={`Cambiar color de ${player.name}`}
+                              onClick={() => {
+                                setColorInput(player.backgroundColor);
+                                setColorDialog({
+                                  id: player.id,
+                                  name: player.name,
+                                  color: player.backgroundColor,
+                                });
+                              }}
                             />
                           </TooltipTrigger>
                           <TooltipContent>
-                            Color: {player.backgroundColor}
+                            Cambiar color: {player.backgroundColor}
                           </TooltipContent>
                         </Tooltip>
+
                       </div>
 
                       <div className="flex items-center gap-2 text-xs text-muted-foreground flex-wrap">
@@ -225,7 +263,7 @@ export default function SummonerPage() {
                               <Flame className="mr-1 h-4 w-4" /> Racha actual
                             </span>
                           )}
-                          
+
                       </div>
 
 
@@ -275,6 +313,72 @@ export default function SummonerPage() {
           </>
         )}
       </div>
+      <ColorDialog
+        data={colorDialog ? { id: colorDialog.id, name: colorDialog.name } : null}
+        value={colorInput}
+        setValue={setColorInput}
+        onClose={() => setColorDialog(null)}
+        onConfirm={() => {
+          if (!colorDialog) return;
+          updateColor.mutate({ playerId: colorDialog.id, color: colorInput });
+        }}
+      />
     </div>
+  );
+}
+
+function ColorDialog({
+  data,
+  onClose,
+  onConfirm,
+  value,
+  setValue,
+}: {
+  data: { id: number; name: string } | null;
+  value: string;
+  setValue: (v: string) => void;
+  onClose: () => void;
+  onConfirm: () => void;
+}) {
+  return (
+    <Dialog open={!!data} onOpenChange={(open) => !open && onClose()}>
+      <DialogContent>
+        <DialogHeader>
+          <DialogTitle>Cambiar color</DialogTitle>
+          <DialogDescription>
+            Ajusta el color de fondo del invocador {data?.name}.
+          </DialogDescription>
+        </DialogHeader>
+        <div className="grid gap-4 py-2">
+          <div className="grid grid-cols-2 items-center gap-3">
+            <Label htmlFor="colorPicker">Selector</Label>
+            <Input
+              id="colorPicker"
+              type="color"
+              value={value}
+              onChange={(e) => setValue(e.target.value)}
+              className="h-9 w-16 p-1"
+              aria-label="Selector de color"
+            />
+          </div>
+          <div className="grid grid-cols-2 items-center gap-3">
+            <Label htmlFor="colorHex">Hex</Label>
+            <Input
+              id="colorHex"
+              value={value}
+              onChange={(e) => setValue(e.target.value)}
+              placeholder="#000000"
+              aria-label="Código de color en HEX"
+            />
+          </div>
+        </div>
+        <DialogFooter>
+          <Button variant="outline" onClick={onClose}>
+            Cancelar
+          </Button>
+          <Button onClick={onConfirm}>Guardar</Button>
+        </DialogFooter>
+      </DialogContent>
+    </Dialog>
   );
 }
