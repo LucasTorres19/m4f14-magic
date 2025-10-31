@@ -1,6 +1,6 @@
 "use client";
 
-// import Wizard from "@/app/_icons/wizard.svg";
+import Wizard from "@/app/_icons/wizard.svg";
 import { CommanderCombobox } from "@/components/commander-combobox";
 import { PlayerNameCombobox } from "@/components/player-name-combobox";
 import { Button } from "@/components/ui/button";
@@ -17,7 +17,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { api } from "@/trpc/react";
-import { Plus, PlusIcon } from "lucide-react";
+import { Plus } from "lucide-react";
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { useShallow } from "zustand/react/shallow";
 import { useCurrentMatch } from "../_stores/current-match-provider";
@@ -140,8 +140,7 @@ export default function PlayersDialog() {
     <Dialog>
       <DialogTrigger asChild>
         <Button size="lg" className="pointer-events-auto px-4">
-          <PlusIcon className="size=5" />
-          {/* <Wizard className="size-5" /> */}
+          <Wizard className="size-5" />
         </Button>
       </DialogTrigger>
 
