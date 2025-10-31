@@ -26,7 +26,8 @@ import {
 import Image from "next/image";
 import Link from "next/link";
 import type { CSSProperties } from "react";
-import { useRef, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
+import { createSwapy, utils, type Swapy } from "swapy";
 import { useCurrentMatch } from "../_stores/current-match-provider";
 import { type Player } from "../_stores/current-match-store";
 import PlayersDialog from "./players-dialog";
@@ -65,6 +66,7 @@ function PlayerCurrentMatch({
 
   const containerStyle: CSSProperties = {
     backgroundColor: commanderBackground ? "" : player.backgroundColor,
+    opacity: commanderBackground ? undefined : 0.7,
   };
 
   const minusAttrs = useLongPress(
@@ -92,13 +94,17 @@ function PlayerCurrentMatch({
     <div
       style={containerStyle}
       className={cn(
-        "text-background relative flex items-stretch justify-center overflow-hidden rounded-3xl text-[clamp(2rem,10vmin,8rem)]",
+        "text-background relative flex h-full w-full items-stretch justify-center overflow-hidden rounded-3xl text-[clamp(3.75rem,10vmin,8rem)]",
         flipped && "flex-row-reverse",
       )}
     >
       {commanderBackground ? (
-        <div className="pointer-events-none absolute inset-0 -z-20 bg-cover bg-top opacity-70">
+        <div
+          data-swapy-no-drag
+          className="pointer-events-none absolute inset-0 -z-20 bg-cover bg-top opacity-70"
+        >
           <Image
+            data-swapy-no-drag
             src={commanderBackground}
             fill
             className="object-cover object-top"
@@ -106,7 +112,21 @@ function PlayerCurrentMatch({
           />
         </div>
       ) : null}
+      {!commanderBackground && (
+        <span
+          data-swapy-no-drag
+          className={cn(
+            "text-background absolute text-2xl",
+            flipped
+              ? "bottom-4 left-1/2 -translate-x-1/2 rotate-180"
+              : "top-4 left-1/2 -translate-x-1/2",
+          )}
+        >
+          {player.displayName}
+        </span>
+      )}
       <Button
+        data-swapy-no-drag
         {...minusAttrs}
         size="icon-lg"
         className={cn(
@@ -116,19 +136,8 @@ function PlayerCurrentMatch({
         variant="ghost"
         onClick={() => updateHp(player.id, -1)}
       >
-        {!commanderBackground && (
-          <span
-            className={cn(
-              "text-background absolute text-2xl",
-              flipped
-                ? "bottom-4 left-1/2 -translate-x-1/2 rotate-180"
-                : "top-4 left-1/2 -translate-x-1/2",
-            )}
-          >
-            {player.displayName}
-          </span>
-        )}
         <Minus
+          data-swapy-no-drag
           className={cn(
             "group-active:text-background size-8",
             player.hpUpdated < 0 ? "text-background" : "text-background/80",
@@ -137,22 +146,15 @@ function PlayerCurrentMatch({
         />
 
         <span
+          data-swapy-no-drag
           className={cn("text-background text-6xl ", flipped && "rotate-180")}
         >
           {player.hpUpdated < 0 ? `${Math.abs(player.hpUpdated)}` : ""}
         </span>
       </Button>
-      <div className="pointer-events-none absolute inset-0 flex items-center justify-center">
-        <button
-          className={cn(
-            "pointer-events-auto text-background text-6xl ",
-            flipped && "rotate-180",
-          )}
-        >
-          {player.hp}
-        </button>
-      </div>
+
       <Button
+        data-swapy-no-drag
         {...plusAttrs}
         size="icon-lg"
         className={cn(
@@ -163,6 +165,7 @@ function PlayerCurrentMatch({
         onClick={() => updateHp(player.id, 1)}
       >
         <Plus
+          data-swapy-no-drag
           className={cn(
             "group-active:text-background size-8",
             player.hpUpdated > 0 ? "text-background" : "text-background/80",
@@ -170,20 +173,96 @@ function PlayerCurrentMatch({
           strokeWidth={4}
         />
         <span
+          data-swapy-no-drag
           className={cn("text-background text-5xl", flipped && "rotate-180")}
         >
           {player.hpUpdated > 0 ? `${Math.abs(player.hpUpdated)}` : ""}
         </span>
       </Button>
+      <div className="pointer-events-none absolute inset-0 flex items-center justify-center">
+        <button
+          type="button"
+          className={cn(
+            "pointer-events-auto text-background",
+            flipped && "rotate-180",
+          )}
+        >
+          {player.hp}
+        </button>
+      </div>
     </div>
   );
 }
 
 export default function CurrentMatch() {
   const players = useCurrentMatch((s) => s.players);
+  const reorderPlayers = useCurrentMatch((s) => s.reorderPlayers);
   const n = players.length;
   const { cols, rows } = Grid(n);
   const [isTimerVisible, setIsTimerVisible] = useState(true);
+  const containerRef = useRef<HTMLDivElement | null>(null);
+  const swapyInstanceRef = useRef<Swapy | null>(null);
+  const playersRef = useRef(players);
+
+  const [slotItemMap, setSlotItemMap] = useState(
+    utils.initSlotItemMap(players, "id"),
+  );
+  const slottedItems = useMemo(
+    () => utils.toSlottedItems(players, "id", slotItemMap),
+    [players, slotItemMap],
+  );
+
+  useEffect(() => {
+    playersRef.current = players;
+  }, [players]);
+
+  useEffect(() => {
+    const container = containerRef.current;
+    if (!container) return;
+    console.log("Creating swapy");
+    const instance = createSwapy(container, {
+      dragOnHold: true,
+      manualSwap: true,
+      animation: "dynamic",
+      swapMode: "drop",
+      autoScrollOnDrag: true,
+    });
+
+    instance.onSwap((event) => {
+      setSlotItemMap(event.newSlotItemMap.asArray);
+    });
+
+    instance.onSwapEnd(({ hasChanged, slotItemMap }) => {
+      if (!hasChanged) return;
+
+      const normalizedSlotItemMap = slotItemMap.asArray;
+      setSlotItemMap(normalizedSlotItemMap);
+      const playerOrder = normalizedSlotItemMap
+        .map(({ item }) => item)
+        .filter((id): id is string => Boolean(id));
+      reorderPlayers(playerOrder);
+    });
+
+    swapyInstanceRef.current = instance;
+
+    return () => {
+      instance.destroy();
+      swapyInstanceRef.current = null;
+    };
+  }, [reorderPlayers]);
+
+  useEffect(
+    () =>
+      utils.dynamicSwapy(
+        swapyInstanceRef.current,
+        players,
+        "id",
+        slotItemMap,
+        setSlotItemMap,
+      ),
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    [players],
+  );
 
   const GAP = "0.75rem";
   const PAD = "0.75rem";
@@ -212,6 +291,7 @@ export default function CurrentMatch() {
 
   return (
     <div
+      ref={containerRef}
       className="relative grid h-dvh w-full gap-3 p-3 min-h-screen overflow-hidden"
       style={styleGrid}
     >
@@ -220,12 +300,22 @@ export default function CurrentMatch() {
         onVisibilityChange={setIsTimerVisible}
       />
 
-      {players.map((player, idx) => (
-        <PlayerCurrentMatch
-          player={player}
-          key={player.id}
-          flipped={idx < cols}
-        />
+      {slottedItems.map(({ item: player, itemId, slotId }, idx) => (
+        <div
+          key={slotId}
+          data-swapy-slot={slotId}
+          className="h-full w-full rounded-3xl group-slot data-swapy-highlighted:bg-slate-600/60"
+        >
+          <div
+            key={itemId}
+            data-swapy-item={itemId}
+            className="h-full w-full group-item"
+          >
+            {player && (
+              <PlayerCurrentMatch player={player} flipped={idx < cols} />
+            )}
+          </div>
+        </div>
       ))}
 
       <div className="pointer-events-none absolute z-40" style={styleBtn}>

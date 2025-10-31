@@ -40,6 +40,7 @@ export type CurrentMatchActions = {
     commander?: CommanderOption | null;
   }) => void;
   removePlayer: (playerId: string) => void;
+  reorderPlayers: (playerIds: string[]) => void;
 
   findPlayer: (playerId: string) => Player | undefined;
 
@@ -154,6 +155,27 @@ export const createCurrentMatchStore = (
                   ? 0
                   : Math.min(state.currentPlayerIndex, remaining.length - 1),
             };
+          }),
+        reorderPlayers: (playerIds) =>
+          set((state) => {
+            if (playerIds.length === 0) return {};
+            const playerById = new Map(state.players.map((p) => [p.id, p]));
+            const ordered = playerIds
+              .map((id) => playerById.get(id))
+              .filter((player): player is Player => Boolean(player));
+            if (ordered.length === 0) return {};
+            const seen = new Set(ordered.map((player) => player.id));
+            const remaining = state.players.filter(
+              (player) => !seen.has(player.id),
+            );
+            const nextPlayers = [...ordered, ...remaining];
+            const changed =
+              nextPlayers.length !== state.players.length ||
+              nextPlayers.some(
+                (player, index) => player.id !== state.players[index]?.id,
+              );
+            if (!changed) return {};
+            return { players: nextPlayers };
           }),
 
         findPlayer: (playerId) => get().players.find((p) => p.id === playerId),
