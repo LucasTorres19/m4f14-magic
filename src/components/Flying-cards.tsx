@@ -41,9 +41,14 @@ function FlyingCard({ it }: FlyingCardProps) {
     top: it.top,
     "--dx": `${it.dx}px`,
     "--dy": `${it.dy}px`,
-    animation: `fc-orbit ${it.dur} ease-in-out infinite`,
+    animationName: "fc-orbit",
+    animationDuration: it.dur,
+    animationTimingFunction: "ease-in-out",
+    animationIterationCount: "infinite",
     animationDelay: it.delay,
   };
+
+  const tiltDuration = useMemo(() => rnd(4, 8), []);
 
   const cardStyle: CSSVars = {
     "--baseR": `${it.angle}deg`,
@@ -51,7 +56,10 @@ function FlyingCard({ it }: FlyingCardProps) {
     transform: `rotate(var(--baseR))`,
     overflow: "hidden",
     zIndex: it.key,
-    animation: `fc-tilt ${rnd(4, 8)}s ease-in-out infinite`,
+    animationName: "fc-tilt",
+    animationDuration: `${tiltDuration}s`,
+    animationTimingFunction: "ease-in-out",
+    animationIterationCount: "infinite",
     animationDelay: it.delay,
   };
 
