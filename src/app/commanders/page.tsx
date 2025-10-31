@@ -16,6 +16,7 @@ import {
 import Image from "next/image";
 import Link from "next/link";
 import { useEffect, useMemo, useState } from "react";
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 
 type ApiCommander = {
   id: number;
@@ -263,11 +264,26 @@ export default function ComandantesPage() {
                       </span>
 
                       {commander.isCebollita && (
-                        <span className="cebolla-badge">
-                          <Droplets width={16} height={16} className="tear" />
-                          <span className="label">Cebollita</span>
-                          <span aria-hidden className="blue-heat" />
-                        </span>
+                        <Tooltip>
+                          <TooltipTrigger asChild>
+                            <span className="cebolla-badge" role="img" aria-label="Cebollita">
+                              <Droplets width={16} height={16} className="tear" />
+                              <span className="label">Cebollita</span>
+                              <span aria-hidden className="blue-heat" />
+                            </span>
+                          </TooltipTrigger>
+
+                          <TooltipContent side="top" align="center" className="max-w-[280px] leading-relaxed">
+                            <p className="font-semibold">“Cebollita”</p>
+                            <p className="text-sm">
+                              Mayor cantidad de segundos puestos.
+                            </p>
+
+                            <div className="mt-2 text-xs">
+                              cantidad: <strong>{commander.seconds ?? 0}</strong><br />
+                            </div>
+                          </TooltipContent>
+                        </Tooltip>
                       )}
 
                       <span className="text-xs py-1 rounded-full bg-primary/10 text-primary flex w-fit items-center px-3">
@@ -280,10 +296,22 @@ export default function ComandantesPage() {
                         {pct(commander.wins, commander.matchCount)}% Winrate
                       </span>
 
-                      <span className="text-xs py-1 rounded-full bg-primary/10 text-primary flex w-fit items-center px-3">
-                        <Boxes className="mr-2" width={20} />
-                        {pct(commander.podiums, commander.matchCount)}% Podio
-                      </span>
+                      <Tooltip>
+                        <TooltipTrigger asChild>      
+                            <span className="text-xs py-1 rounded-full bg-primary/10 text-primary flex w-fit items-center px-3">
+                              <Boxes className="mr-2" width={20} />
+                              {pct(commander.podiums, commander.matchCount)}% Podio
+                            </span>
+                        </TooltipTrigger>
+
+                        <TooltipContent side="top" align="center" className="max-w-[280px] leading-relaxed">
+                          <p className="font-semibold">“Porcentaje de podio”</p>
+                          <p className="text-sm">
+                            Porcentaje de quedar tercer puesto para arriba.
+                          </p>
+                        </TooltipContent>
+                      </Tooltip>
+
                     </div>
                   </div>
                 </Card>
