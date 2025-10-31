@@ -11,6 +11,7 @@ import {
   players,
   playersToMatches,
 } from "@/server/db/schema";
+import { revalidatePath } from "next/cache";
 
 export const matchRouter = createTRPCRouter({
   save: publicProcedure
@@ -184,7 +185,7 @@ export const matchRouter = createTRPCRouter({
           originalName: input.image.name ?? null,
           displayOrder: 1,
         });
-
+        revalidatePath("/analytics");
         return;
       });
     }),

@@ -18,6 +18,7 @@ const config = {
       },
     ],
   },
+  typedRoutes: true,
 };
 
 export default config;

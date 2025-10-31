@@ -15,6 +15,9 @@ import { MetricCard, MetricSkeleton, type Metric } from "./metric";
 import OracleInsights, { OracleInsightsSkeleton } from "./oracle-insights";
 import StreakChampion, { StreakChampionSkeleton } from "./streak-champion";
 
+// Regenerate page after 1 hour in case revalidatePath didnt work
+export const revalidate = 3600;
+
 export default async function AnalyticsPage() {
   const lastWeek = subDays(new Date(), 7);
 
