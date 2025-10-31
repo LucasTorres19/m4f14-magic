@@ -4,18 +4,26 @@ Pagina oficial de LIMTG (Liga Interna Magic: The Gathering)
 
 ## ¿Cuáles son los objetivos?
 
-- [ ] Contador de vidas
+- [x] Contador de vidas
   - [x] Historial de vida
   - [x] Reiniciar partida
   - [x] Configuración de partida
   - [x] Guardar partida
   - [x] Cambiar los colores de los invocadores
-  - [ ] Cargar perfiles
+  - [x] Cargar perfiles
   - [x] Timer integrado en el contador de vidas
     - [x] Cuando queden 10 segundos arranque alguna musica, puede ser algo como el soundtrack del C4 del counter y explote
 - [x] Historial de partidas
 - [x] Estadísticas
-- [ ] ABM invocadores
-- [ ] ABM decks
+- [x] ABM invocadores
+- [x] ABM decks
   - [x] Investigar cual es el mejor camino para integrar decks del magic
 - [x] Hacer la home
+
+- [ ] Mejorar commander combobox UI
+  - [ ] Mostrar primero commanders que se hayan jugado
+  - [ ] En caso de que el player este seleccionado mostrar primero commanders que haya jugado el player ese
+
+**Fixes**
+
+- [ ] Dates en history page no se muestran en el timezone local, revisar otros casos en los que se muestren dates.
