@@ -238,20 +238,22 @@ export default function ComandantesPage() {
                       </h3>
 
                       {commander.scryfallUri && (
-                        <Link
-                          href={commander.scryfallUri ?? ""}
-                          target="_blank"
-                        >
-                          <Image
-                            src={"https://artgame.scryfall.com/scryfall.svg"}
-                            alt={"Scryfall link"}
-                            width={20}
-                            height={20}
-                            className="object-cover cursor-pointer"
-                            unoptimized
-                          />
-                        </Link>
-                      )}
+                          <a
+                            href={commander.scryfallUri}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            aria-label="Ver en Scryfall"
+                          >
+                            <Image
+                              src="https://artgame.scryfall.com/scryfall.svg"
+                              alt="Scryfall link"
+                              width={20}
+                              height={20}
+                              className="object-cover cursor-pointer"
+                              unoptimized
+                            />
+                          </a>
+                        )}
                     </div>
 
                     <div className="flex gap-2 mt-5 flex-wrap gap-y-3 ">
