@@ -19,6 +19,34 @@ const config = {
     ],
   },
   typedRoutes: true,
+  turbopack: {
+    rules: {
+      "*.svg": {
+        loaders: [
+          {
+            loader: "@svgr/webpack",
+            options: {
+              // Optional: Customize SVGR options here
+              svgoConfig: {
+                plugins: [
+                  {
+                    name: "preset-default",
+                    params: {
+                      overrides: {
+                        removeViewBox: false, // Example: keep viewBox
+                      },
+                    },
+                  },
+                  "removeDimensions",
+                ],
+              },
+            },
+          },
+        ],
+        as: "*.js", // Treat the output as a JavaScript module
+      },
+    },
+  },
 };
 
 export default config;
