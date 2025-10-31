@@ -16,7 +16,6 @@ import {
 } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { randomHexColor } from "@/utils/gen";
 import * as React from "react";
 
 type SettingsDialogProps = {
@@ -27,14 +26,7 @@ type SettingsDialogProps = {
   maxHp?: number;
   minPlayers?: number;
   maxPlayers?: number;
-  onSaved?: (hp: number, players: number) => void;
-};
-
-type Player = {
-  id: string;
-  name: string;
-  hp: number;
-  color: string;
+  onSaved?: (hp: number) => void;
 };
 
 export default function SettingsDialog({
@@ -43,14 +35,10 @@ export default function SettingsDialog({
   onOpenChange,
   minHp = 1,
   maxHp = 200,
-  minPlayers = 2,
-  maxPlayers = 10,
   onSaved,
 }: SettingsDialogProps) {
   const settingsSet = useSettings((s) => s.set);
-  const startingHpStore = useSettings((s) => s.startingHp);
-  const playersCountStore = useSettings((s) => s.playersCount);
-  const timerLimitStore = useSettings((s) => s.timerLimit);
+  const settings = useSettings((s) => s);
 
   const [localOpen, setLocalOpen] = React.useState(false);
   const controlled = typeof open === "boolean";
@@ -69,81 +57,43 @@ export default function SettingsDialog({
   );
 
   const [startingHp, setStartingHp] = React.useState<number>(
-    startingHpStore ?? 40,
+    settings.startingHp ?? 40,
   );
-  const [playersCount, setPlayersCount] = React.useState<number>(
-    playersCountStore ?? 4,
-  );
-  const [players, setPlayers] = React.useState<Player[]>([]);
   const [timerLimit, setTimerLimit] = React.useState<number>(
-    timerLimitStore ?? 120,
+    settings.timerLimit ?? 120,
   );
 
   React.useEffect(() => {
     if (isOpen) {
-      setStartingHp(startingHpStore ?? 40);
-      setPlayersCount(playersCountStore ?? 4);
-      setTimerLimit(timerLimitStore ?? 120);
+      setStartingHp(settings.startingHp ?? 40);
+      setTimerLimit(settings.timerLimit ?? 120);
     }
-  }, [isOpen, startingHpStore, playersCountStore, timerLimitStore]);
-
-  React.useEffect(() => {
-    setPlayers((prev) => {
-      const next: Player[] = [];
-      for (let i = 0; i < playersCount; i++) {
-        const existing = prev[i];
-        next.push({
-          id: existing?.id ?? `player-${i + 1}`,
-          name: existing?.name ?? `invocador ${i + 1}`,
-          hp: startingHp,
-          color: existing?.color ?? randomHexColor(i),
-        });
-      }
-      return next;
-    });
-  }, [startingHp, playersCount]);
+  }, [isOpen, settings]);
 
   const clamp = (v: number, min: number, max: number) =>
     Math.max(min, Math.min(max, v));
   // firma gpt premiun
-  const resetMatchWithPlayers = useCurrentMatch((s) => s.resetMatchWithPlayers);
+  const restartMatch = useCurrentMatch((s) => s.restartMatch);
 
   const onSave = () => {
     const hp = clamp(
-      Number.isFinite(startingHp) ? startingHp : (startingHpStore ?? 40),
+      Number.isFinite(startingHp) ? startingHp : (settings.startingHp ?? 40),
       minHp,
       maxHp,
     );
-    const count = clamp(
-      Number.isFinite(playersCount) ? playersCount : (playersCountStore ?? 4),
-      minPlayers,
-      maxPlayers,
-    );
     const timer = clamp(
-      Number.isFinite(timerLimit) ? timerLimit : (timerLimitStore ?? 120),
+      Number.isFinite(timerLimit) ? timerLimit : (settings.timerLimit ?? 120),
       10,
       600,
     );
 
     settingsSet("startingHp", hp);
-    settingsSet("playersCount", count);
     settingsSet("timerLimit", timer);
 
-    // Tomá solo tantos invocadores como 'count'
-    const selected = players.slice(0, count).map((p, i) => ({
-      id: p.id, // si no tenés id en el modal, podés omitirlo
-      name: p.name?.trim() || `P${i + 1}`,
-      color: p.color,
-    }));
-
     // 🔹 Resetea la partida con los invocadores definidos
-    resetMatchWithPlayers(hp, selected, {
-      startingHp: hp,
-      playersCount: count,
-      timerLimit: timer,
-    });
+    restartMatch({ startingHp: hp, timerLimit: timer });
 
-    onSaved?.(hp, count);
+    onSaved?.(hp);
     setOpen(false);
   };
 

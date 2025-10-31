@@ -3,12 +3,11 @@ import { createStore } from "zustand/vanilla";
 
 export type SettingsState = {
   startingHp: number;
-  playersCount: number;
   timerLimit: number; // in seconds
 };
 
 export type SettingsActions = {
-  set: <T extends "startingHp" | "playersCount" | "timerLimit">(
+  set: <T extends "startingHp" | "timerLimit">(
     key: T,
     value: SettingsStore[T],
   ) => void;
@@ -18,7 +17,6 @@ export type SettingsStore = SettingsState & SettingsActions;
 
 const defaultInitState = {
   startingHp: 40,
-  playersCount: 6,
   timerLimit: 120, // 2 minutes default
 } as const satisfies Partial<SettingsStore>;
 

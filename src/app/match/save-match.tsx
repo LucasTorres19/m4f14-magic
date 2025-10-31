@@ -106,13 +106,12 @@ export default function SaveMatch() {
     useShallow((state) => ({
       players: state.players,
       hpHistory: state.hpHistory,
-      resetMatch: state.resetMatch,
+      resetMatch: state.restartMatch,
     })),
   );
 
   const settings = useSettings((state) => state);
   const startingHp = settings.startingHp;
-  const playersCount = settings.playersCount;
 
   const playersQuery = api.players.findAll.useQuery(undefined, {
     staleTime: 1000 * 60 * 5,
@@ -223,7 +222,7 @@ export default function SaveMatch() {
   const matchSave = api.match.save.useMutation({
     onSuccess: () => {
       toast.success("Partida guardada");
-      resetMatch(startingHp, playersCount, settings);
+      resetMatch(settings);
       setUploadedImage(undefined);
       setIsUploadingImages(false);
     },

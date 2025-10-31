@@ -55,12 +55,12 @@ export function NewMatchButton() {
   const router = useRouter();
   const [confirmOpen, setConfirmOpen] = useState(false);
 
-  const resetMatch = useCurrentMatch((s) => s.resetMatch);
+  const resetMatch = useCurrentMatch((s) => s.restartMatch);
   const settings = useSettings((s) => s);
 
   const newGame = useCallback(() => {
     try {
-      resetMatch(settings.startingHp, settings.playersCount, settings);
+      resetMatch(settings);
     } finally {
       router.push("/match");
     }

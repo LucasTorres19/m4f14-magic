@@ -1,8 +1,9 @@
+import { INITIAL_PLAYERS } from "@/lib/constants";
+import type { RouterOutputs } from "@/trpc/react";
 import { randomHexColor } from "@/utils/gen";
 import { persist } from "zustand/middleware";
 import { createStore } from "zustand/vanilla";
 import type { SettingsState } from "./settings-store";
-import type { RouterOutputs } from "@/trpc/react";
 
 type CommanderOption = RouterOutputs["commanders"]["search"][number];
 
@@ -45,23 +46,9 @@ export type CurrentMatchActions = {
   updateHp: (playerId: string, amount: number) => void;
   setHp: (playerId: string, hp: number) => void;
 
-  resetMatch: (
-    startingHp: number,
-    playersCount: number,
-    settings: SettingsState,
-  ) => void;
+  restartMatch: (settings: SettingsState) => void;
 
   // 🔹 Nuevo: resetea con una lista concreta de invocadores (nombre + color)
-  resetMatchWithPlayers: (
-    startingHp: number,
-    uiPlayers: Array<{
-      id?: string;
-      name?: string;
-      color?: string;
-      commander?: CommanderOption | null;
-    }>,
-    settings: SettingsState,
-  ) => void;
 
   nextTurn: () => void;
   pauseTimer: () => void;
@@ -84,7 +71,7 @@ export const initCurrentMatchStore = (
   settings: SettingsState,
 ): CurrentMatchState => {
   return {
-    players: Array.from({ length: settings.playersCount }).map((_, i) => ({
+    players: Array.from({ length: INITIAL_PLAYERS }).map((_, i) => ({
       id: `local-${i}`,
       displayName: `Invocador ${i + 1}`,
       hp: settings.startingHp,
@@ -199,42 +186,20 @@ export const createCurrentMatchStore = (
 
         setHp: (playerId, hp) => get().updatePlayer(playerId, { hp }),
 
-        resetMatch: (startingHp, playersCount, settings?: SettingsState) =>
+        restartMatch: (settings: SettingsState) =>
           set(() => ({
-            players: Array.from({ length: playersCount }).map((_, i) => ({
-              id: `local-${i}`,
-              displayName: `Invocador ${i + 1}`,
-              hp: startingHp,
-              backgroundColor: randomHexColor(i),
-              hpUpdated: 0,
-              hpUpdatedTimeout: null,
-              commander: null,
-            })),
-            hpHistory: [],
-            currentPlayerIndex: 0,
-            timerRemaining: settings?.timerLimit ?? 120,
-            isTimerPaused: true,
-          })),
-
-        // 🔹 Nuevo: usar los invocadores definidos por el usuario
-        resetMatchWithPlayers: (
-          startingHp,
-          uiPlayers,
-          settings?: SettingsState,
-        ) =>
-          set(() => ({
-            players: uiPlayers.map((p, i) => ({
-              id: p.id ?? `local-${i}`,
-              displayName: p.name?.trim() ?? `Invocador ${i + 1}`,
-              hp: startingHp,
-              backgroundColor:
-                p.color && /^#([0-9a-f]{3}|[0-9a-f]{6})$/i.test(p.color)
-                  ? p.color
-                  : randomHexColor(i),
-              hpUpdated: 0,
-              hpUpdatedTimeout: null,
-              commander: p.commander ?? null,
-            })),
+            players: get().players.map((p) => {
+              if (p.hpUpdatedTimeout) clearTimeout(p.hpUpdatedTimeout);
+              return {
+                id: p.id,
+                displayName: p.displayName,
+                hp: settings.startingHp,
+                commander: p.commander,
+                backgroundColor: p.backgroundColor,
+                hpUpdated: 0,
+                hpUpdatedTimeout: null,
+              };
+            }),
             hpHistory: [],
             currentPlayerIndex: 0,
             timerRemaining: settings?.timerLimit ?? 120,

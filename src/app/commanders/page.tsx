@@ -2,6 +2,11 @@
 
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipTrigger,
+} from "@/components/ui/tooltip";
 import { api } from "@/trpc/react";
 import {
   ArrowLeft,
@@ -16,7 +21,6 @@ import {
 import Image from "next/image";
 import Link from "next/link";
 import { useEffect, useMemo, useState } from "react";
-import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 
 type ApiCommander = {
   id: number;
@@ -238,22 +242,22 @@ export default function ComandantesPage() {
                       </h3>
 
                       {commander.scryfallUri && (
-                          <a
-                            href={commander.scryfallUri}
-                            target="_blank"
-                            rel="noopener noreferrer"
-                            aria-label="Ver en Scryfall"
-                          >
-                            <Image
-                              src="https://artgame.scryfall.com/scryfall.svg"
-                              alt="Scryfall link"
-                              width={20}
-                              height={20}
-                              className="object-cover cursor-pointer"
-                              unoptimized
-                            />
-                          </a>
-                        )}
+                        <a
+                          href={commander.scryfallUri}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          aria-label="Ver en Scryfall"
+                        >
+                          <Image
+                            src="https://artgame.scryfall.com/scryfall.svg"
+                            alt="Scryfall link"
+                            width={20}
+                            height={20}
+                            className="object-cover cursor-pointer"
+                            unoptimized
+                          />
+                        </a>
+                      )}
                     </div>
 
                     <div className="flex gap-2 mt-5 flex-wrap gap-y-3 ">
@@ -268,21 +272,35 @@ export default function ComandantesPage() {
                       {commander.isCebollita && (
                         <Tooltip>
                           <TooltipTrigger asChild>
-                            <span className="cebolla-badge" role="img" aria-label="Cebollita">
-                              <Droplets width={16} height={16} className="tear" />
+                            <span
+                              className="cebolla-badge"
+                              role="img"
+                              aria-label="Cebollita"
+                            >
+                              <Droplets
+                                width={16}
+                                height={16}
+                                className="tear"
+                              />
                               <span className="label">Cebollita</span>
                               <span aria-hidden className="blue-heat" />
                             </span>
                           </TooltipTrigger>
 
-                          <TooltipContent side="top" align="center" className="max-w-[280px] leading-relaxed">
+                          <TooltipContent
+                            side="top"
+                            align="center"
+                            className="max-w-[280px] leading-relaxed"
+                          >
                             <p className="font-semibold">“Cebollita”</p>
                             <p className="text-sm">
                               Mayor cantidad de segundos puestos.
                             </p>
 
                             <div className="mt-2 text-xs">
-                              cantidad: <strong>{commander.seconds ?? 0}</strong><br />
+                              cantidad:{" "}
+                              <strong>{commander.seconds ?? 0}</strong>
+                              <br />
                             </div>
                           </TooltipContent>
                         </Tooltip>
@@ -299,21 +317,25 @@ export default function ComandantesPage() {
                       </span>
 
                       <Tooltip>
-                        <TooltipTrigger asChild>      
-                            <span className="text-xs py-1 rounded-full bg-primary/10 text-primary flex w-fit items-center px-3">
-                              <Boxes className="mr-2" width={20} />
-                              {pct(commander.podiums, commander.matchCount)}% Podio
-                            </span>
+                        <TooltipTrigger asChild>
+                          <span className="text-xs py-1 rounded-full bg-primary/10 text-primary flex w-fit items-center px-3">
+                            <Boxes className="mr-2" width={20} />
+                            {pct(commander.podiums, commander.matchCount)}%
+                            Podio
+                          </span>
                         </TooltipTrigger>
 
-                        <TooltipContent side="top" align="center" className="max-w-[280px] leading-relaxed">
+                        <TooltipContent
+                          side="top"
+                          align="center"
+                          className="max-w-[280px] leading-relaxed"
+                        >
                           <p className="font-semibold">“Porcentaje de podio”</p>
                           <p className="text-sm">
                             Porcentaje de quedar tercer puesto para arriba.
                           </p>
                         </TooltipContent>
                       </Tooltip>
-
                     </div>
                   </div>
                 </Card>

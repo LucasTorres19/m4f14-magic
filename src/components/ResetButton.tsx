@@ -35,15 +35,14 @@ export default function ResetButton({
 }: ResetMatchButtonProps) {
   const settings = useSettings((s) => s);
   const startingHp = settings.startingHp;
-  const playersCount = settings.playersCount;
-  const resetMatch = useCurrentMatch((s) => s.resetMatch);
+  const resetMatch = useCurrentMatch((s) => s.restartMatch);
 
   const desc =
     description ??
-    `Esto reiniciará la partida con ${startingHp} de vida inicial y ${playersCount} invocadores. ¿Querés continuar?`;
+    `Esto reiniciará la partida con ${startingHp} de vida inicial. ¿Querés continuar?`;
 
   const handleReset = () => {
-    resetMatch(startingHp, playersCount, settings);
+    resetMatch(settings);
   };
 
   return (

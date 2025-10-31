@@ -23,6 +23,7 @@ import {
   Settings,
   Timer as TimerIcon,
 } from "lucide-react";
+import Image from "next/image";
 import Link from "next/link";
 import type { CSSProperties } from "react";
 import { useRef, useState } from "react";
@@ -96,11 +97,14 @@ function PlayerCurrentMatch({
       )}
     >
       {commanderBackground ? (
-        <div
-          aria-hidden
-          className="pointer-events-none absolute inset-0 -z-20 bg-cover bg-top opacity-70"
-          style={{ backgroundImage: `url(${commanderBackground})` }}
-        />
+        <div className="pointer-events-none absolute inset-0 -z-20 bg-cover bg-top opacity-70">
+          <Image
+            src={commanderBackground}
+            fill
+            className="object-cover object-top"
+            alt={player.commander?.name ?? `${player.displayName} commander`}
+          />
+        </div>
       ) : null}
       <Button
         {...minusAttrs}
