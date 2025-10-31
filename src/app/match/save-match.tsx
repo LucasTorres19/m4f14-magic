@@ -1,4 +1,3 @@
-/* eslint-disable @next/next/no-img-element */
 "use client";
 
 import {
@@ -7,7 +6,6 @@ import {
   GripVertical,
   Loader2,
   Save,
-  Trash2,
 } from "lucide-react";
 import {
   useCallback,
@@ -39,20 +37,18 @@ import {
   DialogTitle,
   DialogTrigger,
 } from "@/components/ui/dialog";
-import { Label } from "@/components/ui/label";
 import {
   Popover,
   PopoverContent,
   PopoverTrigger,
 } from "@/components/ui/popover";
-import { UploadDropzone } from "@/components/uploadthing";
 
 import { cn } from "@/lib/utils";
 import { api, type RouterOutputs } from "@/trpc/react";
 import { toast } from "sonner";
 
+import { ImageUploadButton } from "@/components/image-upload-button";
 import { ScrollArea } from "@/components/ui/scroll-area";
-import { MAX_MATCH_IMAGES } from "@/lib/constants";
 import { useCurrentMatch } from "../_stores/current-match-provider";
 import { useSettings } from "../_stores/settings-provider";
 
@@ -81,7 +77,7 @@ type CommanderOption = RouterOutputs["commanders"]["search"][number];
 type UploadedMatchImage = {
   key: string;
   url: string;
-  name: string | null;
+  name?: string | null;
 };
 
 type PlayerNameComboboxProps = {
@@ -523,9 +519,7 @@ export default function SaveMatch() {
     useState<OrderedPlayer[]>(initialOrder);
   const [draggingId, setDraggingId] = useState<string | null>(null);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
-  const [uploadedImages, setUploadedImages] = useState<UploadedMatchImage[]>(
-    [],
-  );
+  const [uploadedImage, setUploadedImage] = useState<UploadedMatchImage>();
   const [isUploadingImages, setIsUploadingImages] = useState(false);
 
   const [activePointer, setActivePointer] = useState<{
@@ -533,7 +527,6 @@ export default function SaveMatch() {
     playerId: string;
   } | null>(null);
   const [comboboxActive, setComboboxActive] = useState(false);
-  const remainingImageSlots = MAX_MATCH_IMAGES - uploadedImages.length;
 
   useEffect(() => {
     if (!open) {
@@ -605,7 +598,7 @@ export default function SaveMatch() {
     onSuccess: () => {
       toast.success("Partida guardada");
       resetMatch(startingHp, playersCount, settings);
-      setUploadedImages([]);
+      setUploadedImage(undefined);
       setIsUploadingImages(false);
     },
   });
@@ -633,16 +626,6 @@ export default function SaveMatch() {
     [setErrorMessage],
   );
 
-  const handleRemoveImage = useCallback(
-    (key: string) => {
-      setUploadedImages((previous) =>
-        previous.filter((image) => image.key !== key),
-      );
-      setErrorMessage(null);
-    },
-    [setErrorMessage],
-  );
-
   const handleUploadComplete = useCallback(
     (
       result:
@@ -654,37 +637,11 @@ export default function SaveMatch() {
         | undefined,
     ) => {
       setIsUploadingImages(false);
-      if (!result || result.length === 0) {
+      const image = result?.at(0);
+      if (!image) {
         return;
       }
-
-      setUploadedImages((previous) => {
-        const existingKeys = new Set(previous.map((image) => image.key));
-        const remainingSlots = MAX_MATCH_IMAGES - previous.length;
-        if (remainingSlots <= 0) {
-          return previous;
-        }
-
-        const next = result
-          .filter((file) => !existingKeys.has(file.key))
-          .slice(0, remainingSlots)
-          .map<UploadedMatchImage>((file) => ({
-            key: file.key,
-            url: file.url,
-            name: file.name ?? null,
-          }));
-
-        if (next.length === 0) {
-          return previous;
-        }
-
-        toast.success(
-          next.length === 1
-            ? "Imágen cargada"
-            : `${next.length} imágenes cargadas`,
-        );
-        return [...previous, ...next];
-      });
+      setUploadedImage(image);
       setErrorMessage(null);
     },
     [setErrorMessage],
@@ -720,12 +677,7 @@ export default function SaveMatch() {
         await matchSave.mutateAsync({
           startingHp,
           players: sanitizedPlayers,
-          images: uploadedImages.map((image, index) => ({
-            url: image.url,
-            key: image.key,
-            name: image.name ?? undefined,
-            order: index,
-          })),
+          image: uploadedImage,
         });
 
         setOpen(false);
@@ -738,7 +690,7 @@ export default function SaveMatch() {
         console.error(error);
       }
     },
-    [isUploadingImages, matchSave, sanitizePlayers, startingHp, uploadedImages],
+    [isUploadingImages, matchSave, sanitizePlayers, startingHp, uploadedImage],
   );
 
   const handleDragStart = useCallback(
@@ -964,7 +916,7 @@ export default function SaveMatch() {
               </DialogDescription>
             </DialogHeader>
 
-            <form className="flex flex-col gap-4" onSubmit={handleSubmit}>
+            <form className="flex flex-col gap-4 mt-2" onSubmit={handleSubmit}>
               <div className="text-muted-foreground flex items-center justify-between text-xs">
                 <span>Paso {step} de 2</span>
                 <span>
@@ -1060,90 +1012,15 @@ export default function SaveMatch() {
                   </li>
                 </ul>
               ) : (
-                <div className="flex flex-col gap-3">
-                  <div className="flex items-baseline justify-between">
-                    <Label className="text-sm font-medium">
-                      Capturas del duelo
-                    </Label>
-                    <span className="text-muted-foreground text-xs">
-                      {uploadedImages.length}/{MAX_MATCH_IMAGES}
-                    </span>
-                  </div>
-                  <p className="text-muted-foreground text-xs">
-                    Podés subir hasta {MAX_MATCH_IMAGES} imágenes.{" "}
-                    {remainingImageSlots > 0
-                      ? `Te quedan ${remainingImageSlots} ${
-                          remainingImageSlots === 1 ? "espacio" : "espacios"
-                        } disponibles.`
-                      : "Alcanzaste el límite permitido."}
-                  </p>
-                  {remainingImageSlots > 0 ? (
-                    <UploadDropzone
-                      endpoint="imageUploader"
-                      onUploadBegin={() => {
-                        setIsUploadingImages(true);
-                        setErrorMessage(null);
-                      }}
-                      onClientUploadComplete={handleUploadComplete}
-                      onUploadError={handleUploadError}
-                      appearance={{
-                        label: "text-sm font-medium text-foreground",
-                        button:
-                          "bg-primary text-primary-foreground hover:bg-primary/90",
-                        allowedContent: "text-xs text-muted-foreground",
-                      }}
-                      className="ut-uploadthing h-auto min-h-[140px] rounded-md border border-dashed border-muted-foreground/40 bg-muted/40"
-                    />
-                  ) : (
-                    <div className="border-muted-foreground/50 bg-muted/20 text-muted-foreground rounded-md border border-dashed px-3 py-4 text-xs">
-                      Eliminá alguna imagen para cargar otra.
-                    </div>
-                  )}
-                  {uploadedImages.length > 0 ? (
-                    <div className="grid gap-2 sm:grid-cols-2">
-                      {uploadedImages.map((image, index) => (
-                        <div
-                          key={image.key}
-                          className="border-border/70 bg-background/70 flex flex-col gap-2 rounded-md border p-2 shadow-sm"
-                        >
-                          <div className="relative overflow-hidden rounded-md">
-                            <img
-                              src={image.url}
-                              alt={image.name ?? `Captura ${index + 1}`}
-                              className="h-32 w-full object-cover"
-                            />
-                            <Button
-                              type="button"
-                              size="icon"
-                              variant="ghost"
-                              onClick={() => handleRemoveImage(image.key)}
-                              aria-label="Eliminar imágen"
-                              className="absolute right-1 top-1 size-7 rounded-full bg-background/80 text-muted-foreground hover:bg-background"
-                            >
-                              <Trash2 className="size-4" />
-                            </Button>
-                          </div>
-                          <div className="flex flex-col gap-1 text-xs">
-                            <span className="text-foreground font-medium">
-                              Imágen {index + 1}
-                            </span>
-                            {image.name ? (
-                              <span className="text-muted-foreground truncate">
-                                {image.name}
-                              </span>
-                            ) : null}
-                          </div>
-                        </div>
-                      ))}
-                    </div>
-                  ) : null}
-                  {isUploadingImages ? (
-                    <div className="text-muted-foreground flex items-center gap-2 text-xs">
-                      <Loader2 className="size-3 animate-spin" />
-                      Subiendo imágenes...
-                    </div>
-                  ) : null}
-                </div>
+                <ImageUploadButton
+                  endpoint="imageUploader"
+                  onUploadBegin={() => {
+                    setIsUploadingImages(true);
+                    setErrorMessage(null);
+                  }}
+                  onClientUploadComplete={handleUploadComplete}
+                  onUploadError={handleUploadError}
+                />
               )}
 
               <DialogFooter className="gap-2 sm:flex-row sm:justify-end">

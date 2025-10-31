@@ -1,1 +1,1 @@
-export const MAX_MATCH_IMAGES = 6;
+export const MAX_MATCH_IMAGES = 1;

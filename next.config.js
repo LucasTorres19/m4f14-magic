@@ -12,6 +12,10 @@ const config = {
         protocol: "https",
         hostname: "cards.scryfall.io",
       },
+      {
+        protocol: "https",
+        hostname: "utfs.io",
+      },
     ],
   },
 };

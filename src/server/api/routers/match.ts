@@ -2,7 +2,7 @@ import { TRPCError } from "@trpc/server";
 import { eq, inArray } from "drizzle-orm";
 import { z } from "zod";
 
-import { MAX_MATCH_IMAGES } from "@/lib/constants";
+import { utapi } from "@/app/api/uploadthing/core";
 import { createTRPCRouter, publicProcedure } from "@/server/api/trpc";
 import {
   commanders,
@@ -37,37 +37,11 @@ export const matchRouter = createTRPCRouter({
               message: "Each placement must be unique",
             },
           ),
-        images: z
-          .array(
-            z.object({
-              url: z.string().url(),
-              key: z.string().min(1),
-              name: z.string().optional(),
-              order: z.number().int().min(0),
-            }),
-          )
-          .max(MAX_MATCH_IMAGES)
-          .superRefine((images, ctx) => {
-            const orderSet = new Set<number>();
-            const keySet = new Set<string>();
-            for (const image of images) {
-              if (orderSet.has(image.order)) {
-                ctx.addIssue({
-                  code: z.ZodIssueCode.custom,
-                  message: "Each image must have a unique order",
-                });
-                break;
-              }
-              orderSet.add(image.order);
-              if (keySet.has(image.key)) {
-                ctx.addIssue({
-                  code: z.ZodIssueCode.custom,
-                  message: "Each image must have a unique key",
-                });
-                break;
-              }
-              keySet.add(image.key);
-            }
+        image: z
+          .object({
+            url: z.string().url(),
+            key: z.string().min(1),
+            name: z.string().nullish(),
           })
           .optional(),
       }),
@@ -201,40 +175,32 @@ export const matchRouter = createTRPCRouter({
           await tx.insert(playersToMatches).values(playerMatchRows);
         }
 
-        const images = input.images ?? [];
-        if (images.length > 0) {
-          const sortedImages = [...images].sort((a, b) => a.order - b.order);
-          await tx.insert(matchImages).values(
-            sortedImages.map((image, index) => ({
-              matchId: matchRow.id,
-              fileKey: image.key,
-              fileUrl: image.url,
-              originalName: image.name ?? null,
-              displayOrder: index,
-            })),
-          );
-        }
+        if (!input.image) return;
+
+        await tx.insert(matchImages).values({
+          matchId: matchRow.id,
+          fileKey: input.image.key,
+          fileUrl: input.image.url,
+          originalName: input.image.name ?? null,
+          displayOrder: 1,
+        });
+
         return;
       });
     }),
-  addImages: publicProcedure
+  setImage: publicProcedure
     .input(
       z.object({
         matchId: z.number().positive().int(),
-        images: z
-          .array(
-            z.object({
-              url: z.string().url(),
-              key: z.string().min(1),
-              name: z.string().optional(),
-            }),
-          )
-          .min(1)
-          .max(MAX_MATCH_IMAGES),
+        image: z.object({
+          url: z.string().url(),
+          key: z.string().min(1),
+          name: z.string().optional(),
+        }),
       }),
     )
     .mutation(async ({ ctx, input }) => {
-      return ctx.db.transaction(async (tx) => {
+      const transaction = await ctx.db.transaction(async (tx) => {
         const [matchRow] = await tx
           .select({
             id: matches.id,
@@ -250,84 +216,46 @@ export const matchRouter = createTRPCRouter({
           });
         }
 
-        const existingImages = await tx
-          .select({
-            id: matchImages.id,
-            displayOrder: matchImages.displayOrder,
+        const deletedImages = await tx
+          .delete(matchImages)
+          .where(eq(matchImages.matchId, input.matchId))
+          .returning({
             fileKey: matchImages.fileKey,
-          })
-          .from(matchImages)
-          .where(eq(matchImages.matchId, input.matchId));
-
-        const existingCount = existingImages.length;
-
-        if (existingCount >= MAX_MATCH_IMAGES) {
-          throw new TRPCError({
-            code: "BAD_REQUEST",
-            message:
-              "Este duelo ya alcanzo la cantidad maxima de fotografias permitidas.",
           });
-        }
-
-        if (existingCount + input.images.length > MAX_MATCH_IMAGES) {
-          const remaining = MAX_MATCH_IMAGES - existingCount;
-          throw new TRPCError({
-            code: "BAD_REQUEST",
-            message:
-              remaining === 1
-                ? "Solo queda espacio para una fotografia adicional."
-                : `Solo quedan ${remaining} fotografias disponibles para este duelo.`,
-          });
-        }
-
-        const existingKeys = new Set(
-          existingImages.map((image) => image.fileKey),
-        );
-        const duplicateKey = input.images.find((image) =>
-          existingKeys.has(image.key),
-        );
-
-        if (duplicateKey) {
-          throw new TRPCError({
-            code: "BAD_REQUEST",
-            message:
-              "Alguna de las imagenes ya fue cargada anteriormente para este duelo.",
-          });
-        }
-
-        const maxDisplayOrder = existingImages.reduce(
-          (max, image) => Math.max(max, image.displayOrder),
-          -1,
-        );
 
         const inserted = await tx
           .insert(matchImages)
-          .values(
-            input.images.map((image, index) => ({
-              matchId: input.matchId,
-              fileKey: image.key,
-              fileUrl: image.url,
-              originalName: image.name ?? null,
-              displayOrder: maxDisplayOrder + index + 1,
-            })),
-          )
+          .values({
+            matchId: input.matchId,
+            fileKey: input.image.key,
+            fileUrl: input.image.url,
+            originalName: input.image.name ?? null,
+            displayOrder: 1,
+          })
           .returning({
             id: matchImages.id,
             fileKey: matchImages.fileKey,
             fileUrl: matchImages.fileUrl,
             originalName: matchImages.originalName,
             displayOrder: matchImages.displayOrder,
-          });
+          })
+          .then((s) => s.at(0));
 
+        const existingKeys = deletedImages.map((image) => image.fileKey);
+
+        if (!inserted)
+          throw new TRPCError({
+            code: "INTERNAL_SERVER_ERROR",
+            message: "Image couldnt be saved",
+          });
         return {
-          images: inserted.map((image) => ({
-            id: image.id,
-            key: image.fileKey,
-            url: image.fileUrl,
-            name: image.originalName,
-            order: image.displayOrder,
-          })),
+          image: inserted,
+          existingKeys,
         };
       });
+
+      await utapi.deleteFiles(transaction.existingKeys);
+
+      return transaction.image;
     }),
 });

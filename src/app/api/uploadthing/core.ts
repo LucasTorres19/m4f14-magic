@@ -1,5 +1,12 @@
+import { env } from "@/env";
 import { MAX_MATCH_IMAGES } from "@/lib/constants";
 import { createUploadthing, type FileRouter } from "uploadthing/next";
+
+import { UTApi } from "uploadthing/server";
+
+export const utapi = new UTApi({
+  token: env.UPLOADTHING_TOKEN,
+});
 
 const f = createUploadthing();
 
@@ -14,6 +21,7 @@ export const ourFileRouter = {
        */
       maxFileSize: "32MB",
       maxFileCount: MAX_MATCH_IMAGES,
+      contentDisposition: "inline",
     },
   }).onUploadComplete(async () => {
     return;
