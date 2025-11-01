@@ -24,6 +24,7 @@ Pagina oficial de LIMTG (Liga Interna Magic: The Gathering)
   - [ ] Mostrar primero commanders que se hayan jugado
   - [ ] En caso de que el player este seleccionado mostrar primero commanders que haya jugado el player ese
 
+-[ ] Guarda la imagen original en el historial, para mostrarlo al tocar la imagen.
 **Fixes**
 
 - [ ] Dates en history page no se muestran en el timezone local, revisar otros casos en los que se muestren dates.
