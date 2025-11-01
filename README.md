@@ -25,6 +25,7 @@ Pagina oficial de LIMTG (Liga Interna Magic: The Gathering)
   - [ ] En caso de que el player este seleccionado mostrar primero commanders que haya jugado el player ese
 
 - [ ] Guarda la imagen original en el historial, para mostrarlo al tocar la imagen. esto significaría guardar la foto orignal y la croppeed image, creo que es el mejor camino
+  - [ ] Arreglar mobile ui para subir imagenes
 
 **Fixes**
 
@@ -33,6 +34,5 @@ Pagina oficial de LIMTG (Liga Interna Magic: The Gathering)
 - [x] La imagen de fondo de commander no está flipped
 - [x] El drag de los jugadores en current-match no funciona en mobile a veces porque selecciona texto
 - [x] Hubo un caso de que por alguna razon se queda eternamente reduciendole vida a un player porque ponele que le dio a restar vida y despues cambio de pagina o algo asi no entiendo bien que onda
-- [ ] Arreglar mobile ui para subir imagenes
 - [x] Cambiar color del hp, y de los botones a blanco cuando se esté utilizando el background del commander
 - [ ] en current-match, bottom-toolbar son muchos botones hay que mandar un scroll horizontal (se podria matar el boton del timer y mezclar con las settings del boton del plus icon)
