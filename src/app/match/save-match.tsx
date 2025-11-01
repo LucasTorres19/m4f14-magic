@@ -28,12 +28,19 @@ import { api, type RouterOutputs } from "@/trpc/react";
 import { toast } from "sonner";
 
 import { CommanderCombobox } from "@/components/commander-combobox";
-import { ImageUploadButton } from "@/components/image-upload-button";
+import {
+  getCroppedFile,
+  getCroppedFileName,
+  ImageUploadButton,
+  type SelectedFile,
+} from "@/components/image-upload-button";
 import {
   PlayerCombobox,
   type PlayerSelection,
 } from "@/components/player-combobox";
 import { ScrollArea } from "@/components/ui/scroll-area";
+import { useUploadThing } from "@/components/uploadthing";
+import type { Area } from "react-easy-crop";
 import { useCurrentMatch } from "../_stores/current-match-provider";
 import type { Player } from "../_stores/current-match-store";
 import { useSettings } from "../_stores/settings-provider";
@@ -50,12 +57,6 @@ type SuggestedPlayer = {
 };
 
 type CommanderOption = RouterOutputs["commanders"]["search"][number];
-
-type UploadedMatchImage = {
-  key: string;
-  url: string;
-  name?: string | null;
-};
 
 function computeInitialRanking(
   players: Player[],
@@ -102,6 +103,24 @@ export default function SaveMatch() {
 
   const settings = useSettings((state) => state);
   const startingHp = settings.startingHp;
+  const [selectedFile, setSelectedFile] = useState<SelectedFile | null>(null);
+  const [croppedArea, setCroppedArea] = useState<Area | null>(null);
+  const { startUpload, routeConfig, isUploading } = useUploadThing(
+    "imageUploader",
+    {
+      onUploadBegin: () => {
+        setErrorMessage(null);
+      },
+      onUploadError: (error: Error) => {
+        const message =
+          error instanceof Error && error.message.length > 0
+            ? error.message
+            : "No pudimos subir las imágenes. Intentá nuevamente.";
+        setErrorMessage(message);
+        toast.error(message);
+      },
+    },
+  );
 
   const playersQuery = api.players.findAll.useQuery(undefined, {
     staleTime: 1000 * 60 * 5,
@@ -147,8 +166,6 @@ export default function SaveMatch() {
   );
   const [draggingId, setDraggingId] = useState<string | null>(null);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
-  const [uploadedImage, setUploadedImage] = useState<UploadedMatchImage>();
-  const [isUploadingImages, setIsUploadingImages] = useState(false);
 
   const [activePointer, setActivePointer] = useState<{
     pointerId: number;
@@ -226,8 +243,6 @@ export default function SaveMatch() {
     onSuccess: () => {
       toast.success("Partida guardada");
       resetMatch(settings);
-      setUploadedImage(undefined);
-      setIsUploadingImages(false);
     },
   });
 
@@ -260,48 +275,43 @@ export default function SaveMatch() {
     [setErrorMessage],
   );
 
-  const handleUploadComplete = useCallback(
-    (
-      result:
-        | {
-            url: string;
-            key: string;
-            name?: string | null;
-          }[]
-        | undefined,
-    ) => {
-      setIsUploadingImages(false);
-      const image = result?.at(0);
-      if (!image) {
-        return;
-      }
-      setUploadedImage(image);
-      setErrorMessage(null);
-    },
-    [setErrorMessage],
-  );
-
-  const handleUploadError = useCallback(
-    (error: Error) => {
-      setIsUploadingImages(false);
-      const message =
-        error instanceof Error && error.message.length > 0
-          ? error.message
-          : "No pudimos subir las imágenes. Intentá nuevamente.";
-      setErrorMessage(message);
-      toast.error(message);
-    },
-    [setErrorMessage],
-  );
-
   const handleSubmit = useCallback(
     async (event: FormEvent<HTMLFormElement>) => {
       event.preventDefault();
       if (matchSave.isPending) return;
-      // Wait for uploads to finish before allowing a save attempt.
-      if (isUploadingImages) {
+      if (isUploading) {
         setErrorMessage("Esperá a que las imágenes terminen de subir.");
         return;
+      }
+      let croppedImage = undefined;
+      let image = undefined;
+
+      if (selectedFile) {
+        if (!croppedArea) {
+          setErrorMessage("No se pudo recortar.");
+          return;
+        }
+        const croppedFile = await getCroppedFile({
+          imageSrc: selectedFile.url,
+          pixelCrop: croppedArea,
+          fileName: getCroppedFileName(selectedFile?.file.name ?? `match`),
+          mimeType: selectedFile?.file.type ?? "image/jpeg",
+        });
+        const files = await startUpload([croppedFile, selectedFile.file]);
+        if (!files) {
+          setErrorMessage("No se pudo subir la imagen.");
+          return;
+        }
+        const [uploadedCroppedFile, uploadedFile] = files.map((f) => ({
+          url: f.url,
+          key: f.key,
+        }));
+        if (!uploadedCroppedFile || !uploadedFile) {
+          setErrorMessage("No se pudo subir la imagen.");
+          return;
+        }
+        croppedImage = uploadedCroppedFile;
+        image = uploadedFile;
       }
 
       try {
@@ -311,7 +321,8 @@ export default function SaveMatch() {
         await matchSave.mutateAsync({
           startingHp,
           players: sanitizedPlayers,
-          image: uploadedImage,
+          croppedImage,
+          image,
         });
 
         setOpen(false);
@@ -324,7 +335,15 @@ export default function SaveMatch() {
         console.error(error);
       }
     },
-    [isUploadingImages, matchSave, sanitizePlayers, startingHp, uploadedImage],
+    [
+      startUpload,
+      isUploading,
+      matchSave,
+      sanitizePlayers,
+      startingHp,
+      croppedArea,
+      selectedFile,
+    ],
   );
 
   const handleDragStart = useCallback(
@@ -522,6 +541,8 @@ export default function SaveMatch() {
     };
   });
 
+  const isLoading = isUploading || matchSave.isPending;
+
   return (
     <div className="">
       <Dialog open={open} onOpenChange={setOpen}>
@@ -530,13 +551,9 @@ export default function SaveMatch() {
             variant="success"
             size="lg"
             className="pointer-events-auto"
-            disabled={matchSave.isPending}
+            disabled={isLoading}
           >
-            {matchSave.isPending ? (
-              <Loader2 className="size-4 animate-spin" />
-            ) : (
-              <Save />
-            )}
+            {isLoading ? <Loader2 className="size-4 animate-spin" /> : <Save />}
           </Button>
         </DialogTrigger>
         <DialogContent className="sm:max-w-md overflow-hidden">
@@ -652,13 +669,10 @@ export default function SaveMatch() {
                 </ul>
               ) : (
                 <ImageUploadButton
-                  endpoint="imageUploader"
-                  onUploadBegin={() => {
-                    setIsUploadingImages(true);
-                    setErrorMessage(null);
-                  }}
-                  onClientUploadComplete={handleUploadComplete}
-                  onUploadError={handleUploadError}
+                  onFileSelected={setSelectedFile}
+                  onCroppedAreaChange={setCroppedArea}
+                  disabled={isLoading}
+                  routeConfig={routeConfig}
                 />
               )}
 
@@ -667,7 +681,7 @@ export default function SaveMatch() {
                   type="button"
                   variant="secondary"
                   onClick={() => setOpen(false)}
-                  disabled={matchSave.isPending}
+                  disabled={isLoading}
                 >
                   Cancelar
                 </Button>
@@ -677,17 +691,12 @@ export default function SaveMatch() {
                       type="button"
                       variant="outline"
                       onClick={handleBackToPlacements}
-                      disabled={matchSave.isPending || isUploadingImages}
+                      disabled={isLoading}
                     >
                       Volver
                     </Button>
-                    <Button
-                      type="submit"
-                      disabled={matchSave.isPending || isUploadingImages}
-                    >
-                      {matchSave.isPending && (
-                        <Loader2 className="size-4 animate-spin" />
-                      )}
+                    <Button type="submit" disabled={isLoading}>
+                      {isLoading && <Loader2 className="size-4 animate-spin" />}
                       Finalizar
                     </Button>
                   </>
@@ -695,7 +704,7 @@ export default function SaveMatch() {
                   <Button
                     type="button"
                     onClick={handleContinueToImages}
-                    disabled={matchSave.isPending}
+                    disabled={isLoading}
                   >
                     Continuar
                   </Button>

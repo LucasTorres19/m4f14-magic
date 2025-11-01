@@ -202,7 +202,11 @@ const MatchCard = ({ match, gradient }: MatchCardProps) => {
         </header>
 
         <div className="flex flex-col gap-6">
-          <MatchGallery matchId={match.id} initialImages={match.images} />
+          <MatchGallery
+            matchId={match.id}
+            image={match.image}
+            croppedImage={match.croppedImage}
+          />
 
           <div className="grid gap-4 sm:grid-cols-2">
             {match.players.length === 0 ? (

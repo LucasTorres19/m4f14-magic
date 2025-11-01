@@ -10,7 +10,12 @@ import {
 } from "@/components/ui/dialog";
 import { toast } from "sonner";
 
-import { ImageUploadButton } from "@/components/image-upload-button";
+import {
+  getCroppedFile,
+  getCroppedFileName,
+  ImageUploadButton,
+  type SelectedFile,
+} from "@/components/image-upload-button";
 import {
   Drawer,
   DrawerContent,
@@ -19,32 +24,35 @@ import {
   DrawerTitle,
   DrawerTrigger,
 } from "@/components/ui/drawer";
+import { useUploadThing } from "@/components/uploadthing";
 import { api } from "@/trpc/react";
 import { useMediaQuery } from "@uidotdev/usehooks";
-import { Camera } from "lucide-react";
+import { Camera, Loader2 } from "lucide-react";
 import { useState, type Dispatch, type SetStateAction } from "react";
+import type { Area } from "react-easy-crop";
 import type { MatchImage } from "./match-gallery";
 
 function UploadDialog({
   matchId,
-  image,
-  setImage,
+  images,
+  setImages,
   close,
 }: {
   matchId: number;
-  image?: MatchImage;
-  setImage: Dispatch<SetStateAction<MatchImage | undefined>>;
+  images?: { croppedImage: MatchImage; image: MatchImage };
+  setImages: Dispatch<
+    SetStateAction<{ croppedImage: MatchImage; image: MatchImage }>
+  >;
   close?: () => void;
 }) {
+  const [selectedFile, setSelectedFile] = useState<SelectedFile | null>(null);
+  const [croppedArea, setCroppedArea] = useState<Area | null>(null);
   const setImageMutation = api.match.setImage.useMutation({
-    onSuccess: (image) => {
-      setImage({
-        id: image.id,
-        key: image.fileKey,
-        name: image.originalName,
-        order: image.displayOrder,
-        url: image.fileUrl,
-      });
+    onSuccess: (res) => {
+      setImages((prev) => ({
+        croppedImage: res.croppedImage,
+        image: res.image ?? prev.image,
+      }));
       toast.success("Se estableció la imagen");
       close?.();
     },
@@ -53,62 +61,116 @@ function UploadDialog({
     },
   });
 
+  const { startUpload, routeConfig, isUploading } = useUploadThing(
+    "imageUploader",
+    {
+      onUploadError: (error) => {
+        toast.error(error?.message ?? "No se pudo crack.");
+      },
+    },
+  );
+
   const persistUploads = async (
     files?: {
       url: string;
       key: string;
-      name?: string | null;
     }[],
   ) => {
     if (!files || files.length === 0) {
       return;
     }
 
-    const image = files.at(0);
+    const croppedImage = files.at(0);
+    const image = files.at(1);
 
-    if (!image) {
+    if (!croppedImage) {
       return;
     }
 
     try {
       await setImageMutation.mutateAsync({
         matchId,
-        image: {
-          key: image.key,
-          url: image.url,
+        image: image
+          ? {
+              key: image.key,
+              url: image.url,
+            }
+          : undefined,
+        croppedImage: {
+          key: croppedImage.key,
+          url: croppedImage.url,
         },
       });
     } catch {
       // Handled by onError above.
     }
   };
+  const someImage = selectedFile?.url ?? images?.image?.url;
 
-  const handleUploadComplete = async (
-    files?: {
-      url: string;
-      key: string;
-      name?: string | null;
-    }[],
-  ) => {
-    await persistUploads(files);
+  const handleConfirm = async () => {
+    if (!croppedArea || !someImage) return;
+    try {
+      const croppedFile = await getCroppedFile({
+        imageSrc: someImage,
+        pixelCrop: croppedArea,
+        fileName: getCroppedFileName(
+          selectedFile?.file.name ?? `match-${matchId}`,
+        ),
+        mimeType: selectedFile?.file.type ?? "image/jpeg",
+      });
+      const files = await startUpload(
+        [croppedFile, selectedFile?.file].filter(Boolean) as File[],
+      );
+      if (files) {
+        await persistUploads(
+          files.map((f) => ({
+            url: f.url,
+            key: f.key,
+          })),
+        );
+      }
+    } catch (error) {
+      console.error(error);
+    }
   };
 
+  const isLoading = isUploading || setImageMutation.isPending;
+
   return (
-    <ImageUploadButton
-      endpoint="imageUploader"
-      onClientUploadComplete={handleUploadComplete}
-      onUploadError={(error) => {
-        toast.error(error?.message ?? "No se pudo crack.");
-      }}
-      actualImageSrc={image?.url}
-    />
+    <div className="flex flex-col gap-2">
+      <ImageUploadButton
+        disabled={isLoading}
+        actualImageSrc={images?.image?.url}
+        onFileSelected={setSelectedFile}
+        onCroppedAreaChange={setCroppedArea}
+        routeConfig={routeConfig}
+      />
+      <Button
+        type="button"
+        size="lg"
+        className="pointer-events-auto"
+        onClick={handleConfirm}
+        disabled={isLoading || !croppedArea || !someImage}
+      >
+        {isLoading ? (
+          <>
+            <Loader2 className="mr-2 size-4 animate-spin" />
+            Guardar
+          </>
+        ) : (
+          "Guardar"
+        )}
+      </Button>
+    </div>
   );
 }
 
 export default function UploadImageDialog(props: {
   matchId: number;
-  image?: MatchImage;
-  setImage: Dispatch<SetStateAction<MatchImage | undefined>>;
+  images?: { croppedImage: MatchImage; image: MatchImage };
+  setImages: Dispatch<
+    SetStateAction<{ croppedImage: MatchImage; image: MatchImage }>
+  >;
 }) {
   const isDesktop = useMediaQuery("(min-width: 768px)");
   const [open, setOpen] = useState(false);

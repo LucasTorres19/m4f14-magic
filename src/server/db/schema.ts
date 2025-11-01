@@ -67,22 +67,6 @@ export const matches = createTable("match", (d) => ({
   updatedAt: d.integer({ mode: "timestamp" }).$onUpdate(() => new Date()),
 }));
 
-export const matchImages = createTable("matchImage", (d) => ({
-  id: d.integer({ mode: "number" }).primaryKey({ autoIncrement: true }),
-  matchId: d
-    .integer("match_id", { mode: "number" })
-    .notNull()
-    .references(() => matches.id),
-  fileKey: d.text("file_key", { length: 256 }).notNull(),
-  fileUrl: d.text("file_url", { length: 1024 }).notNull(),
-  originalName: d.text("original_name", { length: 512 }),
-  displayOrder: d.integer("display_order", { mode: "number" }).notNull(),
-  createdAt: d
-    .integer({ mode: "timestamp" })
-    .default(sql`(unixepoch())`)
-    .notNull(),
-}));
-
 export const playersToMatches = createTable(
   "playersToMatches",
   (d) => ({

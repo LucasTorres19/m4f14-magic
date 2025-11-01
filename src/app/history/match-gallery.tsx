@@ -3,25 +3,32 @@
 import type { inferRouterOutputs } from "@trpc/server";
 import { ImageOff, X } from "lucide-react";
 import Image from "next/image";
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useState } from "react";
 import { createPortal } from "react-dom";
 
 import { AspectRatio } from "@/components/ui/aspect-ratio";
+import { cn } from "@/lib/utils";
 import type { AppRouter } from "@/server/api/root";
 import UploadImageDialog from "./upload-image-dialog";
 
 type MatchesOutput = inferRouterOutputs<AppRouter>["matches"]["findAll"];
-export type MatchImage = MatchesOutput[number]["images"][number];
+export type MatchImage = MatchesOutput[number]["image"];
 
 type MatchGalleryProps = {
   matchId: number;
-  initialImages: MatchImage[];
+  image: MatchImage;
+  croppedImage: MatchImage;
 };
 
-export function MatchGallery({ matchId, initialImages }: MatchGalleryProps) {
-  const [image, setImage] = useState<MatchImage | undefined>(() =>
-    [...initialImages].sort((a, b) => a.order - b.order).at(0),
-  );
+export function MatchGallery({
+  matchId,
+  image: initialImage,
+  croppedImage: initialCroppedImage,
+}: MatchGalleryProps) {
+  const [images, setImages] = useState({
+    croppedImage: initialCroppedImage,
+    image: initialImage,
+  });
 
   const [lightboxOpen, setLightboxOpen] = useState(false);
   const [mounted, setMounted] = useState(false);
@@ -36,24 +43,21 @@ export function MatchGallery({ matchId, initialImages }: MatchGalleryProps) {
     return () => window.removeEventListener("keydown", onKey);
   }, [lightboxOpen]);
 
-  const altText = useMemo(
-    () =>
-      image?.name
-        ? `Foto principal: ${image.name}`
-        : `Foto del duelo ${matchId}`,
-    [image?.name, matchId],
-  );
+  const altText = `Landscape image for ${matchId}`;
 
   return (
     <div className="space-y-4">
-      {image ? (
+      {images.croppedImage ? (
         <AspectRatio
           ratio={16 / 9}
-          className="relative rounded-2xl border border-white/12 bg-background/60 shadow-lg cursor-zoom-in"
+          className={cn(
+            "relative rounded-2xl border border-white/12 bg-background/60 shadow-lg",
+            images.image && "cursor-zoom-in",
+          )}
           onClick={() => setLightboxOpen(true)}
         >
           <Image
-            src={image.url}
+            src={images.croppedImage.url}
             alt={altText}
             fill
             className="object-cover object-top rounded-2xl"
@@ -64,28 +68,33 @@ export function MatchGallery({ matchId, initialImages }: MatchGalleryProps) {
           <div className="absolute inset-x-0 bottom-0 flex items-center justify-start gap-3 px-4 py-3 text-xs uppercase tracking-[0.3em] text-white/80">
             <span>Campeones</span>
           </div>
-          <div className="absolute top-4 right-4" onClick={(e) => e.stopPropagation()}>
+          <div
+            className="absolute top-4 right-4"
+            onClick={(e) => e.stopPropagation()}
+          >
             <UploadImageDialog
-              image={image}
+              images={images}
               matchId={matchId}
-              setImage={setImage}
+              setImages={setImages}
             />
           </div>
         </AspectRatio>
       ) : (
         <div className="flex relative h-full min-h-[220px] flex-col items-center justify-center gap-3 rounded-2xl border border-dashed border-white/15 bg-background/60 p-4 text-center text-sm text-muted-foreground">
           <div className="absolute top-4 right-4">
-            <UploadImageDialog matchId={matchId} setImage={setImage} />
+            <UploadImageDialog matchId={matchId} setImages={setImages} />
           </div>
           <ImageOff className="size-8 text-muted-foreground/70" />
           <p>Aun no se cargaron fotografias para este duelo.</p>
         </div>
       )}
 
-      {mounted && lightboxOpen && image &&
+      {mounted &&
+        lightboxOpen &&
+        images.image &&
         createPortal(
           <div
-            className="fixed inset-0 z-[9999] bg-black/80 backdrop-blur-sm flex items-center justify-center p-4"
+            className="fixed inset-0 z-9999 bg-black/80 backdrop-blur-sm flex items-center justify-center p-4"
             onClick={() => setLightboxOpen(false)}
             role="dialog"
             aria-modal="true"
@@ -95,8 +104,8 @@ export function MatchGallery({ matchId, initialImages }: MatchGalleryProps) {
               onClick={(e) => e.stopPropagation()}
             >
               <Image
-                src={image.url}
-                alt={altText}
+                src={images.image.url}
+                alt={`Imagen completa del match: ${matchId}`}
                 fill
                 className="object-contain"
                 sizes="100vw"

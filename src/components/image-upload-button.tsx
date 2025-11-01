@@ -1,7 +1,7 @@
 import { cn } from "@/lib/utils";
 import { useMediaQuery } from "@uidotdev/usehooks";
 import { useDropzone } from "@uploadthing/react";
-import { BookImage, Camera, Loader2 } from "lucide-react";
+import { BookImage, Camera } from "lucide-react";
 import { useCallback, useEffect, useState, type ChangeEvent } from "react";
 import Cropper, { type Area, type CropperProps } from "react-easy-crop";
 import {
@@ -9,12 +9,16 @@ import {
   generatePermittedFileTypes,
 } from "uploadthing/client";
 import { Button } from "./ui/button";
-import { useUploadThing } from "./uploadthing";
-type UseUploadThingParameters = Parameters<typeof useUploadThing>;
+
+import type { ExpandedRouteConfig } from "uploadthing/types";
+
 type ImageUploaderProps = {
   actualImageSrc?: string;
-  endpoint: UseUploadThingParameters[0];
-} & UseUploadThingParameters[1];
+  onFileSelected?: (selected: SelectedFile | null) => void;
+  onCroppedAreaChange?: (area: Area | null) => void;
+  routeConfig?: ExpandedRouteConfig;
+  disabled?: boolean;
+};
 
 type UploadedImage = {
   key: string;
@@ -22,15 +26,17 @@ type UploadedImage = {
   name: string | null;
 };
 
-type SelectedFile = {
+export type SelectedFile = {
   file: File;
   url: string;
 };
 
 export function ImageUploadButton({
-  endpoint,
   actualImageSrc,
-  ...rest
+  onCroppedAreaChange,
+  onFileSelected,
+  routeConfig,
+  disabled,
 }: ImageUploaderProps) {
   const isDesktop = useMediaQuery("(min-width: 768px)");
   const [uploadedImage, setUploadedImage] = useState<UploadedImage>();
@@ -65,15 +71,15 @@ export function ImageUploadButton({
     setCroppedAreaPixels(newCroppedAreaPixels);
   }, []);
 
-  const { startUpload, routeConfig, isUploading } = useUploadThing(endpoint, {
-    ...rest,
-    onClientUploadComplete: (images) => {
-      console.log({ images });
-      if (images.at(0)) setUploadedImage(images.at(0));
-      setPreviewFile(null);
-      void rest.onClientUploadComplete?.(images);
-    },
-  });
+  useEffect(() => {
+    onCroppedAreaChange?.(croppedAreaPixels);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [croppedAreaPixels]);
+
+  useEffect(() => {
+    onFileSelected?.(selectedFile);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [selectedFile]);
 
   const onDrop = useCallback(
     (acceptedFiles: File[]) => {
@@ -104,22 +110,6 @@ export function ImageUploadButton({
   const srcToShow =
     selectedFile?.url ?? uploadedImage?.url ?? actualImageSrc ?? null;
   const showPreview = !!srcToShow;
-  const showConfirmButton = !!croppedAreaPixels && !!selectedFile;
-
-  const handleConfirm = useCallback(async () => {
-    if (!selectedFile || !croppedAreaPixels) return;
-    try {
-      const croppedFile = await getCroppedFile({
-        imageSrc: selectedFile.url,
-        pixelCrop: croppedAreaPixels,
-        fileName: getCroppedFileName(selectedFile.file.name),
-        mimeType: selectedFile.file.type || "image/jpeg",
-      });
-      await startUpload([croppedFile]);
-    } catch (error) {
-      console.error(error);
-    }
-  }, [croppedAreaPixels, selectedFile, startUpload]);
 
   return (
     <div className="flex flex-col gap-2">
@@ -158,13 +148,14 @@ export function ImageUploadButton({
               type="button"
               variant="secondary"
               size="lg"
+              disabled={disabled}
               className="border-primary/40 text-primary hover:border-primary/60 pointer-events-auto w-40"
               asChild
             >
               <label onClick={(e) => e.stopPropagation()}>
                 <input
                   {...getInputProps()}
-                  disabled={isUploading}
+                  disabled={disabled}
                   capture="environment"
                   className="sr-only"
                   onChange={handleCameraCapture}
@@ -178,13 +169,14 @@ export function ImageUploadButton({
             type="button"
             variant="secondary"
             size="lg"
+            disabled={disabled}
             className="border-primary/40 text-primary hover:border-primary/60 pointer-events-auto w-40"
             asChild
           >
             <label>
               <input
                 {...getInputProps()}
-                disabled={isUploading}
+                disabled={disabled}
                 className="sr-only"
               />
               <BookImage className="size-4" />
@@ -193,24 +185,6 @@ export function ImageUploadButton({
           </Button>
         </div>
       </div>
-      {showConfirmButton && (
-        <Button
-          type="button"
-          size="lg"
-          className="pointer-events-auto"
-          onClick={handleConfirm}
-          disabled={isUploading}
-        >
-          {isUploading ? (
-            <>
-              <Loader2 className="mr-2 size-4 animate-spin" />
-              Recortar
-            </>
-          ) : (
-            "Recortar"
-          )}
-        </Button>
-      )}
     </div>
   );
 }
@@ -224,7 +198,7 @@ const createImage = (url: string) =>
     image.src = url;
   });
 
-const getCroppedFileName = (originalName: string) => {
+export const getCroppedFileName = (originalName: string) => {
   const extensionIndex = originalName.lastIndexOf(".");
   if (extensionIndex === -1) return `${originalName}-cropped`;
   const baseName = originalName.slice(0, extensionIndex);
@@ -232,7 +206,7 @@ const getCroppedFileName = (originalName: string) => {
   return `${baseName}-cropped${extension}`;
 };
 
-const getCroppedFile = async ({
+export const getCroppedFile = async ({
   imageSrc,
   pixelCrop,
   fileName,

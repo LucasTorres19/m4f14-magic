@@ -6,12 +6,17 @@ import { utapi } from "@/app/api/uploadthing/core";
 import { createTRPCRouter, publicProcedure } from "@/server/api/trpc";
 import {
   commanders,
-  matchImages,
+  images,
   matches,
   players,
   playersToMatches,
 } from "@/server/db/schema";
 import { revalidatePath } from "next/cache";
+
+const imageInputSchema = z.object({
+  url: z.string().url(),
+  key: z.string().min(1),
+});
 
 export const matchRouter = createTRPCRouter({
   save: publicProcedure
@@ -38,17 +43,12 @@ export const matchRouter = createTRPCRouter({
               message: "Each placement must be unique",
             },
           ),
-        image: z
-          .object({
-            url: z.string().url(),
-            key: z.string().min(1),
-            name: z.string().nullish(),
-          })
-          .optional(),
+        image: imageInputSchema.optional(),
+        croppedImage: imageInputSchema.optional(),
       }),
     )
     .mutation(async ({ ctx, input }) => {
-      return ctx.db.transaction(async (tx) => {
+      await ctx.db.transaction(async (tx) => {
         const playerNames = input.players.map((player) => player.name);
 
         const existingPlayers =
@@ -136,10 +136,41 @@ export const matchRouter = createTRPCRouter({
             });
           }
         }
+        let image_id: null | number = null;
+        let cropped_image_id: null | number = null;
+
+        if (input.croppedImage) {
+          cropped_image_id = await tx
+            .insert(images)
+            .values({
+              fileKey: input.croppedImage.key,
+              fileUrl: input.croppedImage.url,
+            })
+            .returning({
+              id: images.id,
+            })
+            .then((r) => r.at(0)?.id ?? null);
+        }
+        if (input.image) {
+          image_id = await tx
+            .insert(images)
+            .values({
+              fileKey: input.image.key,
+              fileUrl: input.image.url,
+            })
+            .returning({
+              id: images.id,
+            })
+            .then((r) => r.at(0)?.id ?? null);
+        }
 
         const [matchRow] = await tx
           .insert(matches)
-          .values({ startingHp: input.startingHp })
+          .values({
+            startingHp: input.startingHp,
+            cropped_image: cropped_image_id,
+            image: image_id,
+          })
           .returning({
             id: matches.id,
             startingHp: matches.startingHp,
@@ -176,28 +207,16 @@ export const matchRouter = createTRPCRouter({
           await tx.insert(playersToMatches).values(playerMatchRows);
         }
 
-        if (!input.image) return;
-
-        await tx.insert(matchImages).values({
-          matchId: matchRow.id,
-          fileKey: input.image.key,
-          fileUrl: input.image.url,
-          originalName: input.image.name ?? null,
-          displayOrder: 1,
-        });
-        revalidatePath("/analytics");
         return;
       });
+      revalidatePath("/analytics");
     }),
   setImage: publicProcedure
     .input(
       z.object({
         matchId: z.number().positive().int(),
-        image: z.object({
-          url: z.string().url(),
-          key: z.string().min(1),
-          name: z.string().optional(),
-        }),
+        image: imageInputSchema.optional(),
+        croppedImage: imageInputSchema,
       }),
     )
     .mutation(async ({ ctx, input }) => {
@@ -205,6 +224,8 @@ export const matchRouter = createTRPCRouter({
         const [matchRow] = await tx
           .select({
             id: matches.id,
+            image_id: matches.image,
+            cropped_image_id: matches.cropped_image,
           })
           .from(matches)
           .where(eq(matches.id, input.matchId))
@@ -217,46 +238,70 @@ export const matchRouter = createTRPCRouter({
           });
         }
 
-        const deletedImages = await tx
-          .delete(matchImages)
-          .where(eq(matchImages.matchId, input.matchId))
-          .returning({
-            fileKey: matchImages.fileKey,
-          });
+        const imagesToDelete = [
+          matchRow.cropped_image_id,
+          input.image && matchRow.image_id,
+        ].filter(Boolean) as number[];
 
-        const inserted = await tx
-          .insert(matchImages)
-          .values({
-            matchId: input.matchId,
+        const keysToDelete: string[] = [];
+
+        if (imagesToDelete.length) {
+          const [deleted] = await tx
+            .delete(images)
+            .where(inArray(images.id, imagesToDelete))
+            .returning({
+              fileKey: images.fileKey,
+            });
+          if (deleted?.fileKey) keysToDelete.push(deleted.fileKey);
+        }
+
+        const imagesToInsert = [
+          {
+            fileKey: input.croppedImage.key,
+            fileUrl: input.croppedImage.url,
+          },
+        ];
+
+        if (input.image)
+          imagesToInsert.push({
             fileKey: input.image.key,
             fileUrl: input.image.url,
-            originalName: input.image.name ?? null,
-            displayOrder: 1,
-          })
+          });
+
+        const [croppedImage, image] = await tx
+          .insert(images)
+          .values(imagesToInsert)
           .returning({
-            id: matchImages.id,
-            fileKey: matchImages.fileKey,
-            fileUrl: matchImages.fileUrl,
-            originalName: matchImages.originalName,
-            displayOrder: matchImages.displayOrder,
-          })
-          .then((s) => s.at(0));
+            id: images.id,
+            url: images.fileUrl,
+          });
 
-        const existingKeys = deletedImages.map((image) => image.fileKey);
-
-        if (!inserted)
+        if (!croppedImage)
           throw new TRPCError({
             code: "INTERNAL_SERVER_ERROR",
             message: "Image couldnt be saved",
           });
+
+        await tx
+          .update(matches)
+          .set({
+            cropped_image: croppedImage.id,
+            image: image?.id ?? undefined,
+          })
+          .where(eq(matches.id, matchRow.id));
+
         return {
-          image: inserted,
-          existingKeys,
+          croppedImage,
+          image,
+          keysToDelete,
         };
       });
 
-      await utapi.deleteFiles(transaction.existingKeys);
+      await utapi.deleteFiles(transaction.keysToDelete);
 
-      return transaction.image;
+      return {
+        croppedImage: transaction.croppedImage,
+        image: transaction.image,
+      };
     }),
 });
