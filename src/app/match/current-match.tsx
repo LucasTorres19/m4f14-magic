@@ -232,9 +232,8 @@ export default function CurrentMatch() {
   useEffect(() => {
     const container = containerRef.current;
     if (!container) return;
-    console.log("Creating swapy");
     const instance = createSwapy(container, {
-      dragOnHold: true,
+      dragOnHold: false,
       manualSwap: true,
       animation: "dynamic",
       swapMode: "drop",
