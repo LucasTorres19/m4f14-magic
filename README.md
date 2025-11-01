@@ -32,7 +32,7 @@ Pagina oficial de LIMTG (Liga Interna Magic: The Gathering)
 - [x] Seleccionar commanders en el boton de magos no lo guarda para cuando se da al boton de guardar partida
 - [x] La imagen de fondo de commander no está flipped
 - [x] El drag de los jugadores en current-match no funciona en mobile a veces porque selecciona texto
-- [ ] Hubo un caso de que por alguna razon se queda eternamente reduciendole vida a un player porque ponele que le dio a restar vida y despues cambio de pagina o algo asi no entiendo bien que onda
+- [x] Hubo un caso de que por alguna razon se queda eternamente reduciendole vida a un player porque ponele que le dio a restar vida y despues cambio de pagina o algo asi no entiendo bien que onda
 - [ ] Arreglar mobile ui para subir imagenes
 - [x] Cambiar color del hp, y de los botones a blanco cuando se esté utilizando el background del commander
 - [ ] en current-match, bottom-toolbar son muchos botones hay que mandar un scroll horizontal
