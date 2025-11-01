@@ -32,3 +32,4 @@ Pagina oficial de LIMTG (Liga Interna Magic: The Gathering)
 - [ ] El drag de los jugadores en current-match no funciona en mobile a veces porque selecciona texto
 - [ ] Hubo un caso de que por alguna razon se queda eternamente reduciendole vida a un player porque ponele que le dio a restar vida y despues cambio de pagina o algo asi no entiendo bien que onda
 - [ ] Arreglar mobile ui para subir imagenes
+- [ ] Cambiar color del hp, y de los botones a blanco cuando se esté utilizando el background del commander
