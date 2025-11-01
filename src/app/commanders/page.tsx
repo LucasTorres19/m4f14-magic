@@ -332,7 +332,7 @@ export default function ComandantesPage() {
                         >
                           <p className="font-semibold">“Porcentaje de podio”</p>
                           <p className="text-sm">
-                            Porcentaje de quedar tercer puesto para arriba.
+                            Porcentaje de quedar segundo puesto para arriba.
                           </p>
                         </TooltipContent>
                       </Tooltip>
