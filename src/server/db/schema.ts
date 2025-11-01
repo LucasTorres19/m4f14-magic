@@ -41,9 +41,25 @@ export const commanders = createTable("commander", (d) => ({
   updatedAt: d.integer({ mode: "timestamp" }).$onUpdate(() => new Date()),
 }));
 
+export const images = createTable("image", (d) => ({
+  id: d.integer({ mode: "number" }).primaryKey({ autoIncrement: true }),
+  fileKey: d.text("file_key", { length: 256 }).notNull(),
+  fileUrl: d.text("file_url", { length: 1024 }).notNull(),
+  createdAt: d
+    .integer({ mode: "timestamp" })
+    .default(sql`(unixepoch())`)
+    .notNull(),
+}));
+
 export const matches = createTable("match", (d) => ({
   id: d.integer({ mode: "number" }).primaryKey({ autoIncrement: true }),
   startingHp: d.integer({ mode: "number" }).notNull(),
+  image: d
+    .integer("image")
+    .references(() => images.id, { onDelete: "set null" }),
+  cropped_image: d
+    .integer("cropped_image")
+    .references(() => images.id, { onDelete: "set null" }),
   createdAt: d
     .integer({ mode: "timestamp" })
     .default(sql`(unixepoch())`)
