@@ -219,7 +219,7 @@ export const commandersRouter = createTRPCRouter({
             CASE WHEN ${playersToMatches.placement} = 1 THEN 1 ELSE 0 END
           `).as("wins"),
           podiums: sum(sql<number>`
-            CASE WHEN ${playersToMatches.placement} IN (1,2,3) THEN 1 ELSE 0 END
+            CASE WHEN ${playersToMatches.placement} IN (1,2) THEN 1 ELSE 0 END
           `).as("podiums"),
           seconds: sum(sql<number>`
             CASE WHEN ${playersToMatches.placement} = 2 THEN 1 ELSE 0 END
