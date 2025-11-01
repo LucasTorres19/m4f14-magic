@@ -1,7 +1,7 @@
 "use client";
 
 import { Check, ChevronsUpDown } from "lucide-react";
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 
 import { Button } from "@/components/ui/button";
 import {
@@ -21,10 +21,19 @@ import {
 
 import { cn } from "@/lib/utils";
 import type { RouterOutputs } from "@/trpc/react";
+
 type SuggestedPlayer = RouterOutputs["players"]["findAll"][number];
-type PlayerNameComboboxProps = {
-  value: string;
-  onChange: (value: string) => void;
+
+export type PlayerSelection = {
+  id: number | null;
+  name: string;
+  backgroundColor?: string | null;
+  source?: "suggestion" | "custom";
+};
+
+type PlayerComboboxProps = {
+  value: PlayerSelection;
+  onChange: (selection: PlayerSelection) => void;
   placeholder: string;
   ariaLabel: string;
   suggestions: SuggestedPlayer[];
@@ -32,7 +41,14 @@ type PlayerNameComboboxProps = {
   className?: string;
 };
 
-export function PlayerNameCombobox({
+const toSelection = (player: SuggestedPlayer): PlayerSelection => ({
+  id: player.id,
+  name: player.name,
+  backgroundColor: player.backgroundColor,
+  source: "suggestion",
+});
+
+export function PlayerCombobox({
   value,
   onChange,
   placeholder,
@@ -40,13 +56,14 @@ export function PlayerNameCombobox({
   suggestions,
   onInteractionChange,
   className,
-}: PlayerNameComboboxProps) {
+}: PlayerComboboxProps) {
   const [open, setOpen] = useState(false);
-  const [search, setSearch] = useState(value);
+  const [search, setSearch] = useState(value.name);
+  const lastSelectionRef = useRef<PlayerSelection["source"] | null>(null);
 
   useEffect(() => {
-    setSearch(value);
-  }, [value]);
+    setSearch(value.name);
+  }, [value.name]);
 
   useEffect(() => {
     onInteractionChange?.(open);
@@ -61,7 +78,8 @@ export function PlayerNameCombobox({
   const normalizedSuggestions = useMemo(() => {
     const seen = new Set<string>();
     return suggestions.filter((player) => {
-      const key = player.name.toLowerCase();
+      const key = player.name.trim().toLowerCase();
+      if (key.length === 0) return false;
       if (seen.has(key)) return false;
       seen.add(key);
       return true;
@@ -72,17 +90,37 @@ export function PlayerNameCombobox({
     event.stopPropagation();
   }, []);
 
-  const handleSelect = useCallback(
-    (name: string) => {
-      const trimmed = name.trim();
-      onChange(trimmed);
-      setSearch(trimmed);
+  const emitSelection = useCallback(
+    (selection: PlayerSelection) => {
+      lastSelectionRef.current = selection.source;
+      onChange(selection);
+      setSearch(selection.name);
       setOpen(false);
     },
     [onChange],
   );
 
-  const currentValue = value.trim();
+  const handleSuggestionSelect = useCallback(
+    (player: SuggestedPlayer) => {
+      emitSelection(toSelection(player));
+    },
+    [emitSelection],
+  );
+
+  const handleCustomSelect = useCallback(
+    (name: string) => {
+      const trimmed = name.trim();
+      emitSelection({
+        id: null,
+        name: trimmed,
+        backgroundColor: value.backgroundColor,
+        source: "custom",
+      });
+    },
+    [emitSelection, value.backgroundColor],
+  );
+
+  const currentValue = value.name.trim();
   const trimmedSearch = search.trim();
   const hasSearchText = trimmedSearch.length > 0;
 
@@ -91,8 +129,17 @@ export function PlayerNameCombobox({
       open={open}
       onOpenChange={(nextOpen) => {
         setOpen(nextOpen);
-        if (!nextOpen && hasSearchText) {
-          onChange(trimmedSearch);
+        if (!nextOpen) {
+          if (lastSelectionRef.current) {
+            lastSelectionRef.current = null;
+            return;
+          }
+          lastSelectionRef.current = null;
+          if (hasSearchText) {
+            handleCustomSelect(trimmedSearch);
+          }
+        } else {
+          lastSelectionRef.current = null;
         }
       }}
     >
@@ -134,7 +181,13 @@ export function PlayerNameCombobox({
             value={search}
             onValueChange={(searchValue) => {
               setSearch(searchValue);
-              onChange(searchValue);
+              onChange({
+                id: null,
+                name: searchValue,
+                backgroundColor: value.backgroundColor,
+                source: "custom",
+              });
+              lastSelectionRef.current = null;
             }}
             placeholder={placeholder}
             aria-label={ariaLabel}
@@ -153,15 +206,18 @@ export function PlayerNameCombobox({
               <CommandGroup heading="Invocadores">
                 {normalizedSuggestions.map((player) => {
                   const displayName = player.name;
+                  const normalizedDisplay = displayName.trim().toLowerCase();
                   const isSelected =
-                    currentValue.length > 0 &&
-                    currentValue.toLowerCase() === displayName.toLowerCase();
+                    (value.id != null && value.id === player.id) ||
+                    (value.id == null &&
+                      currentValue.length > 0 &&
+                      currentValue.toLowerCase() === normalizedDisplay);
 
                   return (
                     <CommandItem
                       key={player.id}
                       value={displayName}
-                      onSelect={(selectedValue) => handleSelect(selectedValue)}
+                      onSelect={() => handleSuggestionSelect(player)}
                     >
                       <span
                         aria-hidden
@@ -188,7 +244,7 @@ export function PlayerNameCombobox({
                 <CommandGroup heading="Personalizado">
                   <CommandItem
                     value={trimmedSearch}
-                    onSelect={(selectedValue) => handleSelect(selectedValue)}
+                    onSelect={() => handleCustomSelect(trimmedSearch)}
                   >
                     <span className="flex-1 truncate">
                       Usar &quot;{trimmedSearch}&quot;

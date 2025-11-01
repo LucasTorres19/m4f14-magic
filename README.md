@@ -20,9 +20,9 @@ Pagina oficial de LIMTG (Liga Interna Magic: The Gathering)
   - [x] Investigar cual es el mejor camino para integrar decks del magic
 - [x] Hacer la home
 
-- [ ] Mejorar commander combobox UI
-  - [ ] Mostrar primero commanders que se hayan jugado
-  - [ ] En caso de que el player este seleccionado mostrar primero commanders que haya jugado el player ese
+- [x] Mejorar commander combobox UI
+  - [x] Mostrar primero commanders que se hayan jugado
+  - [x] En caso de que el player este seleccionado mostrar primero commanders que haya jugado el player ese
 
 - [ ] Guarda la imagen original en el historial, para mostrarlo al tocar la imagen. esto significaría guardar la foto orignal y la croppeed image, creo que es el mejor camino
   - [ ] Arreglar mobile ui para subir imagenes
@@ -36,3 +36,4 @@ Pagina oficial de LIMTG (Liga Interna Magic: The Gathering)
 - [x] Hubo un caso de que por alguna razon se queda eternamente reduciendole vida a un player porque ponele que le dio a restar vida y despues cambio de pagina o algo asi no entiendo bien que onda
 - [x] Cambiar color del hp, y de los botones a blanco cuando se esté utilizando el background del commander
 - [ ] en current-match, bottom-toolbar son muchos botones hay que mandar un scroll horizontal (se podria matar el boton del timer y mezclar con las settings del boton del plus icon)
+- [ ] En el ordenamiento automático de players según hp-history toma peor siempre a alguien que termina en -x que alguien que termina en 0 independientemente de cuando pasó

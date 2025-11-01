@@ -2,7 +2,7 @@
 
 import Wizard from "@/app/_icons/wizard.svg";
 import { CommanderCombobox } from "@/components/commander-combobox";
-import { PlayerNameCombobox } from "@/components/player-name-combobox";
+import { PlayerCombobox } from "@/components/player-combobox";
 import { Button } from "@/components/ui/button";
 import {
   Dialog,
@@ -21,6 +21,7 @@ import { Plus } from "lucide-react";
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { useShallow } from "zustand/react/shallow";
 import { useCurrentMatch } from "../_stores/current-match-provider";
+import { useSettings } from "../_stores/settings-provider";
 
 export default function PlayersDialog() {
   const { players, updatePlayer, addPlayer, removePlayer } = useCurrentMatch(
@@ -31,6 +32,7 @@ export default function PlayersDialog() {
       removePlayer: state.removePlayer,
     })),
   );
+  const settings = useSettings((s) => s);
 
   const playersQuery = api.players.findAll.useQuery(undefined, {
     staleTime: 1000 * 60 * 5,
@@ -175,11 +177,18 @@ export default function PlayersDialog() {
                   <div className="grid gap-4 sm:grid-cols-[minmax(0,1fr)_minmax(0,1fr)_auto]">
                     <div className="flex flex-col gap-2">
                       <Label className="text-sm font-medium">Nombre</Label>
-                      <PlayerNameCombobox
+                      <PlayerCombobox
                         className="grow"
-                        value={player.displayName}
-                        onChange={(value) =>
-                          updatePlayer(player.id, { displayName: value })
+                        value={{
+                          id: player.playerId ?? null,
+                          name: player.displayName,
+                          backgroundColor: player.backgroundColor,
+                        }}
+                        onChange={(selection) =>
+                          updatePlayer(player.id, {
+                            displayName: selection.name,
+                            playerId: selection.id ?? null,
+                          })
                         }
                         placeholder="Elegi o escribi un invocador"
                         ariaLabel={`Nombre del invocador ${index + 1}`}
@@ -196,6 +205,7 @@ export default function PlayersDialog() {
                           updatePlayer(player.id, { commander })
                         }
                         placeholder="Elegi un comandante"
+                        playerId={player.playerId ?? null}
                         ariaLabel={`Comandante del invocador ${index + 1}`}
                       />
                     </div>
@@ -244,7 +254,7 @@ export default function PlayersDialog() {
           <Button
             type="button"
             variant="outline"
-            onClick={() => addPlayer()}
+            onClick={() => addPlayer(settings)}
             className="w-full sm:w-auto"
           >
             <Plus className="mr-2 size-4" />

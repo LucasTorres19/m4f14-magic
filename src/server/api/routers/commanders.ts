@@ -1,4 +1,4 @@
-import { asc, count, eq, like, max, sql, sum } from "drizzle-orm";
+import { and, asc, count, desc, eq, like, max, sql, sum } from "drizzle-orm";
 
 import * as Scry from "scryfall-sdk";
 import { z } from "zod";
@@ -126,7 +126,42 @@ async function upsertCommanders(db: Database, entries: CommanderInsert[]) {
     });
 }
 
-async function findLocalCommanders(db: Database, query: string, limit: number) {
+async function findLocalCommanders(
+  db: Database,
+  query: string,
+  limit: number,
+  playerId?: number,
+) {
+  const matchAgg = db
+    .select({
+      commanderId: playersToMatches.commanderId,
+      totalMatchCount: count(sql`1`).as("totalMatchCount"),
+    })
+    .from(playersToMatches)
+    .where(sql`${playersToMatches.commanderId} is not null`)
+    .groupBy(playersToMatches.commanderId)
+    .as("matchAgg");
+
+  const normalizedPlayerId =
+    typeof playerId === "number" && Number.isFinite(playerId)
+      ? playerId
+      : -1;
+
+  const playerAgg = db
+    .select({
+      commanderId: playersToMatches.commanderId,
+      playerMatchCount: count(sql`1`).as("playerMatchCount"),
+    })
+    .from(playersToMatches)
+    .where(
+      and(
+        eq(playersToMatches.playerId, normalizedPlayerId),
+        sql`${playersToMatches.commanderId} is not null`,
+      ),
+    )
+    .groupBy(playersToMatches.commanderId)
+    .as("playerAgg");
+
   const selection = {
     id: commanders.id,
     name: commanders.name,
@@ -134,9 +169,20 @@ async function findLocalCommanders(db: Database, query: string, limit: number) {
     artImageUrl: commanders.artImageUrl,
     description: commanders.description,
     scryfallUri: commanders.scryfallUri,
+    matchCount: sql<number>`coalesce(${matchAgg.totalMatchCount}, 0)`.as(
+      "matchCount",
+    ),
+    playerMatchCount: sql<number>`coalesce(${playerAgg.playerMatchCount}, 0)`.as(
+      "playerMatchCount",
+    ),
   };
 
-  let commanderQuery = db.select(selection).from(commanders).$dynamic();
+  let commanderQuery = db
+    .select(selection)
+    .from(commanders)
+    .leftJoin(matchAgg, eq(matchAgg.commanderId, commanders.id))
+    .leftJoin(playerAgg, eq(playerAgg.commanderId, commanders.id))
+    .$dynamic();
 
   if (query.length > 0) {
     const pattern = `%${query.toLowerCase()}%`;
@@ -145,7 +191,22 @@ async function findLocalCommanders(db: Database, query: string, limit: number) {
     );
   }
 
-  return commanderQuery.orderBy(asc(commanders.name)).limit(limit);
+  const hasPlayerMatches = sql<number>`
+    CASE WHEN coalesce(${playerAgg.playerMatchCount}, 0) > 0 THEN 1 ELSE 0 END
+  `;
+  const hasMatches = sql<number>`
+    CASE WHEN coalesce(${matchAgg.totalMatchCount}, 0) > 0 THEN 1 ELSE 0 END
+  `;
+
+  return commanderQuery
+    .orderBy(
+      desc(hasPlayerMatches),
+      desc(hasMatches),
+      desc(sql`coalesce(${playerAgg.playerMatchCount}, 0)`),
+      desc(sql`coalesce(${matchAgg.totalMatchCount}, 0)`),
+      asc(commanders.name),
+    )
+    .limit(limit);
 }
 
 export const commandersRouter = createTRPCRouter({
@@ -154,6 +215,7 @@ export const commandersRouter = createTRPCRouter({
       z
         .object({
           query: z.string().optional(),
+          playerId: z.number().int().positive().optional(),
         })
         .optional(),
     )
@@ -161,7 +223,12 @@ export const commandersRouter = createTRPCRouter({
       const trimmedQuery = input?.query?.trim() ?? "";
       const limit = COMMANDER_SEARCH_LIMIT;
 
-      let localResults = await findLocalCommanders(ctx.db, trimmedQuery, limit);
+      let localResults = await findLocalCommanders(
+        ctx.db,
+        trimmedQuery,
+        limit,
+        input?.playerId,
+      );
 
       const shouldFetchFromApi =
         trimmedQuery.length >= MIN_QUERY_LENGTH_FOR_API &&
@@ -191,7 +258,12 @@ export const commandersRouter = createTRPCRouter({
             console.error("Failed to cache commanders", error);
           }
 
-          localResults = await findLocalCommanders(ctx.db, trimmedQuery, limit);
+          localResults = await findLocalCommanders(
+            ctx.db,
+            trimmedQuery,
+            limit,
+            input?.playerId,
+          );
         }
       }
 

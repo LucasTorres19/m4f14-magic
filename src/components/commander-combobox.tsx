@@ -1,7 +1,7 @@
 "use client";
 
 import { Check, ChevronsUpDown } from "lucide-react";
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 
 import { Button } from "@/components/ui/button";
 import {
@@ -30,6 +30,7 @@ type CommanderComboboxProps = {
   ariaLabel: string;
   onInteractionChange?: (isActive: boolean) => void;
   className?: string;
+  playerId?: number | null;
 };
 
 export function CommanderCombobox({
@@ -39,6 +40,7 @@ export function CommanderCombobox({
   ariaLabel,
   onInteractionChange,
   className,
+  playerId,
 }: CommanderComboboxProps) {
   const [open, setOpen] = useState(false);
   const [search, setSearch] = useState(value?.name ?? "");
@@ -58,15 +60,72 @@ export function CommanderCombobox({
   }, [onInteractionChange]);
 
   const trimmedSearch = search.trim();
-  const queryInput =
-    trimmedSearch.length > 0 ? { query: trimmedSearch } : undefined;
+  const normalizedPlayerId =
+    typeof playerId === "number" && Number.isFinite(playerId)
+      ? playerId
+      : undefined;
+
+  const queryInput = useMemo(() => {
+    if (trimmedSearch.length === 0 && normalizedPlayerId === undefined) {
+      return undefined;
+    }
+
+    return {
+      query: trimmedSearch.length > 0 ? trimmedSearch : undefined,
+      playerId: normalizedPlayerId,
+    };
+  }, [trimmedSearch, normalizedPlayerId]);
 
   const commandersQuery = api.commanders.search.useQuery(queryInput, {
     enabled: open,
     staleTime: 1000 * 60 * 5,
   });
 
-  const suggestions = commandersQuery.data ?? [];
+  const suggestions = useMemo(
+    () => commandersQuery.data ?? [],
+    [commandersQuery.data],
+  );
+  const prioritizedSuggestions = useMemo(() => {
+    if (suggestions.length === 0) return [];
+
+    const seen = new Set<number>();
+    const ordered: CommanderOption[] = [];
+
+    const addItems = (items: CommanderOption[]) => {
+      for (const item of items) {
+        if (!item) continue;
+        const { id, name } = item;
+        if (id == null) continue;
+        if (!name || name.length === 0) continue;
+        if (seen.has(id)) continue;
+        seen.add(id);
+        ordered.push(item);
+      }
+    };
+
+    const playerMatches =
+      normalizedPlayerId === undefined
+        ? []
+        : suggestions.filter((option) => (option.playerMatchCount ?? 0) > 0);
+
+    const withMatches = suggestions.filter(
+      (option) =>
+        (option.matchCount ?? 0) > 0 &&
+        (option.playerMatchCount ?? 0) === 0,
+    );
+
+    const withoutMatches = suggestions.filter(
+      (option) =>
+        (option.matchCount ?? 0) === 0 &&
+        (option.playerMatchCount ?? 0) === 0,
+    );
+
+    addItems(playerMatches);
+    addItems(withMatches);
+    addItems(withoutMatches);
+
+    return ordered;
+  }, [normalizedPlayerId, suggestions]);
   const isLoading = commandersQuery.isLoading || commandersQuery.isFetching;
 
   const stopPropagation = useCallback((event: React.SyntheticEvent) => {
@@ -159,35 +218,33 @@ export function CommanderCombobox({
               )}
             </CommandEmpty>
 
-            {suggestions.length > 0 ? (
+            {prioritizedSuggestions.length > 0 ? (
               <CommandGroup heading="Comandantes">
-                {suggestions
-                  .filter((option) => !!option.name)
-                  .map((option) => {
-                    const isSelected = value?.id === option.id;
-                    return (
-                      <CommandItem
-                        key={option.id}
-                        value={option.name!}
-                        title={option.description ?? option.name!}
-                        onSelect={() => handleSelect(option)}
-                      >
-                        <span className="flex-1 truncate">{option.name}</span>
-                        <Check
-                          className={cn(
-                            "size-4 opacity-0",
-                            isSelected && "opacity-100",
-                          )}
-                        />
-                      </CommandItem>
-                    );
-                  })}
+                {prioritizedSuggestions.map((option) => {
+                  const isSelected = value?.id === option.id;
+                  return (
+                    <CommandItem
+                      key={option.id}
+                      value={option.name!}
+                      title={option.description ?? option.name!}
+                      onSelect={() => handleSelect(option)}
+                    >
+                      <span className="flex-1 truncate">{option.name}</span>
+                      <Check
+                        className={cn(
+                          "size-4 opacity-0",
+                          isSelected && "opacity-100",
+                        )}
+                      />
+                    </CommandItem>
+                  );
+                })}
               </CommandGroup>
             ) : null}
 
             {value ? (
               <>
-                {suggestions.length > 0 ? (
+                {prioritizedSuggestions.length > 0 ? (
                   <CommandSeparator className="my-1" />
                 ) : null}
                 <CommandGroup heading="Acciones">

@@ -10,6 +10,7 @@ type CommanderOption = RouterOutputs["commanders"]["search"][number];
 export interface Player {
   id: string;
   displayName: string;
+  playerId: number | null;
   hp: number;
   hpUpdated: number;
   hpUpdatedTimeout: ReturnType<typeof setTimeout> | null;
@@ -32,20 +33,13 @@ export type CurrentMatchActions = {
       | Partial<Omit<Player, "id">>
       | ((player: Player) => Partial<Omit<Player, "id">>),
   ) => void;
-  addPlayer: (player?: {
-    id?: string;
-    displayName?: string;
-    backgroundColor?: string;
-    hp?: number;
-    commander?: CommanderOption | null;
-  }) => void;
+  addPlayer: (settings: SettingsState) => void;
   removePlayer: (playerId: string) => void;
   reorderPlayers: (playerIds: string[]) => void;
 
   findPlayer: (playerId: string) => Player | undefined;
 
   updateHp: (playerId: string, amount: number) => void;
-  setHp: (playerId: string, hp: number) => void;
 
   restartMatch: (settings: SettingsState) => void;
 
@@ -68,19 +62,26 @@ const defaultInitState: CurrentMatchState = {
   isTimerPaused: false,
 };
 
+const createPlayer = (idx: number, settings: SettingsState) => {
+  return {
+    id: `local-${idx}`,
+    displayName: `Invocador ${idx + 1}`,
+    playerId: null,
+    hp: settings.startingHp,
+    backgroundColor: randomHexColor(idx),
+    hpUpdated: 0,
+    hpUpdatedTimeout: null,
+    commander: null,
+  };
+};
+
 export const initCurrentMatchStore = (
   settings: SettingsState,
 ): CurrentMatchState => {
   return {
-    players: Array.from({ length: INITIAL_PLAYERS }).map((_, i) => ({
-      id: `local-${i}`,
-      displayName: `Invocador ${i + 1}`,
-      hp: settings.startingHp,
-      backgroundColor: randomHexColor(i),
-      hpUpdated: 0,
-      hpUpdatedTimeout: null,
-      commander: null,
-    })),
+    players: Array.from({ length: INITIAL_PLAYERS }).map((_, i) =>
+      createPlayer(i, settings),
+    ),
     hpHistory: [],
     currentPlayerIndex: 0,
     timerRemaining: settings.timerLimit,
@@ -105,30 +106,12 @@ export const createCurrentMatchStore = (
                 : player,
             ),
           })),
-        addPlayer: (player) =>
+        addPlayer: (settings) =>
           set((state) => {
-            const nextIndex = state.players.length;
-            const baseHp = player?.hp ?? state.players[0]?.hp ?? 40;
-            const providedName = player?.displayName?.trim() ?? "";
-            const displayName =
-              providedName.length > 0
-                ? providedName
-                : `Invocador ${nextIndex + 1}`;
-            const backgroundColor =
-              player?.backgroundColor ?? randomHexColor(nextIndex);
-            const newPlayer: Player = {
-              id:
-                player?.id ??
-                `local-${Date.now().toString(16)}-${Math.random()
-                  .toString(16)
-                  .slice(2)}`,
-              displayName,
-              hp: baseHp,
-              backgroundColor,
-              hpUpdated: 0,
-              hpUpdatedTimeout: null,
-              commander: player?.commander ?? null,
-            };
+            const newPlayer: Player = createPlayer(
+              state.players.length,
+              settings,
+            );
             return {
               players: [...state.players, newPlayer],
             };
@@ -206,18 +189,13 @@ export const createCurrentMatchStore = (
           });
         },
 
-        setHp: (playerId, hp) => get().updatePlayer(playerId, { hp }),
-
         restartMatch: (settings: SettingsState) =>
           set(() => ({
             players: get().players.map((p) => {
               if (p.hpUpdatedTimeout) clearTimeout(p.hpUpdatedTimeout);
               return {
-                id: p.id,
-                displayName: p.displayName,
+                ...p,
                 hp: settings.startingHp,
-                commander: p.commander,
-                backgroundColor: p.backgroundColor,
                 hpUpdated: 0,
                 hpUpdatedTimeout: null,
               };

@@ -29,25 +29,19 @@ import { toast } from "sonner";
 
 import { CommanderCombobox } from "@/components/commander-combobox";
 import { ImageUploadButton } from "@/components/image-upload-button";
-import { PlayerNameCombobox } from "@/components/player-name-combobox";
+import {
+  PlayerCombobox,
+  type PlayerSelection,
+} from "@/components/player-combobox";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { useCurrentMatch } from "../_stores/current-match-provider";
 import type { Player } from "../_stores/current-match-store";
 import { useSettings } from "../_stores/settings-provider";
 
-type RankedPlayer = {
-  id: string;
-  displayName: string;
-  backgroundColor: string;
-  hp: number;
-};
-
 type OrderedPlayer = Pick<
-  RankedPlayer,
-  "id" | "displayName" | "backgroundColor"
-> & {
-  commander: CommanderOption | null;
-};
+  Player,
+  "id" | "displayName" | "backgroundColor" | "commander" | "playerId"
+>;
 
 type SuggestedPlayer = {
   id: number;
@@ -134,10 +128,23 @@ export default function SaveMatch() {
     [players, hpHistory],
   );
 
+  const mapToOrderedPlayers = useCallback(
+    (list: Player[]): OrderedPlayer[] =>
+      list.map((player) => ({
+        id: player.id,
+        displayName: player.displayName,
+        backgroundColor: player.backgroundColor,
+        commander: player.commander,
+        playerId: player.playerId ?? null,
+      })),
+    [],
+  );
+
   const [open, setOpen] = useState(false);
   const [step, setStep] = useState<1 | 2>(1);
-  const [orderedPlayers, setOrderedPlayers] =
-    useState<OrderedPlayer[]>(initialOrder);
+  const [orderedPlayers, setOrderedPlayers] = useState<OrderedPlayer[]>(() =>
+    mapToOrderedPlayers(initialOrder),
+  );
   const [draggingId, setDraggingId] = useState<string | null>(null);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
   const [uploadedImage, setUploadedImage] = useState<UploadedMatchImage>();
@@ -152,21 +159,21 @@ export default function SaveMatch() {
   useEffect(() => {
     if (!open) {
       setStep(1);
-      setOrderedPlayers(initialOrder);
+      setOrderedPlayers(mapToOrderedPlayers(initialOrder));
       setDraggingId(null);
       setActivePointer(null);
     }
-  }, [initialOrder, open]);
+  }, [initialOrder, mapToOrderedPlayers, open]);
 
   useEffect(() => {
     if (open) {
       setStep(1);
-      setOrderedPlayers(initialOrder);
+      setOrderedPlayers(mapToOrderedPlayers(initialOrder));
       setErrorMessage(null);
       setDraggingId(null);
       setActivePointer(null);
     }
-  }, [open, initialOrder]);
+  }, [initialOrder, mapToOrderedPlayers, open]);
 
   useEffect(() => {
     if (comboboxActive) {
@@ -235,11 +242,17 @@ export default function SaveMatch() {
     [],
   );
 
-  const handleDisplayNameChange = useCallback(
-    (id: string, value: string) => {
+  const handlePlayerChange = useCallback(
+    (id: string, selection: PlayerSelection) => {
       setOrderedPlayers((previous) =>
         previous.map((player) =>
-          player.id === id ? { ...player, displayName: value } : player,
+          player.id === id
+            ? {
+                ...player,
+                displayName: selection.name,
+                playerId: selection.id ?? null,
+              }
+            : player,
         ),
       );
       setErrorMessage(null);
@@ -585,10 +598,14 @@ export default function SaveMatch() {
 
                       <div className="flex grow flex-col gap-2">
                         <div>
-                          <PlayerNameCombobox
-                            value={player.displayName}
-                            onChange={(value) =>
-                              handleDisplayNameChange(player.id, value)
+                          <PlayerCombobox
+                            value={{
+                              id: player.playerId ?? null,
+                              name: player.displayName,
+                              backgroundColor: player.backgroundColor,
+                            }}
+                            onChange={(selection) =>
+                              handlePlayerChange(player.id, selection)
                             }
                             ariaLabel={`Nombre del invocador en posición ${player.placement}`}
                             placeholder="Invocador"
@@ -606,6 +623,7 @@ export default function SaveMatch() {
                             }
                             ariaLabel={`Comandante seleccionado por el invocador en posición ${player.placement}`}
                             placeholder="Comandante"
+                            playerId={player.playerId ?? null}
                             onInteractionChange={
                               handleComboboxInteractionChange
                             }
