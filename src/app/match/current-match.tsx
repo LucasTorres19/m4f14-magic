@@ -107,7 +107,7 @@ function PlayerCurrentMatch({
             data-swapy-no-drag
             src={commanderBackground}
             fill
-            className="object-cover object-top"
+            className={cn("object-cover object-top", flipped && "rotate-180")}
             alt={player.commander?.name ?? `${player.displayName} commander`}
           />
         </div>
@@ -139,15 +139,20 @@ function PlayerCurrentMatch({
         <Minus
           data-swapy-no-drag
           className={cn(
-            "group-active:text-background size-8",
-            player.hpUpdated < 0 ? "text-background" : "text-background/80",
+            "text-background/80 group-active:text-background size-8",
+            commanderBackground && "text-white/80 group-active:text-white",
+            player.hpUpdated > 0 && "opacity-100",
           )}
           strokeWidth={4}
         />
 
         <span
           data-swapy-no-drag
-          className={cn("text-background text-6xl ", flipped && "rotate-180")}
+          className={cn(
+            "text-background text-5xl",
+            flipped && "rotate-180",
+            commanderBackground && "text-white",
+          )}
         >
           {player.hpUpdated < 0 ? `${Math.abs(player.hpUpdated)}` : ""}
         </span>
@@ -167,14 +172,19 @@ function PlayerCurrentMatch({
         <Plus
           data-swapy-no-drag
           className={cn(
-            "group-active:text-background size-8",
-            player.hpUpdated > 0 ? "text-background" : "text-background/80",
+            "text-background/80 group-active:text-background size-8",
+            commanderBackground && "text-white/80 group-active:text-white",
+            player.hpUpdated > 0 && "opacity-100",
           )}
           strokeWidth={4}
         />
         <span
           data-swapy-no-drag
-          className={cn("text-background text-5xl", flipped && "rotate-180")}
+          className={cn(
+            "text-background text-5xl",
+            flipped && "rotate-180",
+            commanderBackground && "text-white",
+          )}
         >
           {player.hpUpdated > 0 ? `${Math.abs(player.hpUpdated)}` : ""}
         </span>
@@ -185,6 +195,7 @@ function PlayerCurrentMatch({
           className={cn(
             "pointer-events-auto text-background",
             flipped && "rotate-180",
+            commanderBackground && "text-white",
           )}
         >
           {player.hp}
