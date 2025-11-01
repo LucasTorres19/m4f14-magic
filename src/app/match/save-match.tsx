@@ -32,6 +32,7 @@ import { ImageUploadButton } from "@/components/image-upload-button";
 import { PlayerNameCombobox } from "@/components/player-name-combobox";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { useCurrentMatch } from "../_stores/current-match-provider";
+import type { Player } from "../_stores/current-match-store";
 import { useSettings } from "../_stores/settings-provider";
 
 type RankedPlayer = {
@@ -63,7 +64,7 @@ type UploadedMatchImage = {
 };
 
 function computeInitialRanking(
-  players: RankedPlayer[],
+  players: Player[],
   hpHistory: Array<{ playerId: string; currentHp: number }>,
 ) {
   const eliminationOrder = new Map<string, number>();
@@ -93,12 +94,7 @@ function computeInitialRanking(
     return b.hp - a.hp;
   });
 
-  return sorted.map<OrderedPlayer>((player) => ({
-    id: player.id,
-    displayName: player.displayName,
-    backgroundColor: player.backgroundColor,
-    commander: null,
-  }));
+  return sorted;
 }
 
 export default function SaveMatch() {
