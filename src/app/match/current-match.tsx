@@ -94,7 +94,7 @@ function PlayerCurrentMatch({
     <div
       style={containerStyle}
       className={cn(
-        "text-background relative flex h-full w-full items-stretch justify-center overflow-hidden rounded-3xl text-[clamp(3.75rem,10vmin,8rem)]",
+        "text-background relative flex h-full w-full items-stretch justify-center overflow-hidden rounded-3xl text-[clamp(3.75rem,10vmin,8rem)] select-none",
         flipped && "flex-row-reverse",
       )}
     >
@@ -108,6 +108,7 @@ function PlayerCurrentMatch({
             src={commanderBackground}
             fill
             className={cn("object-cover object-top", flipped && "rotate-180")}
+            draggable={false}
             alt={player.commander?.name ?? `${player.displayName} commander`}
           />
         </div>
@@ -116,7 +117,7 @@ function PlayerCurrentMatch({
         <span
           data-swapy-no-drag
           className={cn(
-            "text-background absolute text-2xl",
+            "text-background absolute text-2xl select-none",
             flipped
               ? "bottom-4 left-1/2 -translate-x-1/2 rotate-180"
               : "top-4 left-1/2 -translate-x-1/2",
@@ -130,7 +131,7 @@ function PlayerCurrentMatch({
         {...minusAttrs}
         size="icon-lg"
         className={cn(
-          "group h-full grow rounded-none",
+          "group h-full grow rounded-none select-none",
           flipped ? "flex-row-reverse pl-12" : "pr-12",
         )}
         variant="ghost"
@@ -149,7 +150,7 @@ function PlayerCurrentMatch({
         <span
           data-swapy-no-drag
           className={cn(
-            "text-background text-5xl",
+            "text-background text-5xl select-none",
             flipped && "rotate-180",
             commanderBackground && "text-white",
           )}
@@ -163,7 +164,7 @@ function PlayerCurrentMatch({
         {...plusAttrs}
         size="icon-lg"
         className={cn(
-          "group h-full grow rounded-none",
+          "group h-full grow rounded-none select-none",
           flipped ? "flex-row-reverse pr-12" : "pl-12",
         )}
         variant="ghost"
@@ -181,7 +182,7 @@ function PlayerCurrentMatch({
         <span
           data-swapy-no-drag
           className={cn(
-            "text-background text-5xl",
+            "text-background text-5xl select-none",
             flipped && "rotate-180",
             commanderBackground && "text-white",
           )}
@@ -193,10 +194,11 @@ function PlayerCurrentMatch({
         <button
           type="button"
           className={cn(
-            "pointer-events-auto text-background",
+            "pointer-events-auto text-background select-none",
             flipped && "rotate-180",
             commanderBackground && "text-white",
           )}
+          draggable={false}
         >
           {player.hp}
         </button>
@@ -320,7 +322,7 @@ export default function CurrentMatch() {
           <div
             key={itemId}
             data-swapy-item={itemId}
-            className="h-full w-full group-item"
+            className="h-full w-full group-item select-none"
           >
             {player && (
               <PlayerCurrentMatch player={player} flipped={idx < cols} />
