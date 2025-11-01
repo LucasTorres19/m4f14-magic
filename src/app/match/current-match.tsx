@@ -13,7 +13,6 @@ import {
   SheetTrigger,
 } from "@/components/ui/sheet";
 import { cn } from "@/lib/utils";
-import { useLongPress } from "@uidotdev/usehooks";
 import {
   History,
   Home,
@@ -30,6 +29,7 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import { createSwapy, utils, type Swapy } from "swapy";
 import { useCurrentMatch } from "../_stores/current-match-provider";
 import { type Player } from "../_stores/current-match-store";
+import { useStableLongPress } from "../hooks/use-longer-press";
 import PlayersDialog from "./players-dialog";
 import SaveMatch from "./save-match";
 
@@ -69,26 +69,50 @@ function PlayerCurrentMatch({
     opacity: commanderBackground ? undefined : 0.7,
   };
 
-  const minusAttrs = useLongPress(
+  const minusAttrs = useStableLongPress(
     () => {
+      if (minusIntervalRef.current) clearInterval(minusIntervalRef.current);
       minusIntervalRef.current = setInterval(() => updateHp(player.id, -1), 50);
     },
     {
-      onFinish: () =>
-        minusIntervalRef.current && clearInterval(minusIntervalRef.current),
+      onFinish: () => {
+        if (minusIntervalRef.current) clearInterval(minusIntervalRef.current);
+        minusIntervalRef.current = null;
+      },
+      onCancel: () => {
+        if (minusIntervalRef.current) clearInterval(minusIntervalRef.current);
+        minusIntervalRef.current = null;
+      },
       threshold: 500,
     },
   );
-  const plusAttrs = useLongPress(
+  const plusAttrs = useStableLongPress(
     () => {
+      if (plusIntervalRef.current) clearInterval(plusIntervalRef.current);
       plusIntervalRef.current = setInterval(() => updateHp(player.id, 1), 50);
     },
     {
-      onFinish: () =>
-        plusIntervalRef.current && clearInterval(plusIntervalRef.current),
+      onFinish: () => {
+        if (plusIntervalRef.current) clearInterval(plusIntervalRef.current);
+        plusIntervalRef.current = null;
+      },
+      onCancel: () => {
+        if (plusIntervalRef.current) clearInterval(plusIntervalRef.current);
+        plusIntervalRef.current = null;
+      },
       threshold: 500,
     },
   );
+
+  useEffect(() => {
+    // clean up just in case
+    return () => {
+      if (plusIntervalRef.current) clearInterval(plusIntervalRef.current);
+      plusIntervalRef.current = null;
+      if (minusIntervalRef.current) clearInterval(minusIntervalRef.current);
+      minusIntervalRef.current = null;
+    };
+  }, []);
 
   return (
     <div

@@ -201,7 +201,7 @@ export const createCurrentMatchStore = (
                   hpUpdated: 0,
                   hpUpdatedTimeout: null,
                 });
-              }, 500),
+              }, 1500),
             };
           });
         },
