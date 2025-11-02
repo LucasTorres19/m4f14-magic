@@ -17,7 +17,7 @@ import {
 import { Label } from "@/components/ui/label";
 import { Input } from "@/components/ui/input";
 import { toast } from "sonner";
-import { ArrowLeft, ChevronUp, ChevronDown, Users, Swords, Trophy, Boxes, Flame, Droplets } from "lucide-react";
+import { ArrowLeft, ChevronUp, ChevronDown, Users, Swords, Trophy, Boxes, Flame, Droplets, Layers } from "lucide-react";
 import {
   Tooltip,
   TooltipContent,
@@ -35,6 +35,7 @@ type ApiPlayer = {
   isLastWinner?: boolean | null;
   isStreakChampion?: boolean | null;
   topDecks?: { commanderId: number; name: string | null; artImageUrl: string | null; count: number | string | null }[];
+  uniqueCommanderCount?: number | string | null;
 };
 
 type PlayerUI = Required<Pick<ApiPlayer, "id">> & {
@@ -48,6 +49,8 @@ type PlayerUI = Required<Pick<ApiPlayer, "id">> & {
   isStreakChampion: boolean;
   isCebollita: boolean;
   topDecks: { commanderId: number; name: string; artImageUrl: string | null; count: number }[];
+  uniqueCommanderCount: number;
+  isMostDiverse: boolean;
 };
 
 export default function SummonerPage() {
@@ -75,6 +78,7 @@ export default function SummonerPage() {
       const wins = Number(p.wins ?? 0);
       const podiums = Number(p.podiums ?? 0);
       const seconds = Math.max(0, podiums - wins);
+      const uniqueCommanderCount = Number(p.uniqueCommanderCount ?? 0);
       return {
         id: p.id,
         name: (p.name ?? "Sin nombre").trim(),
@@ -86,6 +90,8 @@ export default function SummonerPage() {
         isLastWinner: Boolean(p.isLastWinner),
         isStreakChampion: Boolean(p.isStreakChampion),
         isCebollita: false,
+        uniqueCommanderCount,
+        isMostDiverse: false,
         topDecks: (p.topDecks ?? []).map((d) => ({
           commanderId: d.commanderId,
           name: (d.name ?? "Desconocido").trim(),
@@ -96,8 +102,16 @@ export default function SummonerPage() {
     });
 
     const maxSeconds = base.reduce((m, p) => (p.seconds > m ? p.seconds : m), 0);
-    if (maxSeconds <= 0) return base;
-    return base.map((p) => ({ ...p, isCebollita: p.seconds === maxSeconds }));
+    const maxUnique = base.reduce(
+      (m, p) => (p.uniqueCommanderCount > m ? p.uniqueCommanderCount : m),
+      0,
+    );
+
+    return base.map((p) => ({
+      ...p,
+      isCebollita: maxSeconds > 0 && p.seconds === maxSeconds,
+      isMostDiverse: maxUnique > 0 && p.uniqueCommanderCount === maxUnique,
+    }));
   }, [data]);
 
   type SortKey = "name" | "id" | "winrate" | "matches";
@@ -255,8 +269,22 @@ export default function SummonerPage() {
                         </Tooltip>
 
                       </div>
-
+                            
                       <div className="flex items-center gap-2 text-xs text-muted-foreground flex-wrap">
+                        
+                      {player.isMostDiverse && (
+                          <Tooltip>
+                            <TooltipTrigger asChild>
+                              <span className="text-[11px] py-1 rounded-full bg-indigo-500/15 text-indigo-600 flex w-fit items-center px-3 font-semibold">
+                                <Layers className="mr-1 h-4 w-4" /> Mas comandantes distintos
+                              </span>
+                            </TooltipTrigger>
+                            <TooltipContent side="top" align="center">
+                              {player.uniqueCommanderCount} comandantes diferentes
+                            </TooltipContent>
+                          </Tooltip>
+                        )}
+
                         <span className="inline-flex items-center gap-1 py-1 px-2 rounded-full bg-primary/10 text-primary">
                           <Swords className="h-4 w-4 mr-1" /> {player.matchCount} partidas
                         </span>

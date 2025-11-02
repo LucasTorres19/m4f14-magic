@@ -70,7 +70,7 @@ export const playersRouter = createTRPCRouter({
       })
       .from(usageRank)
       .innerJoin(commanders, eq(commanders.id, usageRank.commanderId))
-      .where(sql`${usageRank.rn} <= 3`);
+      .where(sql`${usageRank.rn} <= 5`);
 
     const topByPlayer = new Map<
       number,
@@ -84,6 +84,20 @@ export const playersRouter = createTRPCRouter({
         artImageUrl: row.commanderArtImageUrl ?? null,
         count: Number(row.count ?? 0),
       });
+    }
+
+    // Count distinct commanders per player (diversity)
+    const uniqueRows = await ctx.db
+      .select({
+        playerId: usageAgg.playerId,
+        uniqueCommanderCount: count(sql`1`).as("uniqueCommanderCount"),
+      })
+      .from(usageAgg)
+      .groupBy(usageAgg.playerId);
+
+    const uniqueByPlayer = new Map<number, number>();
+    for (const r of uniqueRows) {
+      uniqueByPlayer.set(r.playerId ?? 0, Number(r.uniqueCommanderCount ?? 0));
     }
 
     const rows = await ctx.db
@@ -161,6 +175,7 @@ export const playersRouter = createTRPCRouter({
       topDecks: (topByPlayer.get(r.id) ?? []).sort((a, b) => b.count - a.count),
       isLastWinner: lastWinnerId != null && r.id === lastWinnerId,
       isStreakChampion: streakChampionId != null && r.id === streakChampionId,
+      uniqueCommanderCount: Number(uniqueByPlayer.get(r.id) ?? 0),
     }));
   }),
   updateColor: publicProcedure
