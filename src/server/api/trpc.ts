@@ -33,10 +33,7 @@ export const createTRPCContext = async (opts: { headers: Headers }) => {
   const cookie = cookieStore.get("mafia-magic-auth");
   let authorized = false;
   try {
-    const decoded = verify(
-      cookie?.value ?? "",
-      env.AUTHORIZATION_SECRET as string,
-    );
+    const decoded = verify(cookie?.value ?? "", env.AUTHORIZATION_SECRET);
     if (decoded) authorized = true;
   } catch {}
 

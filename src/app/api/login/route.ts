@@ -27,7 +27,7 @@ export async function POST(request: Request) {
   }
 
   const cookieStore = await cookies();
-  const token = sign({ authorized: true }, env.AUTHORIZATION_SECRET as string);
+  const token = sign({ authorized: true }, env.AUTHORIZATION_SECRET);
   cookieStore.set({
     name: "mafia-magic-auth",
     value: token,
