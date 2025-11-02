@@ -27,7 +27,8 @@ Pagina oficial de LIMTG (Liga Interna Magic: The Gathering)
 - [x] Guarda la imagen original en el historial, para mostrarlo al tocar la imagen. esto significaría guardar la foto orignal y la croppeed image, creo que es el mejor camino
   - [x] Arreglar mobile ui para subir imagenes
 
-**Fixes**
+- [] Cada vez que un usuario intente una acción que vaya a mutar datos, tiene que estar autorizado con una cookie en caso de no tener la cookie se le abre un modal pidiendo por una password que vamos a guardar como env var y una vez sea correcta la password le damos la cookie de duracion eterna para poder modificar datos (guardar partida, asignar imagenes, etc)
+  **Fixes**
 
 - [x] Dates en history page no se muestran en el timezone local, revisar otros casos en los que se muestren dates.
 - [x] Seleccionar commanders en el boton de magos no lo guarda para cuando se da al boton de guardar partida
@@ -36,4 +37,4 @@ Pagina oficial de LIMTG (Liga Interna Magic: The Gathering)
 - [x] Hubo un caso de que por alguna razon se queda eternamente reduciendole vida a un player porque ponele que le dio a restar vida y despues cambio de pagina o algo asi no entiendo bien que onda
 - [x] Cambiar color del hp, y de los botones a blanco cuando se esté utilizando el background del commander
 - [x] en current-match, bottom-toolbar son muchos botones hay que mandar un scroll horizontal (se podria matar el boton del timer y mezclar con las settings del boton del plus icon)
-- [ ] En el ordenamiento automático de players según hp-history toma peor siempre a alguien que termina en -x que alguien que termina en 0 independientemente de cuando pasó
+- [x] En el ordenamiento automático de players según hp-history toma peor siempre a alguien que termina en -x que alguien que termina en 0 independientemente de cuando pasó
