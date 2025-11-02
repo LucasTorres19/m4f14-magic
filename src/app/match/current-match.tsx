@@ -154,6 +154,7 @@ function PlayerCurrentMatch({
         data-swapy-no-drag
         {...minusAttrs}
         size="icon-lg"
+        onContextMenu={(e) => e.preventDefault()}
         className={cn(
           "group h-full grow rounded-none select-none",
           flipped ? "flex-row-reverse pl-12" : "pr-12",
@@ -186,6 +187,7 @@ function PlayerCurrentMatch({
       <Button
         data-swapy-no-drag
         {...plusAttrs}
+        onContextMenu={(e) => e.preventDefault()}
         size="icon-lg"
         className={cn(
           "group h-full grow rounded-none select-none",
@@ -217,6 +219,7 @@ function PlayerCurrentMatch({
       <div className="pointer-events-none absolute inset-0 flex items-center justify-center">
         <button
           type="button"
+          onContextMenu={(e) => e.preventDefault()}
           className={cn(
             "pointer-events-auto text-background select-none",
             flipped && "rotate-180",

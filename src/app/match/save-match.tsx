@@ -557,7 +557,7 @@ export default function SaveMatch() {
           </Button>
         </DialogTrigger>
         <DialogContent className="sm:max-w-md overflow-hidden">
-          <ScrollArea className="max-h-[85vh] pr-4">
+          <ScrollArea type="auto" className="max-h-[85vh] pr-4">
             <DialogHeader>
               <DialogTitle>Finalizar partida</DialogTitle>
               <DialogDescription>
