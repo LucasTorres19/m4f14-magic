@@ -375,54 +375,58 @@ export default function CurrentMatch() {
                 Bottom toolbar with some buttons :D
               </SheetDescription>
             </SheetHeader>
-            <div className="relative flex items-center justify-center gap-3">
-              <Button size="lg" asChild>
-                <Link href="/">
-                  <Home className="size-5" />
-                </Link>
-              </Button>
-
-              <SettingsDialog
-                trigger={
-                  <Button
-                    size="lg"
-                    variant={"success"}
-                    className="pointer-events-auto"
-                  >
-                    <Plus className="size-5" />
+            <div className="relative">
+              <div className="pointer-events-auto -mx-2 overflow-x-auto px-2 pb-1">
+                <div className="flex w-max items-center gap-3 md:w-full md:justify-center">
+                  <Button size="lg" asChild>
+                    <Link href="/">
+                      <Home className="size-5" />
+                    </Link>
                   </Button>
-                }
-              />
 
-              <PlayersDialog />
+                  <SettingsDialog
+                    trigger={
+                      <Button
+                        size="lg"
+                        variant={"success"}
+                        className="pointer-events-auto"
+                      >
+                        <Plus className="size-5" />
+                      </Button>
+                    }
+                  />
 
-              <ResetButton
-                trigger={
-                  <Button
-                    size="lg"
-                    variant="destructive"
-                    className="pointer-events-auto"
-                  >
-                    <RotateCcw className="size-5" />
+                  <PlayersDialog />
+
+                  <ResetButton
+                    trigger={
+                      <Button
+                        size="lg"
+                        variant="destructive"
+                        className="pointer-events-auto"
+                      >
+                        <RotateCcw className="size-5" />
+                      </Button>
+                    }
+                  />
+                  <TimerSettingsDialog
+                    trigger={
+                      <Button size="lg" variant="outline">
+                        <TimerIcon className="size-5" />
+                      </Button>
+                    }
+                    onShowTimer={() => setIsTimerVisible(true)}
+                  />
+
+                  <Button size="lg" asChild>
+                    <Link href="/match/hp-history">
+                      <History className="size-5" />
+                    </Link>
                   </Button>
-                }
-              />
-              <TimerSettingsDialog
-                trigger={
-                  <Button size="lg" variant="outline">
-                    <TimerIcon className="size-5" />
-                  </Button>
-                }
-                onShowTimer={() => setIsTimerVisible(true)}
-              />
 
-              <Button size="lg" asChild>
-                <Link href="/match/hp-history">
-                  <History className="size-5" />
-                </Link>
-              </Button>
-
-              <SaveMatch />
+                  <SaveMatch />
+                </div>
+              </div>
             </div>
           </SheetContent>
         </Sheet>

@@ -35,5 +35,5 @@ Pagina oficial de LIMTG (Liga Interna Magic: The Gathering)
 - [x] El drag de los jugadores en current-match no funciona en mobile a veces porque selecciona texto
 - [x] Hubo un caso de que por alguna razon se queda eternamente reduciendole vida a un player porque ponele que le dio a restar vida y despues cambio de pagina o algo asi no entiendo bien que onda
 - [x] Cambiar color del hp, y de los botones a blanco cuando se esté utilizando el background del commander
-- [ ] en current-match, bottom-toolbar son muchos botones hay que mandar un scroll horizontal (se podria matar el boton del timer y mezclar con las settings del boton del plus icon)
+- [x] en current-match, bottom-toolbar son muchos botones hay que mandar un scroll horizontal (se podria matar el boton del timer y mezclar con las settings del boton del plus icon)
 - [ ] En el ordenamiento automático de players según hp-history toma peor siempre a alguien que termina en -x que alguien que termina en 0 independientemente de cuando pasó
