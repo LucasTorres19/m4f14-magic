@@ -16,7 +16,20 @@ import { SettingsPovider } from "./_stores/settings-provider";
 export const metadata: Metadata = {
   title: "Mafia Magic",
   description: "Creado por MafiaTeam",
-  icons: [{ rel: "icon", url: "/favicon.ico" }],
+  manifest: "/manifest.json",
+  icons: {
+    icon: [
+      { url: "/favicon.ico" },
+      { url: "/icon0.svg", type: "image/svg+xml" },
+      { url: "/icon1.png", sizes: "96x96", type: "image/png" },
+      { url: "/favicon-16x16.png", sizes: "16x16", type: "image/png" },
+      { url: "/favicon-32x32.png", sizes: "32x32", type: "image/png" },
+    ],
+    apple: [{ url: "/apple-icon.png", sizes: "180x180", type: "image/png" }],
+  },
+  other: {
+    "apple-mobile-web-app-title": "Mafia Magic",
+  },
 };
 
 const geist = Geist({
