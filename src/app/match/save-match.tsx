@@ -82,7 +82,7 @@ function computeInitialRanking(
       elimA ?? (aliveA ? Number.POSITIVE_INFINITY : Number.NEGATIVE_INFINITY);
 
     const scoreB =
-      (elimB ?? aliveB) ? Number.POSITIVE_INFINITY : Number.NEGATIVE_INFINITY;
+      elimB ?? (aliveB ? Number.POSITIVE_INFINITY : Number.NEGATIVE_INFINITY);
 
     if (scoreA !== scoreB) return scoreB - scoreA;
 
