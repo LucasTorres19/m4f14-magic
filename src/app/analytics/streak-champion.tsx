@@ -1,12 +1,19 @@
+import { LocalizedDate } from "@/components/localized-date";
 import { Skeleton } from "@/components/ui/skeleton";
 import { db } from "@/server/db";
 import { matches, players, playersToMatches } from "@/server/db/schema";
-import { format } from "date-fns";
-import { es } from "date-fns/locale";
 import { eq, sql } from "drizzle-orm";
 import { Flame } from "lucide-react";
+import type { ReactNode } from "react";
 
 const numberFormatter = new Intl.NumberFormat("es-AR");
+
+const longDateOptions: Intl.DateTimeFormatOptions = {
+  weekday: "long",
+  day: "numeric",
+  month: "long",
+  year: "numeric",
+};
 
 export default async function StreakChampion() {
   const orderedMatches = db.$with("ordered_matches").as(
@@ -80,25 +87,34 @@ export default async function StreakChampion() {
     ? new Date(streakChampion.latestMatchAt)
     : null;
 
-  const streakChampionLastWin =
-    lastWinDate && !Number.isNaN(lastWinDate.getTime())
-      ? format(lastWinDate, "PPPP", { locale: es })
-      : null;
-  const isActive =
-    lastWinDate &&
-    latestMatchDate &&
-    !Number.isNaN(lastWinDate.getTime()) &&
-    !Number.isNaN(latestMatchDate.getTime()) &&
-    lastWinDate.getTime() === latestMatchDate.getTime();
+  const hasValidLastWinDate =
+    lastWinDate != null && !Number.isNaN(lastWinDate.getTime());
+  const hasValidLatestMatchDate =
+    latestMatchDate != null && !Number.isNaN(latestMatchDate.getTime());
 
+  const isActive =
+    hasValidLastWinDate &&
+    hasValidLatestMatchDate &&
+    lastWinDate.getTime() === latestMatchDate.getTime();
+  console.log({ lastWinDate });
   const name = streakChampion.name ?? "Invocador desconocido";
   const backgroundColor = streakChampion.backgroundColor ?? "#1f2937";
   const streak = Number(streakChampion.streak ?? 0);
-  const statusMessage = isActive
-    ? "El fuego de la victoria sigue encendido."
-    : streakChampionLastWin
-      ? `Último triunfo sellado el ${streakChampionLastWin}.`
-      : "La leyenda de la racha perdura en los registros.";
+  const statusMessage: ReactNode = isActive ? (
+    "El fuego de la victoria sigue encendido."
+  ) : hasValidLastWinDate ? (
+    <>
+      Último triunfo sellado el{" "}
+      <LocalizedDate
+        value={streakChampion.lastWinAt}
+        options={longDateOptions}
+        className="capitalize"
+      />
+      .
+    </>
+  ) : (
+    "La leyenda de la racha perdura en los registros."
+  );
 
   return (
     <div className="relative mb-12 overflow-hidden rounded-3xl border border-primary/50 bg-linear-to-br from-primary/30 via-background to-background p-px shadow-[0_25px_80px_-45px_rgba(56,189,248,0.8)]">

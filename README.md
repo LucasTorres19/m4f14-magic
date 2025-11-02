@@ -29,7 +29,7 @@ Pagina oficial de LIMTG (Liga Interna Magic: The Gathering)
 
 **Fixes**
 
-- [ ] Dates en history page no se muestran en el timezone local, revisar otros casos en los que se muestren dates.
+- [x] Dates en history page no se muestran en el timezone local, revisar otros casos en los que se muestren dates.
 - [x] Seleccionar commanders en el boton de magos no lo guarda para cuando se da al boton de guardar partida
 - [x] La imagen de fondo de commander no está flipped
 - [x] El drag de los jugadores en current-match no funciona en mobile a veces porque selecciona texto

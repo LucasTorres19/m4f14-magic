@@ -2,11 +2,10 @@ import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
 import { api } from "@/trpc/server";
 import type { inferRouterOutputs } from "@trpc/server";
-import { format } from "date-fns";
-import { es } from "date-fns/locale";
 import { ArrowLeft, Camera, Sparkles } from "lucide-react";
 import Image from "next/image";
 import Link from "next/link";
+import { LocalizedDate } from "@/components/localized-date";
 
 import type { AppRouter } from "@/server/api/root";
 import { MatchGallery } from "./match-gallery";
@@ -20,6 +19,19 @@ const gradientPalettes: [string, ...string[]] = [
   "from-emerald-500/15 via-sky-500/10 to-indigo-700/20",
   "from-amber-400/15 via-amber-600/10 to-red-700/20",
 ];
+
+const matchDateOptions: Intl.DateTimeFormatOptions = {
+  weekday: "long",
+  day: "numeric",
+  month: "long",
+  year: "numeric",
+};
+
+const matchTimeOptions: Intl.DateTimeFormatOptions = {
+  hour: "2-digit",
+  minute: "2-digit",
+  hour12: false,
+};
 
 const placementTitles: Record<number, string> = {
   1: "Campeón",
@@ -154,9 +166,10 @@ interface MatchCardProps {
 }
 
 const MatchCard = ({ match, gradient }: MatchCardProps) => {
-  const createdAt = new Date(match.createdAt);
-  const matchDate = format(createdAt, "EEEE d 'de' MMMM yyyy", { locale: es });
-  const matchTime = format(createdAt, "HH:mm 'hs'", { locale: es });
+  const createdAt =
+    match.createdAt instanceof Date
+      ? match.createdAt.toISOString()
+      : match.createdAt;
   const playerCount = match.players.length;
 
   return (
@@ -175,10 +188,22 @@ const MatchCard = ({ match, gradient }: MatchCardProps) => {
               Duelo #{match.id}
             </p>
             <h2 className="text-foreground text-2xl font-semibold md:text-3xl">
-              {matchDate}
+              <LocalizedDate
+                value={createdAt}
+                options={matchDateOptions}
+                className="capitalize"
+                fallback="Fecha desconocida"
+              />
             </h2>
             <p className="text-muted-foreground text-sm">
-              Registro tomado a las {matchTime}.
+              Registro tomado a las{" "}
+              <LocalizedDate
+                value={createdAt}
+                options={matchTimeOptions}
+                suffix=" hs"
+                fallback="--:-- hs"
+              />
+              .
             </p>
           </div>
           <div className="flex items-end gap-6 text-sm">
