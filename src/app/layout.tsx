@@ -8,6 +8,8 @@ import { NextSSRPlugin } from "@uploadthing/react/next-ssr-plugin";
 import { type Metadata } from "next";
 import { Geist } from "next/font/google";
 import { extractRouterConfig } from "uploadthing/server";
+import { LoginGateDialog } from "./_auth/login-gate-dialog";
+import { LoginGateOpenerProvider } from "./_auth/login-gate-opener";
 import { CurrentMatchPovider } from "./_stores/current-match-provider";
 import { SettingsPovider } from "./_stores/settings-provider";
 
@@ -37,14 +39,17 @@ export default function RootLayout({
            */
           routerConfig={extractRouterConfig(ourFileRouter)}
         />
-        <TRPCReactProvider>
-          <SettingsPovider>
-            <CurrentMatchPovider>
-              <FlyingCards />
-              {children}
-            </CurrentMatchPovider>
-          </SettingsPovider>
-        </TRPCReactProvider>
+        <LoginGateOpenerProvider>
+          <TRPCReactProvider>
+            <SettingsPovider>
+              <CurrentMatchPovider>
+                <FlyingCards />
+                {children}
+              </CurrentMatchPovider>
+            </SettingsPovider>
+            <LoginGateDialog />
+          </TRPCReactProvider>
+        </LoginGateOpenerProvider>
         <Toaster />
       </body>
     </html>

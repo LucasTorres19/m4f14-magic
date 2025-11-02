@@ -40,6 +40,7 @@ import {
 } from "@/components/player-combobox";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { useUploadThing } from "@/components/uploadthing";
+import { TRPCClientError } from "@trpc/client";
 import type { Area } from "react-easy-crop";
 import { useCurrentMatch } from "../_stores/current-match-provider";
 import type { Player } from "../_stores/current-match-store";
@@ -327,6 +328,13 @@ export default function SaveMatch() {
 
         setOpen(false);
       } catch (error) {
+        if (
+          error instanceof TRPCClientError &&
+          // eslint-disable-next-line @typescript-eslint/no-unsafe-member-access
+          error.data?.code === "UNAUTHORIZED"
+        ) {
+          return;
+        }
         setErrorMessage(
           error instanceof Error
             ? error.message

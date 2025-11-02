@@ -1,6 +1,6 @@
+import { commandersRouter } from "@/server/api/routers/commanders";
 import { matchRouter } from "@/server/api/routers/match";
 import { matchesRouter } from "@/server/api/routers/matches";
-import { commandersRouter } from "@/server/api/routers/commanders";
 import { playersRouter } from "@/server/api/routers/players";
 import { createCallerFactory, createTRPCRouter } from "@/server/api/trpc";
 

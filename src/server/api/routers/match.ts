@@ -3,7 +3,7 @@ import { eq, inArray } from "drizzle-orm";
 import { z } from "zod";
 
 import { utapi } from "@/app/api/uploadthing/core";
-import { createTRPCRouter, publicProcedure } from "@/server/api/trpc";
+import { createTRPCRouter, protectedProcedure } from "@/server/api/trpc";
 import {
   commanders,
   images,
@@ -19,7 +19,7 @@ const imageInputSchema = z.object({
 });
 
 export const matchRouter = createTRPCRouter({
-  save: publicProcedure
+  save: protectedProcedure
     .input(
       z.object({
         startingHp: z.number().positive().int(),
@@ -211,7 +211,7 @@ export const matchRouter = createTRPCRouter({
       });
       revalidatePath("/analytics");
     }),
-  setImage: publicProcedure
+  setImage: protectedProcedure
     .input(
       z.object({
         matchId: z.number().positive().int(),

@@ -1,8 +1,17 @@
-import { asc, count, eq, max, sql, sum, desc } from "drizzle-orm";
+import { asc, count, desc, eq, max, sql, sum } from "drizzle-orm";
 import { z } from "zod";
 
-import { createTRPCRouter, publicProcedure } from "@/server/api/trpc";
-import { commanders, matches, players, playersToMatches } from "@/server/db/schema";
+import {
+  createTRPCRouter,
+  protectedProcedure,
+  publicProcedure,
+} from "@/server/api/trpc";
+import {
+  commanders,
+  matches,
+  players,
+  playersToMatches,
+} from "@/server/db/schema";
 
 export const playersRouter = createTRPCRouter({
   findAll: publicProcedure.query(async ({ ctx }) => {
@@ -74,7 +83,12 @@ export const playersRouter = createTRPCRouter({
 
     const topByPlayer = new Map<
       number,
-      { commanderId: number; name: string | null; artImageUrl: string | null; count: number }[]
+      {
+        commanderId: number;
+        name: string | null;
+        artImageUrl: string | null;
+        count: number;
+      }[]
     >();
     for (const row of topRows) {
       if (!topByPlayer.has(row.playerId)) topByPlayer.set(row.playerId, []);
@@ -154,12 +168,16 @@ export const playersRouter = createTRPCRouter({
       .select({
         playerId: orderedMatches.playerId,
         streak: sql<number>`count(*)`,
-        lastWinAt: sql<number>`max(${orderedMatches.createdAt})`.
-          as("lastWinAt"),
+        lastWinAt: sql<number>`max(${orderedMatches.createdAt})`.as(
+          "lastWinAt",
+        ),
       })
       .from(orderedMatches)
       .where(eq(orderedMatches.placement, 1))
-      .groupBy(sql`${orderedMatches.playerId}`, sql`${orderedMatches.lossGroup}`)
+      .groupBy(
+        sql`${orderedMatches.playerId}`,
+        sql`${orderedMatches.lossGroup}`,
+      )
       .orderBy(sql`count(*) desc`, sql`max(${orderedMatches.createdAt}) desc`)
       .limit(1);
 
@@ -178,13 +196,16 @@ export const playersRouter = createTRPCRouter({
       uniqueCommanderCount: Number(uniqueByPlayer.get(r.id) ?? 0),
     }));
   }),
-  updateColor: publicProcedure
+  updateColor: protectedProcedure
     .input(
       z.object({
         playerId: z.number().int().positive(),
         color: z
           .string()
-          .regex(/^#([0-9a-fA-F]{3}|[0-9a-fA-F]{6})$/, "Color inválido (usa HEX)."),
+          .regex(
+            /^#([0-9a-fA-F]{3}|[0-9a-fA-F]{6})$/,
+            "Color inválido (usa HEX).",
+          ),
       }),
     )
     .mutation(async ({ ctx, input }) => {

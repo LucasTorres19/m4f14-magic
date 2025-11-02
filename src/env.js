@@ -13,6 +13,8 @@ export const env = createEnv({
       .enum(["development", "test", "production"])
       .default("development"),
     UPLOADTHING_TOKEN: z.string(),
+    AUTHORIZATION_PASSWORD: z.string(),
+    AUTHORIZATION_SECRET: z.string(),
   },
 
   /**
@@ -33,6 +35,8 @@ export const env = createEnv({
     NODE_ENV: process.env.NODE_ENV,
     TURSO_AUTH_TOKEN: process.env.TURSO_AUTH_TOKEN,
     UPLOADTHING_TOKEN: process.env.UPLOADTHING_TOKEN,
+    AUTHORIZATION_PASSWORD: process.env.AUTHORIZATION_PASSWORD,
+    AUTHORIZATION_SECRET: process.env.AUTHORIZATION_SECRET,
     // NEXT_PUBLIC_CLIENTVAR: process.env.NEXT_PUBLIC_CLIENTVAR,
   },
   /**

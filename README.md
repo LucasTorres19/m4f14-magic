@@ -27,8 +27,8 @@ Pagina oficial de LIMTG (Liga Interna Magic: The Gathering)
 - [x] Guarda la imagen original en el historial, para mostrarlo al tocar la imagen. esto significaría guardar la foto orignal y la croppeed image, creo que es el mejor camino
   - [x] Arreglar mobile ui para subir imagenes
 
-- [] Cada vez que un usuario intente una acción que vaya a mutar datos, tiene que estar autorizado con una cookie en caso de no tener la cookie se le abre un modal pidiendo por una password que vamos a guardar como env var y una vez sea correcta la password le damos la cookie de duracion eterna para poder modificar datos (guardar partida, asignar imagenes, etc)
-  **Fixes**
+- [x] Cada vez que un usuario intente una acción que vaya a mutar datos, tiene que estar autorizado con una cookie en caso de no tener la cookie se le abre un modal pidiendo por una password que vamos a guardar como env var y una vez sea correcta la password le damos la cookie de duracion eterna para poder modificar datos (guardar partida, asignar imagenes, etc)
+      **Fixes**
 
 - [x] Dates en history page no se muestran en el timezone local, revisar otros casos en los que se muestren dates.
 - [x] Seleccionar commanders en el boton de magos no lo guarda para cuando se da al boton de guardar partida

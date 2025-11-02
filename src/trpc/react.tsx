@@ -1,13 +1,15 @@
 "use client";
 
 import { QueryClientProvider, type QueryClient } from "@tanstack/react-query";
-import { httpBatchStreamLink, loggerLink } from "@trpc/client";
+import { httpBatchStreamLink, loggerLink, type TRPCLink } from "@trpc/client";
 import { createTRPCReact } from "@trpc/react-query";
 import { type inferRouterInputs, type inferRouterOutputs } from "@trpc/server";
 import { useState } from "react";
 import SuperJSON from "superjson";
 
+import { useLoginGateOpener } from "@/app/_auth/login-gate-opener";
 import { type AppRouter } from "@/server/api/root";
+import { observable } from "@trpc/server/observable";
 import { createQueryClient } from "./query-client";
 
 let clientQueryClientSingleton: QueryClient | undefined = undefined;
@@ -38,8 +40,40 @@ export type RouterInputs = inferRouterInputs<AppRouter>;
  */
 export type RouterOutputs = inferRouterOutputs<AppRouter>;
 
+// Link that catches UNAUTHORIZED, asks for password, logs in, and retries once.
+function authGateLink({
+  open,
+}: {
+  open: (params: { onSuccess: () => void; onError: () => void }) => void;
+}): TRPCLink<AppRouter> {
+  return () =>
+    ({ op, next }) =>
+      observable((observer) => {
+        const subscribe = () =>
+          next(op).subscribe({
+            next: (v) => observer.next(v),
+            complete: () => observer.complete(),
+            error: (err) => {
+              const code = err?.data?.code ?? err?.shape?.code;
+              if (code === "UNAUTHORIZED") {
+                open({
+                  onSuccess: subscribe,
+                  onError: () => observer.error(err),
+                }); // opens modal, resolves true if logged in
+              } else {
+                observer.error(err);
+              }
+            },
+          });
+
+        const sub = subscribe();
+        return () => sub.unsubscribe();
+      });
+}
+
 export function TRPCReactProvider(props: { children: React.ReactNode }) {
   const queryClient = getQueryClient();
+  const { open } = useLoginGateOpener(); // ✅ hook used inside a component
 
   const [trpcClient] = useState(() =>
     api.createClient({
@@ -49,6 +83,7 @@ export function TRPCReactProvider(props: { children: React.ReactNode }) {
             process.env.NODE_ENV === "development" ||
             (op.direction === "down" && op.result instanceof Error),
         }),
+        authGateLink({ open }),
         httpBatchStreamLink({
           transformer: SuperJSON,
           url: getBaseUrl() + "/api/trpc",

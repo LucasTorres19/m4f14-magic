@@ -6,11 +6,14 @@
  * TL;DR - This is where all the tRPC server stuff is created and plugged in. The pieces you will
  * need to use are documented accordingly near the end.
  */
-import { initTRPC } from "@trpc/server";
+import { initTRPC, TRPCError } from "@trpc/server";
 import superjson from "superjson";
 import { ZodError } from "zod";
 
+import { env } from "@/env";
 import { db } from "@/server/db";
+import { verify } from "jsonwebtoken";
+import { cookies } from "next/headers";
 
 /**
  * 1. CONTEXT
@@ -25,8 +28,21 @@ import { db } from "@/server/db";
  * @see https://trpc.io/docs/server/context
  */
 export const createTRPCContext = async (opts: { headers: Headers }) => {
+  // read a cookie
+  const cookieStore = await cookies();
+  const cookie = cookieStore.get("mafia-magic-auth");
+  let authorized = false;
+  try {
+    const decoded = verify(
+      cookie?.value ?? "",
+      env.AUTHORIZATION_SECRET as string,
+    );
+    if (decoded) authorized = true;
+  } catch {}
+
   return {
     db,
+    authorized,
     ...opts,
   };
 };
@@ -104,3 +120,14 @@ const timingMiddleware = t.middleware(async ({ next, path }) => {
  * are logged in.
  */
 export const publicProcedure = t.procedure.use(timingMiddleware);
+
+const isAuthed = t.middleware(({ ctx, next }) => {
+  if (!ctx.authorized)
+    throw new TRPCError({
+      code: "UNAUTHORIZED",
+      message: "Que pasó papi? te cagaste las patas",
+    });
+  return next();
+});
+
+export const protectedProcedure = publicProcedure.use(isAuthed);
