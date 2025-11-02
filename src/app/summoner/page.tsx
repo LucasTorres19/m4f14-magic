@@ -17,7 +17,7 @@ import {
 import { Label } from "@/components/ui/label";
 import { Input } from "@/components/ui/input";
 import { toast } from "sonner";
-import { ArrowLeft, ChevronUp, ChevronDown, Users, Swords, Trophy, Boxes, Flame } from "lucide-react";
+import { ArrowLeft, ChevronUp, ChevronDown, Users, Swords, Trophy, Boxes, Flame, Droplets } from "lucide-react";
 import {
   Tooltip,
   TooltipContent,
@@ -43,8 +43,10 @@ type PlayerUI = Required<Pick<ApiPlayer, "id">> & {
   matchCount: number;
   wins: number;
   podiums: number;
+  seconds: number;
   isLastWinner: boolean;
   isStreakChampion: boolean;
+  isCebollita: boolean;
   topDecks: { commanderId: number; name: string; artImageUrl: string | null; count: number }[];
 };
 
@@ -68,22 +70,34 @@ export default function SummonerPage() {
 
   const list = useMemo<PlayerUI[]>(() => {
     const rows = (data ?? []) as ApiPlayer[];
-    return rows.map((p) => ({
-      id: p.id,
-      name: (p.name ?? "Sin nombre").trim(),
-      backgroundColor: p.backgroundColor ?? "#CBD5E1",
-      matchCount: Number(p.matchCount ?? 0),
-      wins: Number(p.wins ?? 0),
-      podiums: Number(p.podiums ?? 0),
-      isLastWinner: Boolean(p.isLastWinner),
-      isStreakChampion: Boolean(p.isStreakChampion),
-      topDecks: (p.topDecks ?? []).map((d) => ({
-        commanderId: d.commanderId,
-        name: (d.name ?? "Desconocido").trim(),
-        artImageUrl: d.artImageUrl ?? null,
-        count: Number(d.count ?? 0),
-      })),
-    }));
+    const base = rows.map((p) => {
+      const matchCount = Number(p.matchCount ?? 0);
+      const wins = Number(p.wins ?? 0);
+      const podiums = Number(p.podiums ?? 0);
+      const seconds = Math.max(0, podiums - wins);
+      return {
+        id: p.id,
+        name: (p.name ?? "Sin nombre").trim(),
+        backgroundColor: p.backgroundColor ?? "#CBD5E1",
+        matchCount,
+        wins,
+        podiums,
+        seconds,
+        isLastWinner: Boolean(p.isLastWinner),
+        isStreakChampion: Boolean(p.isStreakChampion),
+        isCebollita: false,
+        topDecks: (p.topDecks ?? []).map((d) => ({
+          commanderId: d.commanderId,
+          name: (d.name ?? "Desconocido").trim(),
+          artImageUrl: d.artImageUrl ?? null,
+          count: Number(d.count ?? 0),
+        })),
+      } satisfies PlayerUI;
+    });
+
+    const maxSeconds = base.reduce((m, p) => (p.seconds > m ? p.seconds : m), 0);
+    if (maxSeconds <= 0) return base;
+    return base.map((p) => ({ ...p, isCebollita: p.seconds === maxSeconds }));
   }, [data]);
 
   type SortKey = "name" | "id" | "winrate" | "matches";
@@ -252,6 +266,35 @@ export default function SummonerPage() {
                         <span className="inline-flex items-center gap-1 py-1 px-2 rounded-full bg-primary/10 text-primary">
                           <Boxes className="h-4 w-4 mr-1" /> {Math.round(podiumPct(player.podiums, player.matchCount))}% podio
                         </span>
+
+                        {player.isCebollita && (
+                          <Tooltip>
+                            <TooltipTrigger asChild>
+                              <span
+                                className="cebolla-badge"
+                                role="img"
+                                aria-label="Cebollita"
+                              >
+                                <Droplets width={16} height={16} className="tear" />
+                                <span className="label">Cebollita</span>
+                                <span aria-hidden className="blue-heat" />
+                              </span>
+                            </TooltipTrigger>
+
+                            <TooltipContent
+                              side="top"
+                              align="center"
+                              className="max-w-[280px] leading-relaxed"
+                            >
+                              <p className="font-semibold">¿Cebollita?</p>
+                              <p className="text-sm">Mayor cantidad de segundos puestos.</p>
+
+                              <div className="mt-2 text-xs">
+                                cantidad: <strong>{player.seconds ?? 0}</strong>
+                              </div>
+                            </TooltipContent>
+                          </Tooltip>
+                        )}
 
                           {player.isLastWinner && (
                             <span className="text-[11px] py-1 rounded-full bg-emerald-500/15 text-emerald-600 flex w-fit items-center px-3 font-semibold">
