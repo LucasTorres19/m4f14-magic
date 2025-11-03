@@ -11,7 +11,7 @@ import {
 const matchesPerDayConfig: ChartConfig = {
   matches: {
     label: "Duelos",
-    color: "hsla(var(--primary), 0.9)",
+    color: "hsla(var(--success))",
   },
 };
 export default function LastWeekMatchesChart({
@@ -33,12 +33,12 @@ export default function LastWeekMatchesChart({
           <linearGradient id="duels-gradient" x1="0" x2="0" y1="0" y2="1">
             <stop
               offset="0%"
-              stopColor="var(--color-matches)"
+              stopColor="var(--color-success)"
               stopOpacity={0.7}
             />
             <stop
               offset="100%"
-              stopColor="var(--color-matches)"
+              stopColor="var(--color-success)"
               stopOpacity={0.05}
             />
           </linearGradient>
@@ -65,7 +65,7 @@ export default function LastWeekMatchesChart({
         <Area
           type="monotone"
           dataKey="matches"
-          stroke="var(--color-matches)"
+          stroke="var(--color-success)"
           strokeWidth={3}
           fill="url(#duels-gradient)"
           activeDot={{ r: 5 }}
