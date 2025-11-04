@@ -1,4 +1,5 @@
-import { asc, count, desc, eq, max, sql, sum } from "drizzle-orm";
+import { asc, count, desc, eq, max, sql, sum, inArray } from "drizzle-orm";
+import { alias } from "drizzle-orm/sqlite-core";
 import { z } from "zod";
 
 import {
@@ -11,6 +12,7 @@ import {
   matches,
   players,
   playersToMatches,
+  images,
 } from "@/server/db/schema";
 
 export const playersRouter = createTRPCRouter({
@@ -26,6 +28,178 @@ export const playersRouter = createTRPCRouter({
 
     return dbPlayers;
   }),
+  detail: publicProcedure
+    .input(z.object({ playerId: z.number().int().positive() }))
+    .query(async ({ ctx, input }) => {
+      const [player] = await ctx.db
+        .select({
+          id: players.id,
+          name: players.name,
+          backgroundColor: players.backgroundColor,
+        })
+        .from(players)
+        .where(eq(players.id, input.playerId))
+        .limit(1);
+
+      if (!player) return null;
+
+      const agg = ctx.db
+        .select({
+          commanderId: playersToMatches.commanderId,
+          matchCount: count(sql`1`).as("matchCount"),
+          wins: sum(
+            sql<number>`CASE WHEN ${playersToMatches.placement} = 1 THEN 1 ELSE 0 END`,
+          ).as("wins"),
+          podiums: sum(
+            sql<number>`CASE WHEN ${playersToMatches.placement} IN (1,2) THEN 1 ELSE 0 END`,
+          ).as("podiums"),
+        })
+        .from(playersToMatches)
+        .where(
+          sql`${playersToMatches.playerId} = ${input.playerId} and ${playersToMatches.commanderId} is not null`,
+        )
+        .groupBy(playersToMatches.commanderId)
+        .as("agg");
+
+      const rows = await ctx.db
+        .select({
+          commanderId: agg.commanderId,
+          matchCount: agg.matchCount,
+          wins: agg.wins,
+          podiums: agg.podiums,
+          name: commanders.name,
+          artImageUrl: commanders.artImageUrl,
+          imageUrl: commanders.imageUrl,
+        })
+        .from(agg)
+        .leftJoin(commanders, eq(commanders.id, agg.commanderId))
+        .orderBy(desc(agg.matchCount), asc(commanders.name));
+
+      return {
+        id: player.id,
+        name: player.name,
+        backgroundColor: player.backgroundColor,
+        commanders: rows.map((r) => ({
+          commanderId: r.commanderId ?? 0,
+          name: r.name ?? null,
+          artImageUrl: r.artImageUrl ?? null,
+          imageUrl: r.imageUrl ?? null,
+          matchCount: Number(r.matchCount ?? 0),
+          wins: Number(r.wins ?? 0),
+          podiums: Number(r.podiums ?? 0),
+        })),
+      } as const;
+    }),
+  history: publicProcedure
+    .input(
+      z.object({ playerId: z.number().int().positive(), limit: z.number().int().min(1).max(200).optional() })
+    )
+    .query(async ({ ctx, input }) => {
+      const limit = input.limit ?? 50;
+
+      // Base rows: matches where this player participated, include their placement and commander
+      const img = alias(images, "orig_image");
+      const cimg = alias(images, "cropped_image");
+
+      const p2mSelf = playersToMatches;
+
+      const baseRows = await ctx.db
+        .select({
+          matchId: matches.id,
+          createdAt: matches.createdAt,
+          startingHp: matches.startingHp,
+          selfPlacement: p2mSelf.placement,
+          selfCommanderId: p2mSelf.commanderId,
+          image: { id: img.id, url: img.fileUrl },
+          croppedImage: { id: cimg.id, url: cimg.fileUrl },
+        })
+        .from(matches)
+        .innerJoin(p2mSelf, eq(p2mSelf.matchId, matches.id))
+        .leftJoin(img, eq(img.id, matches.image))
+        .leftJoin(cimg, eq(cimg.id, matches.cropped_image))
+        .where(eq(p2mSelf.playerId, input.playerId))
+        .orderBy(desc(matches.createdAt))
+        .limit(limit);
+
+      if (baseRows.length === 0) return [] as const;
+
+      const matchIds = baseRows.map((r) => r.matchId);
+
+      const playerRows = await ctx.db
+        .select({
+          matchId: playersToMatches.matchId,
+          placement: playersToMatches.placement,
+          playerId: players.id,
+          name: players.name,
+          backgroundColor: players.backgroundColor,
+          commanderId: playersToMatches.commanderId,
+          commanderName: commanders.name,
+          commanderImageUrl: commanders.imageUrl,
+          commanderArtImageUrl: commanders.artImageUrl,
+        })
+        .from(playersToMatches)
+        .innerJoin(players, eq(players.id, playersToMatches.playerId))
+        .leftJoin(commanders, eq(commanders.id, playersToMatches.commanderId))
+        .where(inArray(playersToMatches.matchId, matchIds))
+        .orderBy(asc(playersToMatches.matchId), asc(playersToMatches.placement));
+
+      const playersByMatch = new Map<
+        number,
+        {
+          playerId: number;
+          name: string;
+          backgroundColor: string;
+          placement: number;
+          commander: { id: number; name: string | null; imageUrl: string | null; artImageUrl: string | null } | null;
+        }[]
+      >();
+
+      for (const row of playerRows) {
+        if (!playersByMatch.has(row.matchId)) playersByMatch.set(row.matchId, []);
+        playersByMatch.get(row.matchId)!.push({
+          playerId: row.playerId,
+          name: row.name ?? "Invocador desconocido",
+          backgroundColor: row.backgroundColor ?? "#1f2937",
+          placement: row.placement,
+          commander: row.commanderId != null
+            ? {
+                id: row.commanderId,
+                name: row.commanderName ?? null,
+                imageUrl: row.commanderImageUrl ?? null,
+                artImageUrl: row.commanderArtImageUrl ?? null,
+              }
+            : null,
+        });
+      }
+
+      // Attach self commander name/art
+      const selfCommanderIds = baseRows
+        .map((r) => r.selfCommanderId)
+        .filter((x): x is number => x != null);
+      const selfCommanderMap = new Map<number, { name: string | null; imageUrl: string | null; artImageUrl: string | null }>();
+      if (selfCommanderIds.length > 0) {
+        const selfCmdRows = await ctx.db
+          .select({ id: commanders.id, name: commanders.name, imageUrl: commanders.imageUrl, artImageUrl: commanders.artImageUrl })
+          .from(commanders)
+          .where(inArray(commanders.id, Array.from(new Set(selfCommanderIds))));
+        for (const r of selfCmdRows) selfCommanderMap.set(r.id, { name: r.name ?? null, imageUrl: r.imageUrl ?? null, artImageUrl: r.artImageUrl ?? null });
+      }
+
+      return baseRows.map((r) => ({
+        matchId: r.matchId,
+        createdAt: r.createdAt,
+        startingHp: r.startingHp,
+        self: {
+          placement: r.selfPlacement,
+          commander: r.selfCommanderId != null
+            ? { id: r.selfCommanderId, ...(selfCommanderMap.get(r.selfCommanderId) ?? { name: null, imageUrl: null, artImageUrl: null }) }
+            : null,
+        },
+        image: r.image,
+        croppedImage: r.croppedImage,
+        players: playersByMatch.get(r.matchId) ?? [],
+      }));
+    }),
   listWithStats: publicProcedure.query(async ({ ctx }) => {
     const agg = ctx.db
       .select({
@@ -79,7 +253,7 @@ export const playersRouter = createTRPCRouter({
       })
       .from(usageRank)
       .innerJoin(commanders, eq(commanders.id, usageRank.commanderId))
-      .where(sql`${usageRank.rn} <= 5`);
+      .where(sql`${usageRank.rn} <= 3`);
 
     const topByPlayer = new Map<
       number,

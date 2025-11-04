@@ -238,11 +238,13 @@ export default function SummonerPage() {
                   <Card
                     key={player.id}
                     className="overflow-hidden group hover:ring-2 hover:ring-primary transition-all"
-                  >
+                  >    
                     <div className="p-4 space-y-4">
                       <div className="flex items-center justify-between">
-                        <h3 className="font-bold text-lg leading-tight">
-                          {player.name}
+                        <h3 className="font-bold text-lg leading-tight">  
+                            <Link href={`/summoner/${player.id}`} className="cursor-pointer">                       
+                              {player.name}
+                            </Link> 
                         </h3>
 
                         <Tooltip>
