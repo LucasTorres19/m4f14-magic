@@ -7,9 +7,62 @@ import { useParams } from "next/navigation";
 import { api } from "@/trpc/react";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
-import { ArrowLeft, Swords, Trophy, Boxes, Droplets,Users, Layers, Flame, ChevronDown, ChevronUp } from "lucide-react";
+import { ArrowLeft, Swords, Trophy, Boxes, Droplets, Users, Layers, Flame, ChevronDown, ChevronUp } from "lucide-react";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+
+type CommanderRow = {
+  commanderId: number;
+  name: string | null;
+  matchCount: number | null;
+  wins: number | null;
+  podiums: number | null;
+  imageUrl?: string | null;
+  artImageUrl?: string | null;
+};
+
+type PlayerDetail = {
+  id: number;
+  name: string | null;
+  backgroundColor?: string | null;
+  commanders: CommanderRow[];
+};
+
+type PlayerListStatsRow = {
+  id: number;
+  matchCount: number;
+  wins: number;
+  podiums: number;
+  isCebollita?: boolean;
+  isLastWinner?: boolean;
+  isStreakChampion?: boolean;
+  isMostDiverse?: boolean;
+  uniqueCommanderCount?: number;
+};
+
+type HistoryCommander = {
+  name?: string | null;
+  imageUrl?: string | null;
+  artImageUrl?: string | null;
+};
+
+type HistoryPlayer = {
+  playerId: number;
+  name: string;
+  placement: number;
+  backgroundColor?: string | null;
+  commander?: HistoryCommander | null;
+};
+
+type HistoryEntry = {
+  matchId: number;
+  createdAt: number; // epoch ms
+  startingHp?: number | null;
+  players: HistoryPlayer[];
+  self?: { commander?: HistoryCommander | null; placement?: number | null } | null;
+  image?: { url: string } | null;
+  croppedImage?: { url: string } | null;
+};
 
 export default function SummonerDetailPage() {
   const params = useParams();
@@ -19,18 +72,21 @@ export default function SummonerDetailPage() {
     return Number.isFinite(n) ? n : NaN;
   }, [idParam]);
 
-  const { data, isLoading, isError } = api.players.detail.useQuery(
+  const { data: rawDetail, isLoading, isError } = api.players.detail.useQuery(
     { playerId },
     { enabled: Number.isFinite(playerId) }
   );
+  const detail = rawDetail as unknown as PlayerDetail | undefined;
 
-  const { data: listStats } = api.players.listWithStats.useQuery(undefined, { refetchOnWindowFocus: false });
-  const playerStats = useMemo(() => {
-    const rows = (listStats ?? []) as any[];
-    return rows.find((r) => r?.id === playerId);
-  }, [listStats, playerId]);
+  const { data: rawListStats } = api.players.listWithStats.useQuery(undefined, { refetchOnWindowFocus: false });
+  const listStats = (rawListStats ?? []) as PlayerListStatsRow[];
+  const playerStats = useMemo(
+    () => listStats.find((r) => r.id === playerId),
+    [listStats, playerId]
+  );
 
-  const pct = (num?: number, den?: number) => (den && den > 0 ? Math.round(((num ?? 0) / den) * 100) : 0);
+  const pct = (num?: number | null, den?: number | null) =>
+    den && den > 0 ? Math.round(((num ?? 0) / den) * 100) : 0;
 
   type SortKey = "name" | "matches" | "winrate" | "podio";
   type SortDir = "asc" | "desc";
@@ -38,14 +94,16 @@ export default function SummonerDetailPage() {
   const [sortDir, setSortDir] = useState<SortDir>("desc");
   const collator = useMemo(() => new Intl.Collator("es", { sensitivity: "base" }), []);
   const winrate = (w: number, t: number) => (t > 0 ? (w / t) * 100 : 0);
+
   const sortedRows = useMemo(() => {
-    const rows = [...(data?.commanders ?? [])];
+    const rows = [...(detail?.commanders ?? [])];
     rows.sort((a, b) => {
       if (sortKey === "name") {
         const cmp = collator.compare(a.name ?? "", b.name ?? "");
         return sortDir === "asc" ? cmp : -cmp;
       }
-      let va = 0, vb = 0;
+      let va = 0,
+        vb = 0;
       if (sortKey === "matches") {
         va = a.matchCount ?? 0;
         vb = b.matchCount ?? 0;
@@ -65,16 +123,38 @@ export default function SummonerDetailPage() {
       return sortDir === "asc" ? cmp : -cmp;
     });
     return rows;
-  }, [data?.commanders, sortKey, sortDir, collator]);
+  }, [detail?.commanders, sortKey, sortDir, collator]);
 
-  // Match history
-  const { data: history, isLoading: historyLoading } = api.players.history.useQuery(
+  const { data: rawHistory, isLoading: historyLoading } = api.players.history.useQuery(
     { playerId, limit: 100 },
     { enabled: Number.isFinite(playerId) }
   );
+
+  const history = useMemo<HistoryEntry[]>(() => {
+    if (!Array.isArray(rawHistory)) return [];
+
+    return rawHistory.map((h) => ({
+      matchId: h.matchId,
+      createdAt:
+        h.createdAt instanceof Date
+          ? h.createdAt.getTime()
+          : typeof h.createdAt === "number"
+          ? h.createdAt
+          : Date.parse(String(h.createdAt)),
+      startingHp: h.startingHp ?? null,
+      self: h.self ?? null,
+      image: h.image ?? null,
+      croppedImage: h.croppedImage ?? null,
+      players: h.players ?? [],
+    }));
+  }, [rawHistory]);
+
   const [openMatchId, setOpenMatchId] = useState<number | null>(null);
-  const openEntry = useMemo(() => history?.find((h) => h.matchId === openMatchId) ?? null, [history, openMatchId]);
-  const fmt = (ts?: number) => (ts ? new Date(ts).toLocaleString() : "");
+  const openEntry = useMemo(
+    () => history?.find((h) => h.matchId === openMatchId) ?? null,
+    [history, openMatchId]
+  );
+  const fmt = (ts?: number | null) => (ts ? new Date(ts).toLocaleString() : "");
 
   return (
     <div className="min-h-screen text-foreground relative overflow-hidden">
@@ -86,13 +166,13 @@ export default function SummonerDetailPage() {
                 <ArrowLeft className="w-4 h-4 mr-2" /> Volver al menú
               </Button>
             </Link>
-            {data && (
+            {detail && (
               <div className="space-y-2">
                 <div className="flex items-center gap-3">
-                  <h1 className="text-2xl md:text-5xl font-bold mb-2">{data.name ?? `#${data.id}`}</h1>
+                  <h1 className="text-2xl md:text-5xl font-bold mb-2">{detail.name ?? `#${detail.id}`}</h1>
                   <span
                     className="inline-flex h-4 w-4 rounded-full border"
-                    style={{ backgroundColor: data.backgroundColor ?? "#CBD5E1" }}
+                    style={{ backgroundColor: detail.backgroundColor ?? "#CBD5E1" }}
                     aria-hidden
                   />
                 </div>
@@ -134,7 +214,12 @@ export default function SummonerDetailPage() {
                           <TooltipContent side="top" align="center" className="max-w-[280px] leading-relaxed">
                             <p className="font-semibold">¿Cebollita?</p>
                             <p className="text-sm">Mayor cantidad de segundos puestos.</p>
-                            <div className="mt-2 text-xs">cantidad: <strong>{Math.max(0, (playerStats.podiums ?? 0) - (playerStats.wins ?? 0))}</strong></div>
+                            <div className="mt-2 text-xs">
+                              cantidad:{" "}
+                              <strong>
+                                {Math.max(0, (playerStats.podiums ?? 0) - (playerStats.wins ?? 0))}
+                              </strong>
+                            </div>
                           </TooltipContent>
                         </Tooltip>
                       )}
@@ -158,7 +243,7 @@ export default function SummonerDetailPage() {
         </div>
 
         {isLoading && (
-            <div
+          <div
             className="flex items-center justify-center gap-3 py-20 text-muted-foreground"
             role="status"
             aria-live="polite"
@@ -168,20 +253,18 @@ export default function SummonerDetailPage() {
           </div>
         )}
 
-        {isError && (
-          <div className="text-center py-20 text-destructive">Error al cargar el invocador.</div>
-        )}
+        {isError && <div className="text-center py-20 text-destructive">Error al cargar el invocador.</div>}
 
-        {!isLoading && !isError && !data && (
-          <div className="text-center py-20">Jugador no encontrado.</div>
-        )}
+        {!isLoading && !isError && !detail && <div className="text-center py-20">Jugador no encontrado.</div>}
 
-        {!isLoading && !isError && data && (
+        {!isLoading && !isError && detail && (
           <>
             <div className="mb-3 flex items-start gap-5 md:gap-0 md:items-center justify-between flex-col md:flex-row">
               <h2 className="text-xl font-semibold">Comandantes jugados</h2>
               <div className="flex items-center gap-2">
-                <label htmlFor="sortKey" className="text-sm text-muted-foreground">Ordenar por:</label>
+                <label htmlFor="sortKey" className="text-sm text-muted-foreground">
+                  Ordenar por:
+                </label>
                 <select
                   id="sortKey"
                   className="h-9 rounded-md border bg-background px-3 text-sm"
@@ -211,9 +294,21 @@ export default function SummonerDetailPage() {
                   <tr className="text-left text-muted-foreground border-b">
                     <th className="py-2 pr-3">Foto</th>
                     <th className="py-2 pr-3">Comandante</th>
-                    <th className="py-2 pr-3"><span className="inline-flex items-center gap-1"><Swords className="h-4 w-4" /> Partidas</span></th>
-                    <th className="py-2 pr-3"><span className="inline-flex items-center gap-1"><Trophy className="h-4 w-4" /> Winrate</span></th>
-                    <th className="py-2 pr-3"><span className="inline-flex items-center gap-1"><Boxes className="h-4 w-4" /> Podios</span></th>
+                    <th className="py-2 pr-3">
+                      <span className="inline-flex items-center gap-1">
+                        <Swords className="h-4 w-4" /> Partidas
+                      </span>
+                    </th>
+                    <th className="py-2 pr-3">
+                      <span className="inline-flex items-center gap-1">
+                        <Trophy className="h-4 w-4" /> Winrate
+                      </span>
+                    </th>
+                    <th className="py-2 pr-3">
+                      <span className="inline-flex items-center gap-1">
+                        <Boxes className="h-4 w-4" /> Podios
+                      </span>
+                    </th>
                   </tr>
                 </thead>
                 <tbody>
@@ -232,9 +327,11 @@ export default function SummonerDetailPage() {
                         </div>
                       </td>
                       <td className="py-2 pr-3 font-medium">{row.name ?? "Desconocido"}</td>
-                      <td className="py-2 pr-3">{row.matchCount}</td>
+                      <td className="py-2 pr-3">{row.matchCount ?? 0}</td>
                       <td className="py-2 pr-3">{pct(row.wins, row.matchCount)}%</td>
-                      <td className="py-2 pr-3">{row.podiums} ({pct(row.podiums, row.matchCount)}%)</td>
+                      <td className="py-2 pr-3">
+                        {row.podiums ?? 0} ({pct(row.podiums, row.matchCount)}%)
+                      </td>
                     </tr>
                   ))}
                   {sortedRows.length === 0 && (
@@ -254,9 +351,7 @@ export default function SummonerDetailPage() {
           <div className="mt-10 space-y-3">
             <div className="flex items-center justify-between">
               <h2 className="text-xl font-semibold">Historial de partidas</h2>
-              {historyLoading && (
-                <span className="text-sm text-muted-foreground">Cargando…</span>
-              )}
+              {historyLoading && <span className="text-sm text-muted-foreground">Cargando…</span>}
             </div>
 
             <Card className="p-4 overflow-x-auto">
@@ -268,7 +363,6 @@ export default function SummonerDetailPage() {
                     <th className="py-2 pr-3">Puesto</th>
                     <th className="py-2 pr-3">Jugadores</th>
                     <th className="py-2 pr-3">Vida inicial</th>
-                    
                   </tr>
                 </thead>
                 <tbody>
@@ -278,7 +372,7 @@ export default function SummonerDetailPage() {
                       className="border-b hover:bg-muted/30 cursor-pointer"
                       onClick={() => setOpenMatchId(row.matchId)}
                     >
-                     <td className="py-2 pr-3 whitespace-nowrap">{fmt(row.createdAt as unknown as number)}</td>
+                      <td className="py-2 pr-3 whitespace-nowrap">{fmt(row.createdAt)}</td>
                       <td className="py-2 pr-3">
                         <div className="flex items-center gap-2 min-w-0">
                           <div className="relative h-10 w-10 rounded overflow-hidden bg-muted shrink-0">
@@ -294,7 +388,7 @@ export default function SummonerDetailPage() {
                           <span className="truncate">{row.self?.commander?.name ?? "Desconocido"}</span>
                         </div>
                       </td>
-                      <td className="py-2 pr-3">{row.self?.placement}</td>
+                      <td className="py-2 pr-3">{row.self?.placement ?? "-"}</td>
                       <td className="py-2 pr-3">{row.players?.length ?? 0}</td>
                       <td className="py-2 pr-3">{row.startingHp ?? "-"}</td>
                     </tr>
@@ -337,7 +431,7 @@ export default function SummonerDetailPage() {
                         <div className="flex items-center gap-2 min-w-0">
                           <span
                             className="inline-flex h-3 w-3 rounded-full border"
-                            style={{ backgroundColor: p.backgroundColor }}
+                            style={{ backgroundColor: p.backgroundColor ?? "#CBD5E1" }}
                             aria-hidden
                           />
                           <span className="truncate">{p.name}</span>
