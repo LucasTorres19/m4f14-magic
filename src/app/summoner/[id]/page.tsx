@@ -66,7 +66,8 @@ type HistoryEntry = {
 
 export default function SummonerDetailPage() {
   const params = useParams();
-  const idParam = Array.isArray(params?.id) ? params?.id[0] : (params?.id as string | undefined);
+  const rawId = params?.id;
+  const idParam = Array.isArray(rawId) ? rawId[0] : rawId;
   const playerId = useMemo(() => {
     const n = Number(idParam);
     return Number.isFinite(n) ? n : NaN;
@@ -79,11 +80,11 @@ export default function SummonerDetailPage() {
   const detail = rawDetail as unknown as PlayerDetail | undefined;
 
   const { data: rawListStats } = api.players.listWithStats.useQuery(undefined, { refetchOnWindowFocus: false });
-  const listStats = (rawListStats ?? []) as PlayerListStatsRow[];
-  const playerStats = useMemo(
-    () => listStats.find((r) => r.id === playerId),
-    [listStats, playerId]
-  );
+  
+  const playerStats = useMemo(() => {
+    const rows = (rawListStats ?? []) as PlayerListStatsRow[];
+    return rows.find((r) => r.id === playerId);
+  }, [rawListStats, playerId]);
 
   const pct = (num?: number | null, den?: number | null) =>
     den && den > 0 ? Math.round(((num ?? 0) / den) * 100) : 0;
