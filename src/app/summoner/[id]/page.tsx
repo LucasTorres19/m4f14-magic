@@ -158,7 +158,7 @@ export default function SummonerDetailPage() {
   const [lightboxUrl, setLightboxUrl] = useState<string | null>(null);
   const podiumPhotos = useMemo(() => {
     return (history ?? []).filter(
-      (h) => (h.self?.placement ?? 99) <= 3 && Boolean(h.croppedImage?.url || h.image?.url),
+      (h) => (h.self?.placement ?? 99) <= 3 && Boolean(h.croppedImage?.url ?? h.image?.url),
     );
   }, [history]);
   const fmt = (ts?: number | null) => (ts ? new Date(ts).toLocaleString() : "");
