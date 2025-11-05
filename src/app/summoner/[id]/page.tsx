@@ -7,7 +7,7 @@ import { useParams } from "next/navigation";
 import { api } from "@/trpc/react";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
-import { ArrowLeft, Swords, Trophy, Boxes, Droplets, Users, Layers, Flame, ChevronDown, ChevronUp } from "lucide-react";
+import { ArrowLeft, Swords, Trophy, Boxes, Droplets, Users, Layers, Flame, ChevronDown, ChevronUp, X } from "lucide-react";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 
@@ -155,6 +155,12 @@ export default function SummonerDetailPage() {
     () => history?.find((h) => h.matchId === openMatchId) ?? null,
     [history, openMatchId]
   );
+  const [lightboxUrl, setLightboxUrl] = useState<string | null>(null);
+  const podiumPhotos = useMemo(() => {
+    return (history ?? []).filter(
+      (h) => (h.self?.placement ?? 99) <= 3 && Boolean(h.croppedImage?.url || h.image?.url),
+    );
+  }, [history]);
   const fmt = (ts?: number | null) => (ts ? new Date(ts).toLocaleString() : "");
 
   return (
@@ -407,6 +413,42 @@ export default function SummonerDetailPage() {
           </div>
         )}
 
+        {!isLoading && !isError && podiumPhotos.length > 0 && (
+          <div className="mt-10 space-y-3">
+            <div className="flex items-center justify-between">
+              <h2 className="text-xl font-semibold">Fotos</h2>
+            </div>
+            <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-3">
+              {podiumPhotos.map((p) => (
+                <button
+                  key={p.matchId}
+                  type="button"
+                  className="relative aspect-video rounded overflow-hidden bg-muted group"
+                  onClick={() => setLightboxUrl(p.image?.url ?? p.croppedImage?.url ?? "/placeholder.svg")}
+                  aria-label={`Abrir foto del duelo ${fmt(p.createdAt)}`}
+                >
+                  <Image
+                    src={p.croppedImage?.url ?? p.image?.url ?? "/placeholder.svg"}
+                    alt="Foto de podio"
+                    fill
+                    className="object-cover transition-transform group-hover:scale-105"
+                    sizes="(max-width: 640px) 50vw, (max-width: 1024px) 33vw, 25vw"
+                    unoptimized
+                  />
+                  <div className="absolute inset-x-0 bottom-0 p-2 bg-linear-to-t from-black/60 to-transparent text-white text-[11px] flex items-center justify-between">
+                    <span className="truncate max-w-[70%]">{fmt(p.createdAt)}</span>
+                    {p.self?.placement != null && (
+                      <span className="inline-flex items-center gap-1 font-medium">
+                        <Trophy className="h-3 w-3" /> {p.self.placement}
+                      </span>
+                    )}
+                  </div>
+                </button>
+              ))}
+            </div>
+          </div>
+        )}
+
         <Dialog open={openMatchId != null} onOpenChange={() => setOpenMatchId(null)}>
           <DialogContent className="max-w-3xl">
             <DialogHeader>
@@ -458,6 +500,39 @@ export default function SummonerDetailPage() {
             )}
           </DialogContent>
         </Dialog>
+
+        {lightboxUrl && (
+          <div
+            className="fixed inset-0 z-9999 bg-black/80 backdrop-blur-sm flex items-center justify-center p-4"
+            onClick={() => setLightboxUrl(null)}
+            role="dialog"
+            aria-modal="true"
+          >
+            <div
+              className="relative w-[95vw] h-[90vh] max-w-[95vw] max-h-[90vh] rounded-xl overflow-hidden shadow-2xl"
+              onClick={(e) => e.stopPropagation()}
+            >
+              <Image
+                src={lightboxUrl}
+                alt="Imagen completa del duelo"
+                fill
+                className="object-contain"
+                sizes="100vw"
+                priority
+                unoptimized
+              />
+              <button
+                type="button"
+                onClick={() => setLightboxUrl(null)}
+                className="absolute top-2 right-2 inline-flex items-center gap-1 rounded-full bg-background/90 px-3 py-2 text-sm shadow hover:bg-background"
+                aria-label="Cerrar"
+              >
+                <X className="h-4 w-4" />
+                Cerrar
+              </button>
+            </div>
+          </div>
+        )}
       </div>
     </div>
   );
