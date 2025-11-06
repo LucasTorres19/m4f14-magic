@@ -1,5 +1,4 @@
-import { addDays, format, subDays } from "date-fns";
-import { es } from "date-fns/locale";
+import { subDays } from "date-fns";
 
 import {
   Card,
@@ -13,32 +12,19 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { db } from "@/server/db";
 import { matches } from "@/server/db/schema";
 
-import { count, gte, sql } from "drizzle-orm";
+import { gte } from "drizzle-orm";
 import { EmptyChartState } from "./empty-chart-state";
 import LastWeekMatchesChart from "./last-week-matches-chart";
 
 export default async function LastWeekMatches() {
-  const dayExpr = sql<string>`
-    strftime('%Y-%m-%d', ${matches.createdAt}, 'unixepoch', 'localtime')
-  `;
-
   const start = subDays(new Date(), 10);
 
-  const rows = await db
+  const data = await db
     .select({
-      day: dayExpr,
-      count: count(matches.id), // count(*) would also work
+      createdAt: matches.createdAt,
     })
     .from(matches)
-    .where(gte(matches.createdAt, start))
-    .groupBy(dayExpr);
-
-  const days = Array.from({ length: 10 }, (_, i) => addDays(start, i));
-  const data = days.map((d) => ({
-    day: format(d, "EEE d MMM", { locale: es }),
-    matches: rows.find((r) => r.day === format(d, "yyyy-MM-dd"))?.count ?? 0,
-    fullLabel: format(d, "PPPP", { locale: es }),
-  }));
+    .where(gte(matches.createdAt, start));
 
   return (
     <Card className="border-primary/40 bg-card/80 shadow-xl backdrop-blur">
@@ -51,7 +37,7 @@ export default async function LastWeekMatches() {
         </CardDescription>
       </CardHeader>
       <CardContent className="px-3 pb-6 md:px-0">
-        {data.some((entry) => entry.matches > 0) ? (
+        {data.length > 0 ? (
           <LastWeekMatchesChart data={data} />
         ) : (
           <EmptyChartState message="Todavía no hay duelos recientes para trazar la profecía." />

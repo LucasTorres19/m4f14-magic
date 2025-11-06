@@ -7,6 +7,8 @@ import {
   ChartTooltipContent,
   type ChartConfig,
 } from "@/components/ui/chart";
+import { addDays, format, subDays } from "date-fns";
+import { useMemo } from "react";
 
 const matchesPerDayConfig: ChartConfig = {
   matches: {
@@ -14,15 +16,26 @@ const matchesPerDayConfig: ChartConfig = {
     color: "hsla(var(--success))",
   },
 };
-export default function LastWeekMatchesChart({
-  data,
-}: {
+export default function LastWeekMatchesChart(props: {
   data: {
-    day: string;
-    matches: number;
-    fullLabel: string;
+    createdAt: Date;
   }[];
 }) {
+  const parsedDates = useMemo(
+    () =>
+      props.data.map((d) => ({
+        createdAt: format(d.createdAt, "yyyy-MM-dd"),
+      })),
+    [props.data],
+  );
+  const start = subDays(new Date(), 10);
+  const days = Array.from({ length: 10 }, (_, i) => addDays(start, i));
+  const data = days.map((d) => ({
+    day: format(d, "EEE d MMM"),
+    matches: parsedDates.filter((p) => p.createdAt === format(d, "yyyy-MM-dd"))
+      .length,
+    fullLabel: format(d, "PPPP"),
+  }));
   return (
     <ChartContainer
       config={matchesPerDayConfig}
