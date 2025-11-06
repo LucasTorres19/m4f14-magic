@@ -185,10 +185,12 @@ export default function PlayersDialog() {
                           backgroundColor: player.backgroundColor,
                         }}
                         onChange={(selection) =>
-                          updatePlayer(player.id, {
+                          updatePlayer(player.id, (p) => ({
                             displayName: selection.name,
                             playerId: selection.id ?? null,
-                          })
+                            backgroundColor:
+                              selection.backgroundColor ?? p.backgroundColor,
+                          }))
                         }
                         placeholder="Elegi o escribi un invocador"
                         ariaLabel={`Nombre del invocador ${index + 1}`}
