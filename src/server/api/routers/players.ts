@@ -201,6 +201,8 @@ export const playersRouter = createTRPCRouter({
       }));
     }),
   listWithStats: publicProcedure.query(async ({ ctx }) => {
+    // Usar cutoff desde SQLite para evitar problemas de zona horaria/tipos
+    // equivalente a últimos 30 días: unixepoch('now','-30 days')
     const agg = ctx.db
       .select({
         playerId: playersToMatches.playerId,
@@ -216,6 +218,16 @@ export const playersRouter = createTRPCRouter({
       .groupBy(playersToMatches.playerId)
       .as("agg");
 
+    const agg30Rows = await ctx.db
+      .select({
+        playerId: playersToMatches.playerId,
+        matchCount30: count(sql`1`).as("matchCount30"),
+      })
+      .from(playersToMatches)
+      .innerJoin(matches, eq(playersToMatches.matchId, matches.id))
+      .where(sql`${matches.createdAt} >= unixepoch('now','-30 days')`)
+      .groupBy(playersToMatches.playerId);
+
     const usageAgg = ctx.db
       .select({
         playerId: playersToMatches.playerId,
@@ -227,6 +239,19 @@ export const playersRouter = createTRPCRouter({
       .where(sql`${playersToMatches.commanderId} is not null`)
       .groupBy(playersToMatches.playerId, playersToMatches.commanderId)
       .as("usageAgg");
+
+    const usageAgg30 = ctx.db
+      .select({
+        playerId: playersToMatches.playerId,
+        commanderId: playersToMatches.commanderId,
+        cnt: count(sql`1`).as("cnt"),
+        lastPlayed: max(matches.createdAt).as("lastPlayed"),
+      })
+      .from(playersToMatches)
+      .innerJoin(matches, eq(playersToMatches.matchId, matches.id))
+      .where(sql`${playersToMatches.commanderId} is not null and ${matches.createdAt} >= unixepoch('now','-30 days')`)
+      .groupBy(playersToMatches.playerId, playersToMatches.commanderId)
+      .as("usageAgg30");
 
     const usageRank = ctx.db
       .select({
@@ -243,6 +268,21 @@ export const playersRouter = createTRPCRouter({
       .from(usageAgg)
       .as("usageRank");
 
+    const usageRank30 = ctx.db
+      .select({
+        playerId: usageAgg30.playerId,
+        commanderId: usageAgg30.commanderId,
+        cnt: usageAgg30.cnt,
+        rn: sql<number>`
+          row_number() over (
+            partition by ${usageAgg30.playerId}
+            order by ${usageAgg30.cnt} desc, ${usageAgg30.lastPlayed} desc
+          )
+        `.as("rn"),
+      })
+      .from(usageAgg30)
+      .as("usageRank30");
+
     const topRows = await ctx.db
       .select({
         playerId: usageRank.playerId,
@@ -254,6 +294,14 @@ export const playersRouter = createTRPCRouter({
       .from(usageRank)
       .innerJoin(commanders, eq(commanders.id, usageRank.commanderId))
       .where(sql`${usageRank.rn} <= 3`);
+
+    const topRows30 = await ctx.db
+      .select({
+        playerId: usageRank30.playerId,
+        count: usageRank30.cnt,
+      })
+      .from(usageRank30)
+      .where(eq(usageRank30.rn, 1));
 
     const topByPlayer = new Map<
       number,
@@ -272,6 +320,16 @@ export const playersRouter = createTRPCRouter({
         artImageUrl: row.commanderArtImageUrl ?? null,
         count: Number(row.count ?? 0),
       });
+    }
+
+    const top30ByPlayerCount = new Map<number, number>();
+    for (const r of topRows30) {
+      top30ByPlayerCount.set(r.playerId ?? 0, Number(r.count ?? 0));
+    }
+
+    const matchCount30ByPlayer = new Map<number, number>();
+    for (const r of agg30Rows) {
+      matchCount30ByPlayer.set(r.playerId ?? 0, Number(r.matchCount30 ?? 0));
     }
 
     // Count distinct commanders per player (diversity)
@@ -368,6 +426,9 @@ export const playersRouter = createTRPCRouter({
       isLastWinner: lastWinnerId != null && r.id === lastWinnerId,
       isStreakChampion: streakChampionId != null && r.id === streakChampionId,
       uniqueCommanderCount: Number(uniqueByPlayer.get(r.id) ?? 0),
+      isOtp:
+        (matchCount30ByPlayer.get(r.id) ?? 0) >= 5 &&
+        (top30ByPlayerCount.get(r.id) ?? 0) / Math.max(1, matchCount30ByPlayer.get(r.id) ?? 1) >= 0.6,
     }));
   }),
   updateColor: protectedProcedure

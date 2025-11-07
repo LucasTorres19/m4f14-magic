@@ -36,6 +36,7 @@ type ApiPlayer = {
   isStreakChampion?: boolean | null;
   topDecks?: { commanderId: number; name: string | null; artImageUrl: string | null; count: number | string | null }[];
   uniqueCommanderCount?: number | string | null;
+  isOtp?: boolean | null;
 };
 
 type PlayerUI = Required<Pick<ApiPlayer, "id">> & {
@@ -48,6 +49,7 @@ type PlayerUI = Required<Pick<ApiPlayer, "id">> & {
   isLastWinner: boolean;
   isStreakChampion: boolean;
   isCebollita: boolean;
+  isOtp: boolean;
   topDecks: { commanderId: number; name: string; artImageUrl: string | null; count: number }[];
   uniqueCommanderCount: number;
   isMostDiverse: boolean;
@@ -79,6 +81,12 @@ export default function SummonerPage() {
       const podiums = Number(p.podiums ?? 0);
       const seconds = Math.max(0, podiums - wins);
       const uniqueCommanderCount = Number(p.uniqueCommanderCount ?? 0);
+      const topDecks = (p.topDecks ?? []).map((d) => ({
+        commanderId: d.commanderId,
+        name: (d.name ?? "Desconocido").trim(),
+        artImageUrl: d.artImageUrl ?? null,
+        count: Number(d.count ?? 0),
+      }));
       return {
         id: p.id,
         name: (p.name ?? "Sin nombre").trim(),
@@ -92,12 +100,8 @@ export default function SummonerPage() {
         isCebollita: false,
         uniqueCommanderCount,
         isMostDiverse: false,
-        topDecks: (p.topDecks ?? []).map((d) => ({
-          commanderId: d.commanderId,
-          name: (d.name ?? "Desconocido").trim(),
-          artImageUrl: d.artImageUrl ?? null,
-          count: Number(d.count ?? 0),
-        })),
+        isOtp: Boolean(p.isOtp),
+        topDecks,
       } satisfies PlayerUI;
     });
 
@@ -111,6 +115,7 @@ export default function SummonerPage() {
       ...p,
       isCebollita: maxSeconds > 0 && p.seconds === maxSeconds,
       isMostDiverse: maxUnique > 0 && p.uniqueCommanderCount === maxUnique,
+      isOtp: Boolean(p.isOtp),
     }));
   }, [data]);
 
@@ -297,19 +302,19 @@ export default function SummonerPage() {
                           <Boxes className="h-4 w-4 mr-1" /> {Math.round(podiumPct(player.podiums, player.matchCount))}% podio
                         </span>
 
-                        {player.isCebollita && (
-                          <Tooltip>
-                            <TooltipTrigger asChild>
-                              <span
-                                className="cebolla-badge"
-                                role="img"
-                                aria-label="Cebollita"
-                              >
-                                <Droplets width={16} height={16} className="tear" />
-                                <span className="label">Cebollita</span>
-                                <span aria-hidden className="blue-heat" />
-                              </span>
-                            </TooltipTrigger>
+                      {player.isCebollita && (
+                        <Tooltip>
+                          <TooltipTrigger asChild>
+                            <span
+                              className="cebolla-badge"
+                              role="img"
+                              aria-label="Cebollita"
+                            >
+                              <Droplets width={16} height={16} className="tear" />
+                              <span className="label">Cebollita</span>
+                              <span aria-hidden className="blue-heat" />
+                            </span>
+                          </TooltipTrigger>
 
                             <TooltipContent
                               side="top"
@@ -322,9 +327,28 @@ export default function SummonerPage() {
                               <div className="mt-2 text-xs">
                                 cantidad: <strong>{player.seconds ?? 0}</strong>
                               </div>
-                            </TooltipContent>
-                          </Tooltip>
-                        )}
+                          </TooltipContent>
+                        </Tooltip>
+                      )}
+
+                      {player.isOtp && (
+                        <Tooltip>
+                          <TooltipTrigger asChild>
+                            <span className="otp-badge-summoner" role="img" aria-label="OTP">
+                              <Flame width={16} height={16} className="flame" />
+                              <span className="label">OTP</span>
+                              <span aria-hidden className="heat" />
+                            </span>
+                          </TooltipTrigger>
+                          <TooltipContent side="top" align="center" className="max-w-[280px] leading-relaxed">
+                            <p className="font-semibold">OTP (one trick pony)</p>
+                            <p className="text-sm">En el ultimo mes juega mayormente un mismo deck (= 60% y minimo 5 partidas).</p>
+                            <div className="mt-2 text-xs">
+                              top deck: <strong>{player.topDecks[0]?.count ?? 0}</strong> / {player.matchCount}
+                            </div>
+                          </TooltipContent>
+                        </Tooltip>
+                      )}
 
                           {player.isLastWinner && (
                             <span className="text-[11px] py-1 rounded-full bg-emerald-500/15 text-emerald-600 flex w-fit items-center px-3 font-semibold">
@@ -455,3 +479,4 @@ function ColorDialog({
     </Dialog>
   );
 }
+

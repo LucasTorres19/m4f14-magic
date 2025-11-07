@@ -38,6 +38,8 @@ type PlayerListStatsRow = {
   isStreakChampion?: boolean;
   isMostDiverse?: boolean;
   uniqueCommanderCount?: number;
+  topDecks?: { commanderId: number; name: string | null; artImageUrl: string | null; count: number | string | null }[];
+  isOtp?: boolean;
 };
 
 type HistoryCommander = {
@@ -91,6 +93,12 @@ export default function SummonerDetailPage() {
       const podiums = Number(p.podiums ?? 0);
       const seconds = Math.max(0, podiums - wins);
       const uniqueCommanderCount = Number(p.uniqueCommanderCount ?? 0);
+      const topDecks = (p.topDecks ?? []).map((d) => ({
+        commanderId: d.commanderId,
+        name: (d.name ?? "Desconocido").trim(),
+        artImageUrl: d.artImageUrl ?? null,
+        count: Number(d.count ?? 0),
+      }));
       return {
         ...p,
         matchCount,
@@ -98,6 +106,7 @@ export default function SummonerDetailPage() {
         podiums,
         uniqueCommanderCount,
         seconds,
+        topDecks,
       } as PlayerListStatsRow & { seconds: number };
     });
 
@@ -111,7 +120,8 @@ export default function SummonerDetailPage() {
       ...p,
       isCebollita: maxSeconds > 0 && p.seconds === maxSeconds,
       isMostDiverse: maxUnique > 0 && (p.uniqueCommanderCount ?? 0) === maxUnique,
-    }));
+      isOtp: Boolean(p.isOtp),
+    } as PlayerListStatsRow & { seconds: number }));
 
     return enriched.find((r) => r.id === playerId);
   }, [rawListStats, playerId]);
@@ -241,6 +251,22 @@ export default function SummonerDetailPage() {
                         <Boxes className="h-4 w-4 mr-1" /> {pct(playerStats.podiums, playerStats.matchCount)}% podio
                       </span>
 
+                      {Boolean(playerStats.isOtp) && (
+                        <Tooltip>
+                          <TooltipTrigger asChild>
+                            <span className="otp-badge-summoner" role="img" aria-label="OTP">
+                              <Flame width={16} height={16} className="flame" />
+                              <span className="label">OTP</span>
+                              <span aria-hidden className="heat" />
+                            </span>
+                          </TooltipTrigger>
+                          <TooltipContent side="top" align="center" className="max-w-[280px] leading-relaxed">
+                            <p className="font-semibold">OTP (one trick pony)</p>
+                            <p className="text-sm">En el ultimo mes juega mayormente un mismo deck (60% y minimo 5 partidas).</p>
+                          </TooltipContent>
+                        </Tooltip>
+                      )}
+
                       {Boolean(playerStats.isCebollita) && (
                         <Tooltip>
                           <TooltipTrigger asChild>
@@ -265,7 +291,7 @@ export default function SummonerDetailPage() {
 
                       {Boolean(playerStats.isLastWinner) && (
                         <span className="text-[11px] py-1 rounded-full bg-emerald-500/15 text-emerald-600 flex w-fit items-center px-3 font-semibold">
-                          <Trophy className="mr-1 h-4 w-4" /> Último ganador
+                          <Trophy className="mr-1 h-4 w-4" /> ultimo ganador
                         </span>
                       )}
                       {Boolean(playerStats.isStreakChampion) && (
@@ -376,7 +402,7 @@ export default function SummonerDetailPage() {
                   {sortedRows.length === 0 && (
                     <tr>
                       <td className="py-6 text-center text-muted-foreground" colSpan={5}>
-                        Aún no hay partidas con comandantes.
+                        AÃºn no hay partidas con comandantes.
                       </td>
                     </tr>
                   )}
@@ -390,7 +416,7 @@ export default function SummonerDetailPage() {
           <div className="mt-10 space-y-3">
             <div className="flex items-center justify-between">
               <h2 className="text-xl font-semibold">Historial de partidas</h2>
-              {historyLoading && <span className="text-sm text-muted-foreground">Cargando…</span>}
+              {historyLoading && <span className="text-sm text-muted-foreground">Cargandoâ€¦</span>}
             </div>
 
             <Card className="p-4 overflow-x-auto">
@@ -435,7 +461,7 @@ export default function SummonerDetailPage() {
                   {(history?.length ?? 0) === 0 && (
                     <tr>
                       <td className="py-6 text-center text-muted-foreground" colSpan={5}>
-                        Aún no hay partidas registradas.
+                        AÃºn no hay partidas registradas.
                       </td>
                     </tr>
                   )}
