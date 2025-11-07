@@ -80,10 +80,40 @@ export default function SummonerDetailPage() {
   const detail = rawDetail as unknown as PlayerDetail | undefined;
 
   const { data: rawListStats } = api.players.listWithStats.useQuery(undefined, { refetchOnWindowFocus: false });
-  
+
   const playerStats = useMemo(() => {
     const rows = (rawListStats ?? []) as PlayerListStatsRow[];
-    return rows.find((r) => r.id === playerId);
+    if (!Number.isFinite(playerId)) return undefined;
+
+    const base = rows.map((p) => {
+      const matchCount = Number(p.matchCount ?? 0);
+      const wins = Number(p.wins ?? 0);
+      const podiums = Number(p.podiums ?? 0);
+      const seconds = Math.max(0, podiums - wins);
+      const uniqueCommanderCount = Number(p.uniqueCommanderCount ?? 0);
+      return {
+        ...p,
+        matchCount,
+        wins,
+        podiums,
+        uniqueCommanderCount,
+        seconds,
+      } as PlayerListStatsRow & { seconds: number };
+    });
+
+    const maxSeconds = base.reduce((m, p) => (p.seconds > m ? p.seconds : m), 0);
+    const maxUnique = base.reduce(
+      (m, p) => (p.uniqueCommanderCount && p.uniqueCommanderCount > m ? p.uniqueCommanderCount : m),
+      0,
+    );
+
+    const enriched = base.map((p) => ({
+      ...p,
+      isCebollita: maxSeconds > 0 && p.seconds === maxSeconds,
+      isMostDiverse: maxUnique > 0 && (p.uniqueCommanderCount ?? 0) === maxUnique,
+    }));
+
+    return enriched.find((r) => r.id === playerId);
   }, [rawListStats, playerId]);
 
   const pct = (num?: number | null, den?: number | null) =>
