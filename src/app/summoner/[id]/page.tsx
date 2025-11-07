@@ -190,6 +190,83 @@ export default function SummonerDetailPage() {
     }));
   }, [rawHistory]);
 
+  type Streaks = {
+    currentWins: number;
+    bestWins: number;
+    currentPodiums: number;
+    bestPodiums: number;
+    milestones: { label: string; ts: number }[];
+  };
+
+  const streaks = useMemo<Streaks>(() => {
+    const sorted = [...history].sort((a, b) => (a.createdAt ?? 0) - (b.createdAt ?? 0));
+    let currentWins = 0;
+    let bestWins = 0;
+    let currentPodiums = 0;
+    let bestPodiums = 0;
+    let wins = 0;
+    let games = 0;
+    let firstWinTs: number | null = null;
+    let firstPodiumTs: number | null = null;
+    const uniqueCmd = new Set<string>();
+    const milestones: { label: string; ts: number }[] = [];
+
+    const gameTargets = new Set([10, 25]);
+    const gameHit = new Set<number>();
+    const winTargets = new Set([5, 10]);
+    const winHit = new Set<number>();
+    const uniqueCmdTarget = 5;
+    let uniqueCmdHit = false;
+
+    for (const m of sorted) {
+      games += 1;
+
+      const placement = m.self?.placement ?? null;
+      const isWin = placement === 1;
+      const isPodium = placement === 1 || placement === 2;
+
+      if (isWin) {
+        currentWins += 1;
+        wins += 1;
+        if (firstWinTs == null) firstWinTs = m.createdAt;
+      } else {
+        currentWins = 0;
+      }
+      if (isPodium) {
+        currentPodiums += 1;
+        if (firstPodiumTs == null) firstPodiumTs = m.createdAt;
+      } else {
+        currentPodiums = 0;
+      }
+      bestWins = Math.max(bestWins, currentWins);
+      bestPodiums = Math.max(bestPodiums, currentPodiums);
+
+      if (gameTargets.has(games) && !gameHit.has(games)) {
+        milestones.push({ label: `${games}ª partida`, ts: m.createdAt });
+        gameHit.add(games);
+      }
+      if (winTargets.has(wins) && !winHit.has(wins)) {
+        milestones.push({ label: `${wins} victorias`, ts: m.createdAt });
+        winHit.add(wins);
+      }
+
+      const cmdName = (m.self?.commander?.name ?? '').trim().toLowerCase();
+      if (cmdName) {
+        const before = uniqueCmd.size;
+        uniqueCmd.add(cmdName);
+        if (!uniqueCmdHit && before < uniqueCmdTarget && uniqueCmd.size >= uniqueCmdTarget) {
+          milestones.push({ label: `${uniqueCmdTarget} comandantes usados`, ts: m.createdAt });
+          uniqueCmdHit = true;
+        }
+      }
+    }
+
+    if (firstWinTs != null) milestones.unshift({ label: 'Primera victoria', ts: firstWinTs });
+    if (firstPodiumTs != null) milestones.unshift({ label: 'Primer podio', ts: firstPodiumTs });
+
+    return { currentWins, bestWins, currentPodiums, bestPodiums, milestones };
+  }, [history]);
+
   const [openMatchId, setOpenMatchId] = useState<number | null>(null);
   const openEntry = useMemo(
     () => history?.find((h) => h.matchId === openMatchId) ?? null,
@@ -321,6 +398,57 @@ export default function SummonerDetailPage() {
         {isError && <div className="text-center py-20 text-destructive">Error al cargar el invocador.</div>}
 
         {!isLoading && !isError && !detail && <div className="text-center py-20">Jugador no encontrado.</div>}
+
+
+               
+        {!isLoading && !isError && history.length > 0 && (
+          <div className="mb-10 space-y-3">
+            <div className="flex items-center justify-between">
+              <h2 className="text-xl font-semibold">Rachas e hitos</h2>
+            </div>
+            <Card className="p-4">
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div>
+                  <h3 className="font-medium mb-2">Rachas</h3>
+                  <ul className="space-y-2 text-sm">
+                    <li className="flex items-center justify-between">
+                      <span className="inline-flex items-center gap-2"><Flame className="h-4 w-4" /> Racha actual (victorias)</span>
+                      <span className="font-medium">{streaks.currentWins}</span>
+                    </li>
+                    <li className="flex items-center justify-between">
+                      <span className="inline-flex items-center gap-2"><Trophy className="h-4 w-4" /> Mejor racha (victorias)</span>
+                      <span className="font-medium">{streaks.bestWins}</span>
+                    </li>
+                    <li className="flex items-center justify-between">
+                      <span className="inline-flex items-center gap-2"><Users className="h-4 w-4" /> Racha actual (podios)</span>
+                      <span className="font-medium">{streaks.currentPodiums}</span>
+                    </li>
+                    <li className="flex items-center justify-between">
+                      <span className="inline-flex items-center gap-2"><Boxes className="h-4 w-4" /> Mejor racha (podios)</span>
+                      <span className="font-medium">{streaks.bestPodiums}</span>
+                    </li>
+                  </ul>
+                </div>
+                <div>
+                  <h3 className="font-medium mb-2">Hitos</h3>
+                  <ul className="space-y-2 text-sm">
+                    {streaks.milestones.length > 0 ? (
+                      streaks.milestones.map((m, idx) => (
+                        <li key={`${m.label}-${m.ts}-${idx}`} className="flex items-center justify-between">
+                          <span className="truncate">{m.label}</span>
+                          <span className="text-muted-foreground whitespace-nowrap">{fmt(m.ts)}</span>
+                        </li>
+                      ))
+                    ) : (
+                      <li className="text-muted-foreground">Sin hitos aún.</li>
+                    )}
+                  </ul>
+                </div>
+              </div>
+            </Card>
+          </div>
+        )}
+
 
         {!isLoading && !isError && detail && (
           <>
