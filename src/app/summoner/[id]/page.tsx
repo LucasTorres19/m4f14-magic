@@ -228,16 +228,18 @@ export default function SummonerDetailPage() {
       if (isWin) {
         currentWins += 1;
         wins += 1;
-        if (firstWinTs == null) firstWinTs = m.createdAt;
+        firstWinTs ??= m.createdAt;
       } else {
         currentWins = 0;
       }
-      if (isPodium) {
+
+     if (isPodium) {
         currentPodiums += 1;
-        if (firstPodiumTs == null) firstPodiumTs = m.createdAt;
+        firstPodiumTs ??= m.createdAt;
       } else {
         currentPodiums = 0;
       }
+
       bestWins = Math.max(bestWins, currentWins);
       bestPodiums = Math.max(bestPodiums, currentPodiums);
 
