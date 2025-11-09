@@ -173,6 +173,15 @@ export default function SaveMatch() {
     playerId: string;
   } | null>(null);
   const [comboboxActive, setComboboxActive] = useState(false);
+  const usedPlayerIds = useMemo(() => {
+    const ids = new Set<number>();
+    for (const player of orderedPlayers) {
+      if (player.playerId != null) {
+        ids.add(player.playerId);
+      }
+    }
+    return ids;
+  }, [orderedPlayers]);
 
   useEffect(() => {
     if (!open) {
@@ -587,78 +596,87 @@ export default function SaveMatch() {
 
               {step === 1 ? (
                 <ul className="flex flex-col gap-2">
-                  {orderedWithPlacements.map((player) => (
-                    <li
-                      key={player.id}
-                      draggable={!comboboxActive}
-                      onDragStart={(event) => handleDragStart(event, player.id)}
-                      onDrop={(event) => handleDropItem(event, player.id)}
-                      onDragOver={(event) =>
-                        handleDragOverItem(event, player.id)
-                      }
-                      onPointerDown={(event) =>
-                        handlePointerDown(event, player.id)
-                      }
-                      onPointerMove={handlePointerMove}
-                      onPointerUp={handlePointerUp}
-                      onPointerCancel={handlePointerUp}
-                      onDragEnd={handleDragEnd}
-                      data-player-id={player.id}
-                      style={{ touchAction: comboboxActive ? "auto" : "none" }}
-                      className={cn(
-                        "border-border bg-muted/50 flex cursor-grab items-center gap-3 rounded-lg border px-3 py-2 transition-colors active:cursor-grabbing",
-                        draggingId === player.id && "opacity-60",
-                      )}
-                    >
-                      <span className="w-[1ch] text-lg font-semibold shrink-0">
-                        {player.placement}
-                      </span>
-
-                      <div
-                        className="text-background flex size-10 shrink-0 items-center justify-center rounded-full text-sm font-semibold"
-                        style={{ backgroundColor: player.backgroundColor }}
+                  {orderedWithPlacements.map((player) => {
+                    const availableSuggestions = playerSuggestions.filter(
+                      (suggestion) =>
+                        suggestion.id === player.playerId ||
+                        !usedPlayerIds.has(suggestion.id),
+                    );
+                    return (
+                      <li
+                        key={player.id}
+                        draggable={!comboboxActive}
+                        onDragStart={(event) =>
+                          handleDragStart(event, player.id)
+                        }
+                        onDrop={(event) => handleDropItem(event, player.id)}
+                        onDragOver={(event) =>
+                          handleDragOverItem(event, player.id)
+                        }
+                        onPointerDown={(event) =>
+                          handlePointerDown(event, player.id)
+                        }
+                        onPointerMove={handlePointerMove}
+                        onPointerUp={handlePointerUp}
+                        onPointerCancel={handlePointerUp}
+                        onDragEnd={handleDragEnd}
+                        data-player-id={player.id}
+                        style={{ touchAction: comboboxActive ? "auto" : "none" }}
+                        className={cn(
+                          "border-border bg-muted/50 flex cursor-grab items-center gap-3 rounded-lg border px-3 py-2 transition-colors active:cursor-grabbing",
+                          draggingId === player.id && "opacity-60",
+                        )}
                       >
-                        {player.initials}
-                      </div>
+                        <span className="w-[1ch] text-lg font-semibold shrink-0">
+                          {player.placement}
+                        </span>
 
-                      <div className="flex grow flex-col gap-2">
-                        <div>
-                          <PlayerCombobox
-                            value={{
-                              id: player.playerId ?? null,
-                              name: player.displayName,
-                              backgroundColor: player.backgroundColor,
-                            }}
-                            onChange={(selection) =>
-                              handlePlayerChange(player.id, selection)
-                            }
-                            ariaLabel={`Nombre del invocador en posición ${player.placement}`}
-                            placeholder="Invocador"
-                            suggestions={playerSuggestions}
-                            onInteractionChange={
-                              handleComboboxInteractionChange
-                            }
-                          />
+                        <div
+                          className="text-background flex size-10 shrink-0 items-center justify-center rounded-full text-sm font-semibold"
+                          style={{ backgroundColor: player.backgroundColor }}
+                        >
+                          {player.initials}
                         </div>
-                        <div>
-                          <CommanderCombobox
-                            value={player.commander}
-                            onSelect={(commander) =>
-                              handleCommanderChange(player.id, commander)
-                            }
-                            ariaLabel={`Comandante seleccionado por el invocador en posición ${player.placement}`}
-                            placeholder="Comandante"
-                            playerId={player.playerId ?? null}
-                            onInteractionChange={
-                              handleComboboxInteractionChange
-                            }
-                          />
-                        </div>
-                      </div>
 
-                      <GripVertical className="text-muted-foreground size-4 shrink-0" />
-                    </li>
-                  ))}
+                        <div className="flex grow flex-col gap-2">
+                          <div>
+                            <PlayerCombobox
+                              value={{
+                                id: player.playerId ?? null,
+                                name: player.displayName,
+                                backgroundColor: player.backgroundColor,
+                              }}
+                              onChange={(selection) =>
+                                handlePlayerChange(player.id, selection)
+                              }
+                              ariaLabel={`Nombre del invocador en posición ${player.placement}`}
+                              placeholder="Invocador"
+                              suggestions={availableSuggestions}
+                              onInteractionChange={
+                                handleComboboxInteractionChange
+                              }
+                            />
+                          </div>
+                          <div>
+                            <CommanderCombobox
+                              value={player.commander}
+                              onSelect={(commander) =>
+                                handleCommanderChange(player.id, commander)
+                              }
+                              ariaLabel={`Comandante seleccionado por el invocador en posición ${player.placement}`}
+                              placeholder="Comandante"
+                              playerId={player.playerId ?? null}
+                              onInteractionChange={
+                                handleComboboxInteractionChange
+                              }
+                            />
+                          </div>
+                        </div>
+
+                        <GripVertical className="text-muted-foreground size-4 shrink-0" />
+                      </li>
+                    );
+                  })}
                   <li
                     onDrop={handleDropToEnd}
                     onDragOver={(event) => {

@@ -47,6 +47,15 @@ export default function PlayersDialog() {
     startX: number;
   } | null>(null);
   const [offsets, setOffsets] = useState<Record<string, number>>({});
+  const usedPlayerIds = useMemo(() => {
+    const ids = new Set<number>();
+    for (const player of players) {
+      if (player.playerId != null) {
+        ids.add(player.playerId);
+      }
+    }
+    return ids;
+  }, [players]);
 
   useEffect(() => {
     setOffsets((previous) => {
@@ -156,99 +165,107 @@ export default function PlayersDialog() {
 
         <ScrollArea className="h-96">
           <div className="flex flex-col gap-4">
-            {players.map((player, index) => (
-              <div
-                key={player.id}
-                className="relative"
-                style={{
-                  transform: `translateX(${offsets[player.id] ?? 0}px)`,
-                  transition:
-                    dragging?.id === player.id ? "none" : "transform 0.2s ease",
-                  touchAction: dragging?.id === player.id ? "none" : "pan-y",
-                }}
-                onPointerDown={(event) => handlePointerDown(player.id, event)}
-                onPointerMove={(event) => handlePointerMove(player.id, event)}
-                onPointerUp={(event) => handlePointerEnd(player.id, event)}
-                onPointerCancel={(event) =>
-                  handlePointerCancel(player.id, event)
-                }
-              >
-                <div className="border-border/40 relative flex flex-col gap-4 rounded-lg border bg-background p-3">
-                  <div className="grid gap-4 sm:grid-cols-[minmax(0,1fr)_minmax(0,1fr)_auto]">
-                    <div className="flex flex-col gap-2">
-                      <Label className="text-sm font-medium">Nombre</Label>
-                      <PlayerCombobox
-                        className="grow"
-                        value={{
-                          id: player.playerId ?? null,
-                          name: player.displayName,
-                          backgroundColor: player.backgroundColor,
-                        }}
-                        onChange={(selection) =>
-                          updatePlayer(player.id, (p) => ({
-                            displayName: selection.name,
-                            playerId: selection.id ?? null,
-                            backgroundColor:
-                              selection.backgroundColor ?? p.backgroundColor,
-                          }))
-                        }
-                        placeholder="Elegi o escribi un invocador"
-                        ariaLabel={`Nombre del invocador ${index + 1}`}
-                        suggestions={playerSuggestions}
-                      />
+            {players.map((player, index) => {
+              const availableSuggestions = playerSuggestions.filter(
+                (suggestion) =>
+                  suggestion.id === player.playerId ||
+                  !usedPlayerIds.has(suggestion.id),
+              );
+
+              return (
+                <div
+                  key={player.id}
+                  className="relative"
+                  style={{
+                    transform: `translateX(${offsets[player.id] ?? 0}px)`,
+                    transition:
+                      dragging?.id === player.id ? "none" : "transform 0.2s ease",
+                    touchAction: dragging?.id === player.id ? "none" : "pan-y",
+                  }}
+                  onPointerDown={(event) => handlePointerDown(player.id, event)}
+                  onPointerMove={(event) => handlePointerMove(player.id, event)}
+                  onPointerUp={(event) => handlePointerEnd(player.id, event)}
+                  onPointerCancel={(event) =>
+                    handlePointerCancel(player.id, event)
+                  }
+                >
+                  <div className="border-border/40 relative flex flex-col gap-4 rounded-lg border bg-background p-3">
+                    <div className="grid gap-4 sm:grid-cols-[minmax(0,1fr)_minmax(0,1fr)_auto]">
+                      <div className="flex flex-col gap-2">
+                        <Label className="text-sm font-medium">Nombre</Label>
+                        <PlayerCombobox
+                          className="grow"
+                          value={{
+                            id: player.playerId ?? null,
+                            name: player.displayName,
+                            backgroundColor: player.backgroundColor,
+                          }}
+                          onChange={(selection) =>
+                            updatePlayer(player.id, (p) => ({
+                              displayName: selection.name,
+                              playerId: selection.id ?? null,
+                              backgroundColor:
+                                selection.backgroundColor ?? p.backgroundColor,
+                            }))
+                          }
+                          placeholder="Elegi o escribi un invocador"
+                          ariaLabel={`Nombre del invocador ${index + 1}`}
+                          suggestions={availableSuggestions}
+                        />
+                      </div>
+
+                      <div className="flex flex-col gap-2">
+                        <Label className="text-sm font-medium">Comandante</Label>
+                        <CommanderCombobox
+                          className="grow"
+                          value={player.commander}
+                          onSelect={(commander) =>
+                            updatePlayer(player.id, { commander })
+                          }
+                          placeholder="Elegi un comandante"
+                          playerId={player.playerId ?? null}
+                          ariaLabel={`Comandante del invocador ${index + 1}`}
+                        />
+                      </div>
+
+                      <div className="flex flex-col gap-2 sm:items-center sm:justify-end">
+                        <Label
+                          htmlFor={`playerColor_${index}`}
+                          className="text-sm font-medium"
+                        >
+                          Color
+                        </Label>
+                        <Input
+                          id={`playerColor_${index}`}
+                          type="color"
+                          value={player.backgroundColor}
+                          className="h-10 w-full sm:w-24"
+                          onChange={(event) =>
+                            updatePlayer(player.id, {
+                              backgroundColor: event.target.value,
+                            })
+                          }
+                        />
+                      </div>
                     </div>
 
-                    <div className="flex flex-col gap-2">
-                      <Label className="text-sm font-medium">Comandante</Label>
-                      <CommanderCombobox
-                        className="grow"
-                        value={player.commander}
-                        onSelect={(commander) =>
-                          updatePlayer(player.id, { commander })
-                        }
-                        placeholder="Elegi un comandante"
-                        playerId={player.playerId ?? null}
-                        ariaLabel={`Comandante del invocador ${index + 1}`}
-                      />
-                    </div>
-
-                    <div className="flex flex-col gap-2 sm:items-center sm:justify-end">
-                      <Label
-                        htmlFor={`playerColor_${index}`}
-                        className="text-sm font-medium"
-                      >
-                        Color
-                      </Label>
-                      <Input
-                        id={`playerColor_${index}`}
-                        type="color"
-                        value={player.backgroundColor}
-                        className="h-10 w-full sm:w-24"
-                        onChange={(event) =>
-                          updatePlayer(player.id, {
-                            backgroundColor: event.target.value,
-                          })
-                        }
-                      />
-                    </div>
+                    {players.length > 2 ? (
+                      <div className="pointer-events-none absolute inset-y-0 right-3 flex items-center text-xs font-semibold uppercase tracking-wide text-destructive/80 sm:right-auto sm:left-3">
+                        <span
+                          className={`transition-opacity duration-200 ${
+                            Math.abs(offsets[player.id] ?? 0) > 40
+                              ? "opacity-100"
+                              : "opacity-0"
+                          }`}
+                        >
+                          Desliza para eliminar
+                        </span>
+                      </div>
+                    ) : null}
                   </div>
-
-                  {players.length > 2 ? (
-                    <div className="pointer-events-none absolute inset-y-0 right-3 flex items-center text-xs font-semibold uppercase tracking-wide text-destructive/80 sm:right-auto sm:left-3">
-                      <span
-                        className={`transition-opacity duration-200 ${
-                          Math.abs(offsets[player.id] ?? 0) > 40
-                            ? "opacity-100"
-                            : "opacity-0"
-                        }`}
-                      >
-                        Desliza para eliminar
-                      </span>
-                    </div>
-                  ) : null}
                 </div>
-              </div>
-            ))}
+              );
+            })}
           </div>
         </ScrollArea>
 
