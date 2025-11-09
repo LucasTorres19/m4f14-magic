@@ -62,10 +62,20 @@ const defaultInitState: CurrentMatchState = {
   isTimerPaused: false,
 };
 
-const createPlayer = (idx: number, settings: SettingsState) => {
+const generatePlayerId = () => {
+  if (typeof crypto !== "undefined" && "randomUUID" in crypto) {
+    return `local-${crypto.randomUUID()}`;
+  }
+  const fallback = `${Date.now().toString(36)}-${Math.random()
+    .toString(36)
+    .slice(2)}`;
+  return `local-${fallback}`;
+};
+
+const createPlayer = (idx: number, settings: SettingsState): Player => {
   return {
-    id: `local-${idx}`,
-    displayName: `Invocador ${idx + 1}`,
+    id: generatePlayerId(),
+    displayName: "",
     playerId: null,
     hp: settings.startingHp,
     backgroundColor: randomHexColor(idx),
