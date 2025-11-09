@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import Image from "next/image";
 import Link from "next/link";
 import { useParams } from "next/navigation";
@@ -284,6 +284,20 @@ export default function SummonerDetailPage() {
   }, [history]);
   const fmt = (ts?: number | null) => (ts ? new Date(ts).toLocaleString() : "");
 
+  const [historyPage, setHistoryPage] = useState(1);
+  const pageSize = 10;
+  const totalPages = useMemo(
+    () => Math.max(1, Math.ceil((history?.length ?? 0) / pageSize)),
+    [history]
+  );
+  useEffect(() => {
+    if (historyPage > totalPages) setHistoryPage(totalPages);
+  }, [totalPages, historyPage]);
+  const paginatedHistory = useMemo(() => {
+    const start = (historyPage - 1) * pageSize;
+    return (history ?? []).slice(start, start + pageSize);
+  }, [history, historyPage]);
+
   return (
     <div className="min-h-screen text-foreground relative overflow-hidden">
       <div className="relative z-10 container mx-auto px-4 py-8 max-w-7xl">
@@ -561,7 +575,7 @@ export default function SummonerDetailPage() {
                   </tr>
                 </thead>
                 <tbody>
-                  {(history ?? []).map((row) => (
+                  {(paginatedHistory ?? []).map((row) => (
                     <tr
                       key={row.matchId}
                       className="border-b hover:bg-muted/30 cursor-pointer"
@@ -597,6 +611,39 @@ export default function SummonerDetailPage() {
                   )}
                 </tbody>
               </table>
+
+              {((history?.length ?? 0) > pageSize) && (
+                <div className="mt-3 flex items-center justify-between">
+                  <span className="text-sm text-muted-foreground">
+                    {(() => {
+                      const total = history?.length ?? 0;
+                      const start = Math.min((historyPage - 1) * pageSize + 1, total);
+                      const end = Math.min(historyPage * pageSize, total);
+                      return `Mostrando ${start}–${end} de ${total}`;
+                    })()}
+                  </span>
+                  <div className="flex items-center gap-2">
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={() => setHistoryPage((p) => Math.max(1, p - 1))}
+                      disabled={historyPage === 1}
+                    >
+                      Anterior
+                    </Button>
+                    <span className="text-sm">Página {historyPage} de {totalPages}</span>
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={() => setHistoryPage((p) => Math.min(totalPages, p + 1))}
+                      disabled={historyPage === totalPages}
+                    >
+                      Siguiente
+                    </Button>
+                  </div>
+                </div>
+              )}
+
             </Card>
           </div>
         )}
