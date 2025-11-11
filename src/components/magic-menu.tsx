@@ -1,7 +1,7 @@
 "use client";
 
 import { Button } from "@/components/ui/button";
-import { BarChart3, Crown, LibraryBig, Sparkles, Users } from "lucide-react";
+import { BarChart3, Crown, LibraryBig, Sparkles, Users,Trophy  } from "lucide-react";
 import Link from "next/link";
 import { NewMatchButton } from "./NewMatchButton";
 
@@ -98,6 +98,21 @@ export function MagicMenu() {
                  Invocadores
               </Link>     
             </Button>
+
+            <Button
+              asChild
+              variant="outline"
+              className="bg-muted/30 hover:bg-muted/50 text-foreground border-border hover:border-primary/50 h-12 w-full text-base font-medium transition-all duration-300 hover:scale-105"
+            >
+              <Link
+                href="/tournament"
+                className="flex w-full items-center justify-center"
+              >
+                <Trophy  className="mr-2 h-4 w-4" />
+                Liga magica
+              </Link>
+            </Button>
+
           </div>
 
           <p className="text-muted-foreground mt-6 text-center text-sm tracking-widest">

@@ -51,9 +51,24 @@ export const images = createTable("image", (d) => ({
     .notNull(),
 }));
 
+export const tournaments = createTable("tournament", (d) => ({
+  id: d.integer({ mode: "number" }).primaryKey({ autoIncrement: true }),
+  name: d.text({ length: 256 }).notNull(),
+  state: d.text({ length: 16384 }).notNull(),
+  finished: d.integer({ mode: "number" }).notNull().default(0),
+  createdAt: d
+    .integer({ mode: "timestamp" })
+    .default(sql`(unixepoch())`)
+    .notNull(),
+  updatedAt: d.integer({ mode: "timestamp" }).$onUpdate(() => new Date()),
+}));
+
 export const matches = createTable("match", (d) => ({
   id: d.integer({ mode: "number" }).primaryKey({ autoIncrement: true }),
   startingHp: d.integer({ mode: "number" }).notNull(),
+  tournamentId: d
+    .integer("tournament_id")
+    .references(() => tournaments.id, { onDelete: "set null" }),
   image: d
     .integer("image")
     .references(() => images.id, { onDelete: "set null" }),

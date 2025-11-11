@@ -1,5 +1,5 @@
 import { TRPCError } from "@trpc/server";
-import { eq, inArray } from "drizzle-orm";
+import { desc, eq, inArray } from "drizzle-orm";
 import { z } from "zod";
 
 import { utapi } from "@/app/api/uploadthing/core";
@@ -43,12 +43,13 @@ export const matchRouter = createTRPCRouter({
               message: "Each placement must be unique",
             },
           ),
+        tournamentId: z.number().positive().int().optional(),
         image: imageInputSchema.optional(),
         croppedImage: imageInputSchema.optional(),
       }),
     )
     .mutation(async ({ ctx, input }) => {
-      await ctx.db.transaction(async (tx) => {
+      const createdMatchId = await ctx.db.transaction(async (tx) => {
         const playerNames = input.players.map((player) => player.name);
 
         const existingPlayers =
@@ -168,6 +169,7 @@ export const matchRouter = createTRPCRouter({
           .insert(matches)
           .values({
             startingHp: input.startingHp,
+            tournamentId: input.tournamentId,
             cropped_image: cropped_image_id,
             image: image_id,
           })
@@ -207,9 +209,10 @@ export const matchRouter = createTRPCRouter({
           await tx.insert(playersToMatches).values(playerMatchRows);
         }
 
-        return;
+        return matchRow.id;
       });
       revalidatePath("/analytics");
+      return { matchId: createdMatchId ?? null } as const;
     }),
   setImage: protectedProcedure
     .input(

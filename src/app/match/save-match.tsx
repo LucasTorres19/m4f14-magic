@@ -249,10 +249,25 @@ export default function SaveMatch() {
     setErrorMessage(null);
   }, [setErrorMessage, setStep]);
 
+  const tournamentId = useCurrentMatch((s) => s.tournamentId);
+  const tournamentMatchIndex = useCurrentMatch((s) => s.tournamentMatchIndex);
+  const setTournamentId = useCurrentMatch((s) => s.setTournamentId);
+  const setTournamentMatchIndex = useCurrentMatch((s) => s.setTournamentMatchIndex);
+  const markMatchPlayed = api.tournament.markMatchPlayed.useMutation();
+
   const matchSave = api.match.save.useMutation({
-    onSuccess: () => {
+    onSuccess: async () => {
       toast.success("Partida guardada");
+      // Mark scheduled match as played if coming from a tournament
+      if (tournamentId && typeof tournamentMatchIndex === "number") {
+        try {
+          await markMatchPlayed.mutateAsync({ tournamentId, matchIndex: tournamentMatchIndex });
+        } catch {}
+      }
       resetMatch(settings);
+      // Clear tournament context after saving
+      setTournamentId(null);
+      setTournamentMatchIndex(null);
     },
   });
 
@@ -328,13 +343,18 @@ export default function SaveMatch() {
         const sanitizedPlayers = sanitizePlayers();
         if (!sanitizedPlayers) return;
 
-        await matchSave.mutateAsync({
+        const created = await matchSave.mutateAsync({
           startingHp,
           players: sanitizedPlayers,
+          tournamentId: tournamentId ?? undefined,
           croppedImage,
           image,
         });
-
+        if (tournamentId && typeof tournamentMatchIndex === "number") {
+          try {
+            await markMatchPlayed.mutateAsync({ tournamentId, matchIndex: tournamentMatchIndex, matchId: created?.matchId ?? undefined });
+          } catch {}
+        }
         setOpen(false);
       } catch (error) {
         if (

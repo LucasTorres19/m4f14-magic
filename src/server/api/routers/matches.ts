@@ -1,4 +1,4 @@
-import { asc, desc, eq, inArray } from "drizzle-orm";
+import { asc, desc, eq, inArray, sql } from "drizzle-orm";
 import { z } from "zod";
 
 import { createTRPCRouter, publicProcedure } from "@/server/api/trpc";
@@ -43,6 +43,7 @@ export const matchesRouter = createTRPCRouter({
         .from(matches)
         .leftJoin(origImage, eq(origImage.id, matches.image))
         .leftJoin(croppedImage, eq(croppedImage.id, matches.cropped_image))
+        .where(sql`${matches.tournamentId} is null`)
         .orderBy(desc(matches.createdAt))
         .limit(limit);
 

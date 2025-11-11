@@ -96,6 +96,7 @@ const placementBadge = (placement: number) => {
 
 export default async function HistoryPage() {
   const matches: MatchesOutput = await api.matches.findAll({ limit: 50 });
+  const leagues = await api.tournament.list();
 
   return (
     <>
@@ -126,6 +127,33 @@ export default async function HistoryPage() {
           a cada comandante hasta la victoria.
         </p>
       </header>
+
+      {/* Ligas */}
+      <section className="mb-10">
+        <h2 className="mb-3 text-lg font-semibold">Ligas</h2>
+        {leagues.length === 0 ? (
+          <p className="text-sm text-muted-foreground">Aún no hay ligas.</p>
+        ) : (
+          <ul className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
+            {leagues.map((l) => (
+              <li key={`league-${l.id}`} className="rounded-xl border bg-card/70 p-4">
+                <div className="mb-2 flex items-center justify-between">
+                  <h3 className="truncate text-base font-semibold">{l.name}</h3>
+                  <span className="text-xs text-muted-foreground">{l.finished ? "Finalizada" : "En curso"}</span>
+                </div>
+                <p className="text-sm text-muted-foreground">
+                  Partidos: {l.playedMatches} / {l.plannedMatches}
+                </p>
+                <div className="mt-3">
+                  <Button asChild size="sm" variant="outline">
+                    <a href={`/history/tournament/${l.id}`}>Ver detalle</a>
+                  </Button>
+                </div>
+              </li>
+            ))}
+          </ul>
+        )}
+      </section>
 
       <section className="flex flex-1 flex-col gap-8 pb-12">
         {matches.length === 0 ? (

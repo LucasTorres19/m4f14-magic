@@ -24,6 +24,8 @@ export type CurrentMatchState = {
   currentPlayerIndex: number;
   timerRemaining: number;
   isTimerPaused: boolean;
+  tournamentId: number | null;
+  tournamentMatchIndex: number | null;
 };
 
 export type CurrentMatchActions = {
@@ -42,6 +44,8 @@ export type CurrentMatchActions = {
   updateHp: (playerId: string, amount: number) => void;
 
   restartMatch: (settings: SettingsState) => void;
+  setTournamentId: (id: number | null) => void;
+  setTournamentMatchIndex: (idx: number | null) => void;
 
   // 🔹 Nuevo: resetea con una lista concreta de invocadores (nombre + color)
 
@@ -60,6 +64,8 @@ const defaultInitState: CurrentMatchState = {
   currentPlayerIndex: 0,
   timerRemaining: 0,
   isTimerPaused: false,
+  tournamentId: null,
+  tournamentMatchIndex: null,
 };
 
 const generatePlayerId = () => {
@@ -96,6 +102,8 @@ export const initCurrentMatchStore = (
     currentPlayerIndex: 0,
     timerRemaining: settings.timerLimit,
     isTimerPaused: true,
+    tournamentId: null,
+    tournamentMatchIndex: null,
   };
 };
 
@@ -215,6 +223,9 @@ export const createCurrentMatchStore = (
             timerRemaining: settings?.timerLimit ?? 120,
             isTimerPaused: true,
           })),
+
+        setTournamentId: (id: number | null) => set(() => ({ tournamentId: id })),
+        setTournamentMatchIndex: (idx: number | null) => set(() => ({ tournamentMatchIndex: idx })),
 
         nextTurn: () =>
           set((state) => {
