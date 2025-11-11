@@ -283,24 +283,44 @@ export const commandersRouter = createTRPCRouter({
       const trimmed = input?.query?.trim() ?? "";
       const limit = input?.limit ?? COMMANDER_SEARCH_LIMIT;
 
+      // Count players per match to detect 1v1 (league) games and exclude them from podium metrics
+      const matchSizeAgg = ctx.db
+        .select({
+          matchId: playersToMatches.matchId,
+          playerCount: count(sql`1`).as("playerCount"),
+        })
+        .from(playersToMatches)
+        .groupBy(playersToMatches.matchId)
+        .as("matchSizeAgg");
+
       const agg = ctx.db
         .select({
           commanderId: playersToMatches.commanderId,
+          // Total times this commander was used (all matches)
           matchCount: count(playersToMatches.commanderId).as("matchCount"),
+          // Total wins (all matches)
           wins: sum(sql<number>`
             CASE WHEN ${playersToMatches.placement} = 1 THEN 1 ELSE 0 END
           `).as("wins"),
+          // Podium-eligible matches: matches with 3+ players
+          podiumMatchCount: sum(sql<number>`
+            CASE WHEN ${matchSizeAgg.playerCount} >= 3 THEN 1 ELSE 0 END
+          `).as("podiumMatchCount"),
+          // Podiums excluding 1v1 (only count when match has 3+ players)
           podiums: sum(sql<number>`
-            CASE WHEN ${playersToMatches.placement} IN (1,2) THEN 1 ELSE 0 END
+            CASE WHEN ${matchSizeAgg.playerCount} >= 3 AND ${playersToMatches.placement} IN (1,2) THEN 1 ELSE 0 END
           `).as("podiums"),
+          // Seconds excluding 1v1
           seconds: sum(sql<number>`
-            CASE WHEN ${playersToMatches.placement} = 2 THEN 1 ELSE 0 END
+            CASE WHEN ${matchSizeAgg.playerCount} >= 3 AND ${playersToMatches.placement} = 2 THEN 1 ELSE 0 END
           `).as("seconds"),
+          // Last time this commander placed second in an eligible match
           lastSecondAt: max(sql<number>`
-            CASE WHEN ${playersToMatches.placement} = 2 THEN ${playersToMatches.matchId} ELSE NULL END
+            CASE WHEN ${matchSizeAgg.playerCount} >= 3 AND ${playersToMatches.placement} = 2 THEN ${playersToMatches.matchId} ELSE NULL END
           `).as("lastSecondAt"),
         })
         .from(playersToMatches)
+        .innerJoin(matchSizeAgg, eq(matchSizeAgg.matchId, playersToMatches.matchId))
         .groupBy(playersToMatches.commanderId)
         .as("agg");
 
@@ -366,6 +386,7 @@ export const commandersRouter = createTRPCRouter({
           scryfallUri: commanders.scryfallUri,
           matchCount: agg.matchCount,
           wins: agg.wins,
+          podiumMatchCount: agg.podiumMatchCount,
           podiums: agg.podiums,
           seconds: agg.seconds,
           lastSecondAt: agg.lastSecondAt,

@@ -43,6 +43,16 @@ export const playersRouter = createTRPCRouter({
 
       if (!player) return null;
 
+      // Count players per match to detect 1v1 (league) games and exclude them from podium metrics
+      const matchSizeAgg = ctx.db
+        .select({
+          matchId: playersToMatches.matchId,
+          playerCount: count(sql`1`).as("playerCount"),
+        })
+        .from(playersToMatches)
+        .groupBy(playersToMatches.matchId)
+        .as("matchSizeAgg");
+
       const agg = ctx.db
         .select({
           commanderId: playersToMatches.commanderId,
@@ -50,11 +60,15 @@ export const playersRouter = createTRPCRouter({
           wins: sum(
             sql<number>`CASE WHEN ${playersToMatches.placement} = 1 THEN 1 ELSE 0 END`,
           ).as("wins"),
+          podiumMatchCount: sum(
+            sql<number>`CASE WHEN ${matchSizeAgg.playerCount} >= 3 THEN 1 ELSE 0 END`,
+          ).as("podiumMatchCount"),
           podiums: sum(
-            sql<number>`CASE WHEN ${playersToMatches.placement} IN (1,2) THEN 1 ELSE 0 END`,
+            sql<number>`CASE WHEN ${matchSizeAgg.playerCount} >= 3 AND ${playersToMatches.placement} IN (1,2) THEN 1 ELSE 0 END`,
           ).as("podiums"),
         })
         .from(playersToMatches)
+        .innerJoin(matchSizeAgg, eq(matchSizeAgg.matchId, playersToMatches.matchId))
         .where(
           sql`${playersToMatches.playerId} = ${input.playerId} and ${playersToMatches.commanderId} is not null`,
         )
@@ -66,6 +80,7 @@ export const playersRouter = createTRPCRouter({
           commanderId: agg.commanderId,
           matchCount: agg.matchCount,
           wins: agg.wins,
+          podiumMatchCount: agg.podiumMatchCount,
           podiums: agg.podiums,
           name: commanders.name,
           artImageUrl: commanders.artImageUrl,
@@ -203,6 +218,16 @@ export const playersRouter = createTRPCRouter({
   listWithStats: publicProcedure.query(async ({ ctx }) => {
     // Usar cutoff desde SQLite para evitar problemas de zona horaria/tipos
     // equivalente a últimos 30 días: unixepoch('now','-30 days')
+    // Count players per match to detect 1v1 (league) games and exclude them from podium metrics
+    const matchSizeAgg = ctx.db
+      .select({
+        matchId: playersToMatches.matchId,
+        playerCount: count(sql`1`).as("playerCount"),
+      })
+      .from(playersToMatches)
+      .groupBy(playersToMatches.matchId)
+      .as("matchSizeAgg");
+
     const agg = ctx.db
       .select({
         playerId: playersToMatches.playerId,
@@ -210,11 +235,15 @@ export const playersRouter = createTRPCRouter({
         wins: sum(
           sql<number>`CASE WHEN ${playersToMatches.placement} = 1 THEN 1 ELSE 0 END`,
         ).as("wins"),
+        podiumMatchCount: sum(
+          sql<number>`CASE WHEN ${matchSizeAgg.playerCount} >= 3 THEN 1 ELSE 0 END`,
+        ).as("podiumMatchCount"),
         podiums: sum(
-          sql<number>`CASE WHEN ${playersToMatches.placement} IN (1,2) THEN 1 ELSE 0 END`,
+          sql<number>`CASE WHEN ${matchSizeAgg.playerCount} >= 3 AND ${playersToMatches.placement} IN (1,2) THEN 1 ELSE 0 END`,
         ).as("podiums"),
       })
       .from(playersToMatches)
+      .innerJoin(matchSizeAgg, eq(matchSizeAgg.matchId, playersToMatches.matchId))
       .groupBy(playersToMatches.playerId)
       .as("agg");
 
@@ -353,6 +382,7 @@ export const playersRouter = createTRPCRouter({
         backgroundColor: players.backgroundColor,
         matchCount: agg.matchCount,
         wins: agg.wins,
+        podiumMatchCount: agg.podiumMatchCount,
         podiums: agg.podiums,
       })
       .from(players)

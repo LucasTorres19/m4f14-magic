@@ -30,6 +30,7 @@ type ApiCommander = {
   scryfallUri: string | null;
   matchCount: number | string | null;
   wins: number | string | null;
+  podiumMatchCount?: number | string | null;
   podiums: number | string | null;
   seconds: number | string | null;
   lastSecondAt: number | string | null;
@@ -41,6 +42,7 @@ type ApiCommander = {
 type CommanderUI = ApiCommander & {
   matchCount: number;
   wins: number;
+  podiumMatchCount: number;
   podiums: number;
   seconds: number;
   lastSecondAt: number;
@@ -61,6 +63,7 @@ export default function ComandantesPage() {
       ...c,
       matchCount: Number(c.matchCount ?? 0),
       wins: Number(c.wins ?? 0),
+      podiumMatchCount: Number(c.podiumMatchCount ?? 0),
       podiums: Number(c.podiums ?? 0),
       seconds: Number(c.seconds ?? 0),
       lastSecondAt: Number(c.lastSecondAt ?? 0),
@@ -320,7 +323,7 @@ export default function ComandantesPage() {
                         <TooltipTrigger asChild>
                           <span className="text-xs py-1 rounded-full bg-primary/10 text-primary flex w-fit items-center px-3">
                             <Boxes className="mr-2" width={20} />
-                            {pct(commander.podiums, commander.matchCount)}%
+                            {pct(commander.podiums, commander.podiumMatchCount)}%
                             Podio
                           </span>
                         </TooltipTrigger>

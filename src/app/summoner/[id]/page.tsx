@@ -16,6 +16,7 @@ type CommanderRow = {
   name: string | null;
   matchCount: number | null;
   wins: number | null;
+  podiumMatchCount?: number | null;
   podiums: number | null;
   imageUrl?: string | null;
   artImageUrl?: string | null;
@@ -32,6 +33,7 @@ type PlayerListStatsRow = {
   id: number;
   matchCount: number;
   wins: number;
+  podiumMatchCount?: number;
   podiums: number;
   isCebollita?: boolean;
   isLastWinner?: boolean;
@@ -90,6 +92,7 @@ export default function SummonerDetailPage() {
     const base = rows.map((p) => {
       const matchCount = Number(p.matchCount ?? 0);
       const wins = Number(p.wins ?? 0);
+      const podiumMatchCount = Number(p.podiumMatchCount ?? 0);
       const podiums = Number(p.podiums ?? 0);
       const seconds = Math.max(0, podiums - wins);
       const uniqueCommanderCount = Number(p.uniqueCommanderCount ?? 0);
@@ -103,6 +106,7 @@ export default function SummonerDetailPage() {
         ...p,
         matchCount,
         wins,
+        podiumMatchCount,
         podiums,
         uniqueCommanderCount,
         seconds,
@@ -152,8 +156,8 @@ export default function SummonerDetailPage() {
         va = winrate(a.wins ?? 0, a.matchCount ?? 0);
         vb = winrate(b.wins ?? 0, b.matchCount ?? 0);
       } else {
-        va = (a.podiums ?? 0) / Math.max(1, a.matchCount ?? 0);
-        vb = (b.podiums ?? 0) / Math.max(1, b.matchCount ?? 0);
+        va = (a.podiums ?? 0) / Math.max(1, (a.podiumMatchCount ?? a.matchCount ?? 0));
+        vb = (b.podiums ?? 0) / Math.max(1, (b.podiumMatchCount ?? b.matchCount ?? 0));
       }
       if (va === vb) {
         const byName = collator.compare(a.name ?? "", b.name ?? "");
@@ -341,7 +345,7 @@ export default function SummonerDetailPage() {
                         <Trophy className="h-4 w-4 mr-1" /> {pct(playerStats.wins, playerStats.matchCount)}% winrate
                       </span>
                       <span className="inline-flex items-center gap-1 py-1 px-2 rounded-full bg-primary/10 text-primary">
-                        <Boxes className="h-4 w-4 mr-1" /> {pct(playerStats.podiums, playerStats.matchCount)}% podio
+                        <Boxes className="h-4 w-4 mr-1" /> {pct(playerStats.podiums, playerStats.podiumMatchCount ?? playerStats.matchCount)}% podio
                       </span>
 
                       {Boolean(playerStats.isOtp) && (
@@ -539,7 +543,7 @@ export default function SummonerDetailPage() {
                       <td className="py-2 pr-3">{row.matchCount ?? 0}</td>
                       <td className="py-2 pr-3">{pct(row.wins, row.matchCount)}%</td>
                       <td className="py-2 pr-3">
-                        {row.podiums ?? 0} ({pct(row.podiums, row.matchCount)}%)
+                        {row.podiums ?? 0} ({pct(row.podiums, row.podiumMatchCount ?? row.matchCount)}%)
                       </td>
                     </tr>
                   ))}

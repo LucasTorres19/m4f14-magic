@@ -31,6 +31,7 @@ type ApiPlayer = {
   backgroundColor: string | null;
   matchCount?: number | string | null;
   wins?: number | string | null;
+  podiumMatchCount?: number | string | null;
   podiums?: number | string | null;
   isLastWinner?: boolean | null;
   isStreakChampion?: boolean | null;
@@ -44,6 +45,7 @@ type PlayerUI = Required<Pick<ApiPlayer, "id">> & {
   backgroundColor: string;
   matchCount: number;
   wins: number;
+  podiumMatchCount: number;
   podiums: number;
   seconds: number;
   isLastWinner: boolean;
@@ -78,6 +80,7 @@ export default function SummonerPage() {
     const base = rows.map((p) => {
       const matchCount = Number(p.matchCount ?? 0);
       const wins = Number(p.wins ?? 0);
+      const podiumMatchCount = Number(p.podiumMatchCount ?? 0);
       const podiums = Number(p.podiums ?? 0);
       const seconds = Math.max(0, podiums - wins);
       const uniqueCommanderCount = Number(p.uniqueCommanderCount ?? 0);
@@ -93,6 +96,7 @@ export default function SummonerPage() {
         backgroundColor: p.backgroundColor ?? "#CBD5E1",
         matchCount,
         wins,
+        podiumMatchCount,
         podiums,
         seconds,
         isLastWinner: Boolean(p.isLastWinner),
@@ -299,7 +303,7 @@ export default function SummonerPage() {
                           <Trophy className="h-4 w-4 mr-1" /> {Math.round(winrate(player.wins, player.matchCount))}% winrate
                         </span>
                         <span className="inline-flex items-center gap-1 py-1 px-2 rounded-full bg-primary/10 text-primary">
-                          <Boxes className="h-4 w-4 mr-1" /> {Math.round(podiumPct(player.podiums, player.matchCount))}% podio
+                          <Boxes className="h-4 w-4 mr-1" /> {Math.round(podiumPct(player.podiums, player.podiumMatchCount))}% podio
                         </span>
 
                       {player.isCebollita && (
