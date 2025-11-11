@@ -2,6 +2,7 @@
 
 import { useContext, useEffect, useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
+import { Loader2 } from "lucide-react";
 
 import { api } from "@/trpc/react";
 import { Button } from "@/components/ui/button";
@@ -158,7 +159,11 @@ export default function TournamentPage() {
   const setTournamentMatchIndex = useCurrentMatch((s) => s.setTournamentMatchIndex);
 
   const { data: suggestedPlayers = [] } = api.players.findAll.useQuery();
-  const { data: activeTournament, refetch: refetchActive } = api.tournament.getActive.useQuery();
+  const {
+    data: activeTournament,
+    refetch: refetchActive,
+    isLoading: isCheckingActive,
+  } = api.tournament.getActive.useQuery();
   const createTournament = api.tournament.create.useMutation({
     onSuccess: () => {
       void refetchActive();
@@ -345,6 +350,21 @@ export default function TournamentPage() {
     router.push("/match");
   }
 
+  if (isCheckingActive) {
+    return (
+      <main className="mx-auto w-full max-w-5xl p-4 sm:p-6">
+        <div
+          className="flex min-h-[50vh] items-center justify-center text-muted-foreground"
+          role="status"
+          aria-live="polite"
+          aria-busy="true"
+        >
+          <Loader2 className="size-8 animate-spin" />
+        </div>
+      </main>
+    );
+  }
+
   return (
     <main className="mx-auto w-full max-w-5xl p-4 sm:p-6">
       <h1 className="mb-2 text-2xl font-bold">Liga magica</h1>
@@ -495,7 +515,7 @@ export default function TournamentPage() {
                       <thead className="text-muted-foreground">
                         <tr className="border-b">
                           <th className="py-2 pr-3 text-right">#</th>
-                          <th className="py-2 pr-3 text-left">Equipo</th>
+                          <th className="py-2 pr-3 text-left">Invocadores</th>
                           <th className="py-2 pr-3 text-right">PTS</th>
                           <th className="py-2 pr-3 text-right">J</th>
                           <th className="py-2 pr-3 text-right">G</th>
@@ -535,7 +555,7 @@ export default function TournamentPage() {
 
             <div className="rounded-xl border bg-card/70 p-4">
               <div className="mb-3 flex items-center justify-between">
-                <h2 className="text-lg font-semibold uppercase tracking-wide">Partidos</h2>
+                <h2 className="text-lg font-semibold uppercase tracking-wide">Duelos</h2>
                 <div className="flex items-center gap-2">
                   <span className="text-sm text-muted-foreground">Rondas {currentRoundIndex + 1}{rounds.length ? `/${rounds.length}` : ""}</span>
                   {activeTournament && rounds.length > 0 && currentRoundIndex < (rounds.length - 1) && (
