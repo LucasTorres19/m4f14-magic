@@ -4,4 +4,6 @@ Pagina oficial de LIMTG (Liga Interna Magic: The Gathering)
 
 ## ¿Cuáles son los objetivos?
 
+- [] Remover segundo paso al guardar partida, nadie guarda imagen utilizando eso.
+
 ## **Fixes**
