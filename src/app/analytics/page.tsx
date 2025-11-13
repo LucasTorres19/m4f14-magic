@@ -50,7 +50,7 @@ export default async function AnalyticsPage() {
         .innerJoin(matches, eq(playersToMatches.matchId, matches.id))
         .where(gte(matches.createdAt, lastWeek))
         .then((r) => r.at(0)?.count.toString() ?? "0"),
-      description: "Compandantes que fueron invocados en los últimos 7 días.",
+      description: "Comandantes que fueron invocados en los últimos 7 días.",
     },
   ];
 
