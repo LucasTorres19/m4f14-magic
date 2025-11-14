@@ -13,6 +13,8 @@ import { MatchGallery } from "./match-gallery";
 type MatchesOutput = inferRouterOutputs<AppRouter>["matches"]["findAll"];
 type MatchSummary = MatchesOutput[number];
 type PlayerSummary = MatchSummary["players"][number];
+type LeaguesOutput = inferRouterOutputs<AppRouter>["tournament"]["list"];
+type LeagueSummary = LeaguesOutput[number];
 
 const gradientPalettes: [string, ...string[]] = [
   "from-amber-500/15 via-rose-500/10 to-purple-700/20",
@@ -22,6 +24,12 @@ const gradientPalettes: [string, ...string[]] = [
 
 const matchDateOptions: Intl.DateTimeFormatOptions = {
   weekday: "long",
+  day: "numeric",
+  month: "long",
+  year: "numeric",
+};
+
+const leagueDateOptions: Intl.DateTimeFormatOptions = {
   day: "numeric",
   month: "long",
   year: "numeric",
@@ -82,7 +90,7 @@ const contrastColor = (hex: string) => {
 };
 
 const placementBadge = (placement: number) => {
-  const title = placementTitles[placement] ?? `Posicion ${placement}`;
+  const title = placementTitles[placement] ?? `Posición ${placement}`;
   const ordinal =
     placement === 1
       ? "1ro"
@@ -96,7 +104,7 @@ const placementBadge = (placement: number) => {
 
 export default async function HistoryPage() {
   const matches: MatchesOutput = await api.matches.findAll({ limit: 50 });
-  const leagues = await api.tournament.list();
+  const leagues: LeaguesOutput = await api.tournament.list();
 
   return (
     <>
@@ -108,13 +116,13 @@ export default async function HistoryPage() {
         >
           <Link href="/" className="inline-flex items-center gap-2">
             <ArrowLeft className="size-4" />
-            Volver al menu
+            Volver al menú
           </Link>
         </Button>
 
         <div className="text-primary flex items-center gap-2 text-xs font-medium uppercase tracking-[0.4em]">
           <Sparkles className="size-4 animate-pulse" />
-          Cronicas de la mesa
+          Crónicas de la mesa
         </div>
       </div>
 
@@ -123,8 +131,8 @@ export default async function HistoryPage() {
           Archivo de duelos
         </h1>
         <p className="text-muted-foreground mx-auto max-w-3xl text-sm leading-relaxed md:mx-0 md:text-base">
-          Revive cada mesa con las fotografias guardadas y recuerda quien piloto
-          a cada comandante hasta la victoria.
+          Revive cada mesa con las fotografías guardadas y recuerda quién
+          pilotó a cada comandante hasta la victoria.
         </p>
       </header>
 
@@ -135,20 +143,15 @@ export default async function HistoryPage() {
           <p className="text-sm text-muted-foreground">Aún no hay ligas.</p>
         ) : (
           <ul className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
-            {leagues.map((l) => (
-              <li key={`league-${l.id}`} className="rounded-xl border bg-card/70 p-4">
-                <div className="mb-2 flex items-center justify-between">
-                  <h3 className="truncate text-base font-semibold">{l.name}</h3>
-                  <span className="text-xs text-muted-foreground">{l.finished ? "Finalizada" : "En curso"}</span>
-                </div>
-                <p className="text-sm text-muted-foreground">
-                  Partidos: {l.playedMatches} / {l.plannedMatches}
-                </p>
-                <div className="mt-3">
-                  <Button asChild size="sm" variant="outline">
-                    <a href={`/history/tournament/${l.id}`}>Ver detalle</a>
-                  </Button>
-                </div>
+            {leagues.map((league, index) => (
+              <li key={`league-${league.id}`} className="h-full">
+                <LeagueCard
+                  league={league}
+                  gradient={
+                    gradientPalettes[index % gradientPalettes.length] ??
+                    gradientPalettes[0]
+                  }
+                />
               </li>
             ))}
           </ul>
@@ -179,14 +182,105 @@ const EmptyHistoryState = () => (
   <div className="ornate-border relative mx-auto mt-12 flex max-w-xl flex-col items-center gap-4 rounded-3xl border border-primary/30 bg-card/70 px-6 py-12 text-center shadow-lg backdrop-blur">
     <Sparkles className="text-primary size-10 animate-pulse" />
     <h2 className="text-foreground text-2xl font-semibold tracking-wide">
-      Aun no hay duelos registrados
+      Aún no hay duelos registrados
     </h2>
     <p className="text-muted-foreground text-sm leading-relaxed">
-      Guarda una partida desde el tablero principal para construir la coleccion
-      de comandantes y fotografias de tu grupo.
+      Guarda una partida desde el tablero principal para construir la colección
+      de comandantes y fotografías de tu grupo.
     </p>
   </div>
 );
+
+interface LeagueCardProps {
+  league: LeagueSummary;
+  gradient: string;
+}
+
+const LeagueCard = ({ league, gradient }: LeagueCardProps) => {
+  const createdAt =
+    league.createdAt instanceof Date
+      ? league.createdAt.toISOString()
+      : league.createdAt;
+  const statusLabel = league.finished ? "Finalizada" : "En curso";
+  const hasPlannedMatches = league.plannedMatches > 0;
+  const progress = hasPlannedMatches
+    ? Math.round((league.playedMatches / league.plannedMatches) * 100)
+    : 0;
+
+  return (
+    <Link
+      href={`/history/tournament/${league.id}`}
+      className="group block h-full"
+    >
+      <article className="ornate-border relative flex h-full flex-col overflow-hidden rounded-3xl border border-primary/30 bg-card/70 shadow-lg transition-transform duration-200 hover:-translate-y-1 hover:shadow-xl backdrop-blur">
+        <div
+          className={cn(
+            "pointer-events-none absolute inset-0 opacity-60 blur-2xl transition-opacity group-hover:opacity-80",
+            `bg-linear-to-br ${gradient}`,
+          )}
+        />
+
+        <div className="relative flex flex-1 flex-col gap-4 p-5">
+          <header className="flex items-start justify-between gap-3 flex-col">
+            <div className="space-y-1">
+              <p className="text-muted-foreground/80 text-[10px] uppercase tracking-[0.35em]">
+                Liga
+              </p>
+              <h3 className="text-foreground line-clamp-2 text-lg font-semibold leading-tight">
+                {league.name}
+              </h3>
+              <p className="text-muted-foreground text-xs">
+                <LocalizedDate
+                  value={createdAt}
+                  options={leagueDateOptions}
+                  className="capitalize"
+                  fallback="Fecha desconocida"
+                />
+              </p>
+            </div>
+            <span
+              className={cn(
+                "rounded-full border border-white/20 px-3 py-1 text-[11px] font-semibold uppercase tracking-[0.3em]",
+                league.finished
+                  ? "bg-emerald-900/70 text-emerald-200"
+                  : "bg-amber-900/70 text-amber-200",
+              )}
+            >
+              {statusLabel}
+            </span>
+          </header>
+
+          <dl className="mt-auto grid grid-cols-2 gap-4 text-xs">
+            <div>
+              <dt className="text-muted-foreground text-[10px] uppercase tracking-[0.35em]">
+                Partidos
+              </dt>
+              <dd className="text-foreground text-xl font-bold">
+                {league.playedMatches}
+                <span className="text-muted-foreground text-xs">
+                  {" "}
+                  / {league.plannedMatches}
+                </span>
+              </dd>
+            </div>
+            <div className="text-right">
+              <dt className="text-muted-foreground text-[10px] uppercase tracking-[0.35em]">
+                Progreso
+              </dt>
+              <dd className="text-foreground text-sm font-medium">
+                {hasPlannedMatches ? `${progress}%` : "-"}
+              </dd>
+            </div>
+          </dl>
+
+          <p className="mt-2 text-right text-[11px] font-medium uppercase tracking-[0.35em] text-primary/80">
+            Ver detalle
+          </p>
+        </div>
+      </article>
+    </Link>
+  );
+};
 
 interface MatchCardProps {
   match: MatchSummary;
@@ -235,7 +329,7 @@ const MatchCard = ({ match, gradient }: MatchCardProps) => {
             </p>
           </div>
           <div className="flex items-end gap-6 text-sm">
-            <div className=" grow text-center md:text-right">
+            <div className="grow text-center md:text-right">
               <p className="text-muted-foreground uppercase tracking-wider">
                 Invocadores
               </p>
@@ -245,7 +339,7 @@ const MatchCard = ({ match, gradient }: MatchCardProps) => {
             </div>
             <div className="grow text-center md:text-right">
               <p className="text-muted-foreground uppercase tracking-wider">
-                Vida Inicial
+                Vida inicial
               </p>
               <p className="text-foreground text-2xl font-bold">
                 {match.startingHp}
@@ -334,7 +428,7 @@ const PlayerCommanderCard = ({ player }: { player: PlayerSummary }) => {
         <div className="flex items-center justify-between gap-3">
           <div className="flex items-center gap-3">
             <div
-              className="flex relative h-11 w-11 items-center justify-center rounded-full border border-white/20 text-sm font-semibold uppercase shadow"
+              className="relative flex h-11 w-11 items-center justify-center rounded-full border border-white/20 text-sm font-semibold uppercase shadow"
               style={{
                 backgroundColor: player.backgroundColor ?? "#f8fafc",
                 color: textColor,
@@ -353,7 +447,7 @@ const PlayerCommanderCard = ({ player }: { player: PlayerSummary }) => {
             </div>
           </div>
 
-          <span className="rounded-full border border-white/20 px-3 py-1 text-[11px] bg-slate-900/70 font-semibold uppercase tracking-[0.3em] text-white/80">
+          <span className="rounded-full border border-white/20 bg-slate-900/70 px-3 py-1 text-[11px] font-semibold uppercase tracking-[0.3em] text-white/80">
             {ordinal}
           </span>
         </div>
@@ -368,3 +462,4 @@ const PlayerCommanderCard = ({ player }: { player: PlayerSummary }) => {
     </div>
   );
 };
+

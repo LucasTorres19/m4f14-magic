@@ -2,6 +2,7 @@ import { Button } from "@/components/ui/button";
 import { api } from "@/trpc/server";
 import Link from "next/link";
 import { LocalizedDate } from "@/components/localized-date";
+import { cn } from "@/lib/utils";
 
 const leagueDateOptions: Intl.DateTimeFormatOptions = {
   day: "numeric",
@@ -10,7 +11,7 @@ const leagueDateOptions: Intl.DateTimeFormatOptions = {
 };
 
 export default async function TournamentHistoryPage(
-  props: PageProps<"/history/tournament/[id]">
+  props: PageProps<"/history/tournament/[id]">,
 ) {
   const { id } = await props.params;
   const tournamentId = Number(id);
@@ -35,14 +36,34 @@ export default async function TournamentHistoryPage(
   }
 
   const standings = (() => {
-    const pts = new Map<number, { name: string; color: string; points: number; wins: number; played: number; last: ("W"|"L")[] }>();
+    const pts = new Map<
+      number,
+      {
+        name: string;
+        color: string;
+        points: number;
+        wins: number;
+        played: number;
+        last: ("W" | "L")[];
+      }
+    >();
     for (const r of results) {
-      const sorted = [...r.players].sort((a, b) => a.placement - b.placement);
+      const sorted = [...r.players].sort(
+        (a, b) => a.placement - b.placement,
+      );
       const w = sorted[0];
       const l = sorted[1];
       if (!w || !l) continue;
       for (const p of [w, l]) {
-        const entry = pts.get(p.id) ?? { name: p.name, color: p.backgroundColor, points: 0, wins: 0, played: 0, last: [] };
+        const entry =
+          pts.get(p.id) ?? {
+            name: p.name,
+            color: p.backgroundColor,
+            points: 0,
+            wins: 0,
+            played: 0,
+            last: [],
+          };
         entry.played += 1;
         if (p.id === w.id) {
           entry.wins += 1;
@@ -55,7 +76,14 @@ export default async function TournamentHistoryPage(
         pts.set(p.id, entry);
       }
     }
-    return Array.from(pts.entries()).map(([id, v]) => ({ id, ...v })).sort((a, b) => b.points - a.points || b.wins - a.wins || a.name.localeCompare(b.name));
+    return Array.from(pts.entries())
+      .map(([id, v]) => ({ id, ...v }))
+      .sort(
+        (a, b) =>
+          b.points - a.points ||
+          b.wins - a.wins ||
+          a.name.localeCompare(b.name),
+      );
   })();
 
   return (
@@ -76,88 +104,159 @@ export default async function TournamentHistoryPage(
       </div>
 
       <div className="grid gap-6 md:grid-cols-2">
-        <section className="rounded-xl border bg-card/70 p-4">
-          <h2 className="mb-3 text-lg font-semibold uppercase tracking-wide">Invocadores</h2>
-          {standings.length === 0 ? (
-            <p className="text-sm text-muted-foreground">Aún no hay resultados.</p>
-          ) : (
-            <div className="overflow-x-auto">
-              <table className="w-full text-sm">
-                <thead className="text-muted-foreground">
-                  <tr className="border-b">
-                    <th className="py-2 pr-3 text-right">#</th>
-                    <th className="py-2 pr-3 text-left">Equipo</th>
-                    <th className="py-2 pr-3 text-right">PTS</th>
-                    <th className="py-2 pr-3 text-right">J</th>
-                    <th className="py-2 pr-3 text-right">G</th>
-                    <th className="py-2 pr-3 text-right">P</th>
-                    <th className="py-2 text-right">Últimas</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {standings.map((row, idx) => (
-                    <tr key={`tb-${row.id}`} className="border-b last:border-0">
-                      <td className="py-2 pr-3 text-right text-muted-foreground">{idx + 1}</td>
-                      <td className="py-2 pr-3">
-                        <span className="flex items-center gap-2">
-                          <span aria-hidden className="inline-block size-3 rounded-full" style={{ backgroundColor: row.color }} />
-                          <span>{row.name}</span>
-                        </span>
-                      </td>
-                      <td className="py-2 pr-3 text-right font-semibold">{row.points}</td>
-                      <td className="py-2 pr-3 text-right">{row.played}</td>
-                      <td className="py-2 pr-3 text-right">{row.wins}</td>
-                      <td className="py-2 pr-3 text-right">{Math.max(0, row.played - row.wins)}</td>
-                      <td className="py-2 text-right">
-                        <span className="inline-flex items-center gap-1">
-                          {row.last.map((r, i) => (
-                            <span key={i} className={"inline-flex size-6 items-center justify-center rounded text-xs font-semibold " + (r === "W" ? "bg-green-600/20 text-green-600" : "bg-red-600/20 text-red-600")}>{r}</span>
-                          ))}
-                        </span>
-                      </td>
+        <section className="relative overflow-hidden rounded-3xl border border-primary/30 bg-card/70 p-4 shadow-xl backdrop-blur">
+          <div
+            className={cn(
+              "pointer-events-none absolute inset-0 opacity-60 blur-2xl",
+              "bg-linear-to-br from-emerald-500/15 via-sky-500/10 to-indigo-700/20",
+            )}
+          />
+          <div className="relative">
+            <h2 className="mb-3 text-lg font-semibold uppercase tracking-wide">
+              Invocadores
+            </h2>
+            {standings.length === 0 ? (
+              <p className="text-sm text-muted-foreground">
+                Aún no hay resultados.
+              </p>
+            ) : (
+              <div className="overflow-x-auto">
+                <table className="w-full text-sm">
+                  <thead className="text-muted-foreground">
+                    <tr className="border-b">
+                      <th className="py-2 pr-3 text-right">#</th>
+                      <th className="py-2 pr-3 text-left">Equipo</th>
+                      <th className="py-2 pr-3 text-right">PTS</th>
+                      <th className="py-2 pr-3 text-right">J</th>
+                      <th className="py-2 pr-3 text-right">G</th>
+                      <th className="py-2 pr-3 text-right">P</th>
+                      <th className="py-2 text-right">Últimas</th>
                     </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
-          )}
+                  </thead>
+                  <tbody>
+                    {standings.map((row, idx) => (
+                      <tr
+                        key={`tb-${row.id}`}
+                        className="border-b last:border-0"
+                      >
+                        <td className="py-2 pr-3 text-right text-muted-foreground">
+                          {idx + 1}
+                        </td>
+                        <td className="py-2 pr-3">
+                          <span className="flex items-center gap-2">
+                            <span
+                              aria-hidden
+                              className="inline-block size-3 rounded-full"
+                              style={{ backgroundColor: row.color }}
+                            />
+                            <span>{row.name}</span>
+                          </span>
+                        </td>
+                        <td className="py-2 pr-3 text-right font-semibold">
+                          {row.points}
+                        </td>
+                        <td className="py-2 pr-3 text-right">
+                          {row.played}
+                        </td>
+                        <td className="py-2 pr-3 text-right">{row.wins}</td>
+                        <td className="py-2 pr-3 text-right">
+                          {Math.max(0, row.played - row.wins)}
+                        </td>
+                        <td className="py-2 text-right">
+                          <span className="inline-flex items-center gap-1">
+                            {row.last.map((r, i) => (
+                              <span
+                                key={i}
+                                className={
+                                  "inline-flex size-6 items-center justify-center rounded text-xs font-semibold " +
+                                  (r === "W"
+                                    ? "bg-green-600/20 text-green-600"
+                                    : "bg-red-600/20 text-red-600")
+                                }
+                              >
+                                {r}
+                              </span>
+                            ))}
+                          </span>
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            )}
+          </div>
         </section>
 
-        <section className="rounded-xl border bg-card/70 p-4">
-          <h2 className="mb-3 text-lg font-semibold uppercase tracking-wide">Partidas</h2>
-          {results.length === 0 ? (
-            <p className="text-sm text-muted-foreground">Sin partidos registrados.</p>
-          ) : (
-            <ul className="grid grid-cols-1 gap-2">
-              {results.map((r) => {
-                const sorted = [...r.players].sort((a, b) => a.placement - b.placement);
-                const w = sorted[0];
-                const l = sorted[1];
-                if (!w || !l) return null;
-                return (
-                  <li key={`m-${r.id}`} className="rounded-md border p-3">
-                    <div className="flex items-center justify-between">
-                      <span className="text-xs font-medium uppercase tracking-wide text-muted-foreground"></span>
-                      <div className="mx-3 grid grid-cols-2 items-center">
-                        <span className="flex items-center gap-2">
-                          <span aria-hidden className="inline-block size-3 rounded-full" style={{ backgroundColor: w.backgroundColor }} />
-                          <span className="truncate font-medium">{w.name}</span>
-                          <span className="ml-2 inline-block rounded bg-green-600/15 px-2 py-0.5 text-xs text-green-600">Ganó</span>
+        <section className="relative overflow-hidden rounded-3xl border border-primary/30 bg-card/70 p-4 shadow-xl backdrop-blur">
+          <div
+            className={cn(
+              "pointer-events-none absolute inset-0 opacity-60 blur-2xl",
+              "bg-linear-to-br from-amber-500/15 via-rose-500/10 to-purple-700/20",
+            )}
+          />
+          <div className="relative">
+            <h2 className="mb-3 text-lg font-semibold uppercase tracking-wide">
+              Partidas
+            </h2>
+            {results.length === 0 ? (
+              <p className="text-sm text-muted-foreground">
+                Sin partidos registrados.
+              </p>
+            ) : (
+              <ul className="grid grid-cols-1 gap-2">
+                {results.map((r) => {
+                  const sorted = [...r.players].sort(
+                    (a, b) => a.placement - b.placement,
+                  );
+                  const w = sorted[0];
+                  const l = sorted[1];
+                  if (!w || !l) return null;
+                  return (
+                    <li
+                      key={`m-${r.id}`}
+                      className="rounded-2xl border border-white/10 bg-slate-950/40 p-3"
+                    >
+                      <div className="flex items-center justify-between">
+                        <span className="text-xs font-medium uppercase tracking-wide text-muted-foreground">
+                          Duelo #{r.id}
                         </span>
-                        <span className="flex items-center justify-end gap-2">
-                          <span className="mr-2 inline-block rounded bg-red-600/15 px-2 py-0.5 text-xs text-red-600">Perdió</span>
-                          <span className="truncate">{l.name}</span>
-                          <span aria-hidden className="inline-block size-3 rounded-full" style={{ backgroundColor: l.backgroundColor }} />
-                        </span>
+                        <div className="mx-3 grid grid-cols-2 items-center gap-2">
+                          <span className="flex items-center gap-2">
+                            <span
+                              aria-hidden
+                              className="inline-block size-3 rounded-full"
+                              style={{ backgroundColor: w.backgroundColor }}
+                            />
+                            <span className="truncate font-medium">
+                              {w.name}
+                            </span>
+                            <span className="ml-2 inline-block rounded bg-green-600/15 px-2 py-0.5 text-xs text-green-600">
+                              Ganó
+                            </span>
+                          </span>
+                          <span className="flex items-center justify-end gap-2">
+                            <span className="mr-2 inline-block rounded bg-red-600/15 px-2 py-0.5 text-xs text-red-600">
+                              Perdió
+                            </span>
+                            <span className="truncate">{l.name}</span>
+                            <span
+                              aria-hidden
+                              className="inline-block size-3 rounded-full"
+                              style={{ backgroundColor: l.backgroundColor }}
+                            />
+                          </span>
+                        </div>
                       </div>
-                    </div>
-                  </li>
-                );
-              })}
-            </ul>
-          )}
+                    </li>
+                  );
+                })}
+              </ul>
+            )}
+          </div>
         </section>
       </div>
     </main>
   );
 }
+
