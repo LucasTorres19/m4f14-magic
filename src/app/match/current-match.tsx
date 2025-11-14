@@ -1,37 +1,15 @@
 "use client";
-import ResetButton from "@/components/ResetButton";
-import SettingsDialog from "@/components/SettingsDialog";
-import Timer from "@/components/Timer";
-import TimerSettingsDialog from "@/components/TimerSettingsDialog";
 import { Button } from "@/components/ui/button";
-import {
-  Sheet,
-  SheetContent,
-  SheetDescription,
-  SheetHeader,
-  SheetTitle,
-  SheetTrigger,
-} from "@/components/ui/sheet";
 import { cn } from "@/lib/utils";
-import {
-  History,
-  Home,
-  Minus,
-  Plus,
-  RotateCcw,
-  Settings,
-  Timer as TimerIcon,
-} from "lucide-react";
+import { Minus, Plus } from "lucide-react";
 import Image from "next/image";
-import Link from "next/link";
 import type { CSSProperties } from "react";
 import { useEffect, useMemo, useRef, useState } from "react";
 import { createSwapy, utils, type Swapy } from "swapy";
 import { useCurrentMatch } from "../_stores/current-match-provider";
 import { type Player } from "../_stores/current-match-store";
 import { useStableLongPress } from "../hooks/use-longer-press";
-import PlayersDialog from "./players-dialog";
-import SaveMatch from "./save-match";
+import SettingsButton from "./settings-button";
 
 function Grid(n: number) {
   const cols = Math.max(1, Math.ceil(n / 2));
@@ -239,22 +217,26 @@ export default function CurrentMatch() {
   const reorderPlayers = useCurrentMatch((s) => s.reorderPlayers);
   const n = players.length;
   const { cols, rows } = Grid(n);
-  const [isTimerVisible, setIsTimerVisible] = useState(true);
+
   const containerRef = useRef<HTMLDivElement | null>(null);
   const swapyInstanceRef = useRef<Swapy | null>(null);
-  const playersRef = useRef(players);
+  const playersWithEmptyItems = useMemo(
+    () => [
+      ...players,
+      ...Array.from({ length: cols * rows - players.length }).map(
+        (_, i) => ({ id: `empty-${i}` }) as const,
+      ),
+    ],
+    [players, cols, rows],
+  );
 
   const [slotItemMap, setSlotItemMap] = useState(
-    utils.initSlotItemMap(players, "id"),
+    utils.initSlotItemMap(playersWithEmptyItems, "id"),
   );
   const slottedItems = useMemo(
-    () => utils.toSlottedItems(players, "id", slotItemMap),
-    [players, slotItemMap],
+    () => utils.toSlottedItems(playersWithEmptyItems, "id", slotItemMap),
+    [playersWithEmptyItems, slotItemMap],
   );
-
-  useEffect(() => {
-    playersRef.current = players;
-  }, [players]);
 
   useEffect(() => {
     const container = containerRef.current;
@@ -294,13 +276,13 @@ export default function CurrentMatch() {
     () =>
       utils.dynamicSwapy(
         swapyInstanceRef.current,
-        players,
+        playersWithEmptyItems,
         "id",
         slotItemMap,
         setSlotItemMap,
       ),
     // eslint-disable-next-line react-hooks/exhaustive-deps
-    [players],
+    [playersWithEmptyItems],
   );
 
   const GAP = "0.75rem";
@@ -320,117 +302,35 @@ export default function CurrentMatch() {
     "--y": `calc(var(--pad) + var(--cellH) + (var(--gap) / 2))`,
   };
 
-  const styleBtn: CSSProperties = {
-    left: "var(--x)",
-    top: "var(--y)",
-    width: "var(--hit)",
-    height: "var(--hit)",
-    transform: "translate(-50%, -50%)",
-  };
-
   return (
     <div
       ref={containerRef}
       className="relative grid h-dvh w-full gap-3 p-3 min-h-screen overflow-hidden"
       style={styleGrid}
     >
-      <Timer
-        isVisible={isTimerVisible}
-        onVisibilityChange={setIsTimerVisible}
-      />
-
       {slottedItems.map(({ item: player, itemId, slotId }, idx) => (
         <div
           key={slotId}
           data-swapy-slot={slotId}
           className="h-full w-full rounded-3xl group-slot data-swapy-highlighted:bg-slate-600/60"
         >
-          <div
-            key={itemId}
-            data-swapy-item={itemId}
-            className="h-full w-full group-item select-none"
-          >
-            {player && (
+          {player && "playerId" in player && itemId ? (
+            <div
+              data-swapy-item={itemId}
+              className="h-full w-full group-item select-none"
+            >
               <PlayerCurrentMatch player={player} flipped={idx < cols} />
-            )}
-          </div>
+            </div>
+          ) : (
+            <div
+              data-swapy-item={itemId}
+              className="h-full w-full rounded-3xl border border-dashed border-muted/40 bg-muted/10"
+            />
+          )}
         </div>
       ))}
 
-      <div className="pointer-events-none absolute z-40" style={styleBtn}>
-        <Sheet>
-          <SheetTrigger asChild>
-            <Button
-              variant="settings"
-              size="icon"
-              className="pointer-events-auto h-full w-full rounded-full shadow-lg"
-            >
-              <Settings className="size-8 transition-transform hover:animate-spin" />
-            </Button>
-          </SheetTrigger>
-          <SheetContent hideClose side="bottom" className="gap-0 px-2 py-4">
-            <SheetHeader className="p-0">
-              <SheetTitle hidden>Bottom Toolbar</SheetTitle>
-              <SheetDescription hidden>
-                Bottom toolbar with some buttons :D
-              </SheetDescription>
-            </SheetHeader>
-            <div className="relative">
-              <div className="pointer-events-auto -mx-2 overflow-x-auto px-2 pb-1">
-                <div className="flex w-max items-center gap-3 md:w-full md:justify-center">
-                  <Button size="lg" asChild>
-                    <Link href="/">
-                      <Home className="size-5" />
-                    </Link>
-                  </Button>
-
-                  <SettingsDialog
-                    trigger={
-                      <Button
-                        size="lg"
-                        variant={"success"}
-                        className="pointer-events-auto"
-                      >
-                        <Plus className="size-5" />
-                      </Button>
-                    }
-                  />
-
-                  <PlayersDialog />
-
-                  <ResetButton
-                    trigger={
-                      <Button
-                        size="lg"
-                        variant="destructive"
-                        className="pointer-events-auto"
-                      >
-                        <RotateCcw className="size-5" />
-                      </Button>
-                    }
-                  />
-                  <TimerSettingsDialog
-                    trigger={
-                      <Button size="lg" variant="outline">
-                        <TimerIcon className="size-5" />
-                      </Button>
-                    }
-                    onShowTimer={() => setIsTimerVisible(true)}
-                  />
-
-                  <Button size="lg" asChild>
-                    <Link href="/match/hp-history">
-                      <History className="size-5" />
-                    </Link>
-                  </Button>
-
-                  <SaveMatch />
-                </div>
-              </div>
-            </div>
-          </SheetContent>
-        </Sheet>
-      </div>
+      <SettingsButton />
     </div>
   );
 }
