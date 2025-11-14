@@ -3,6 +3,12 @@ import { api } from "@/trpc/server";
 import Link from "next/link";
 import { LocalizedDate } from "@/components/localized-date";
 
+const leagueDateOptions: Intl.DateTimeFormatOptions = {
+  day: "numeric",
+  month: "long",
+  year: "numeric",
+};
+
 export default async function TournamentHistoryPage(
   props: PageProps<"/history/tournament/[id]">
 ) {
@@ -61,7 +67,10 @@ export default async function TournamentHistoryPage(
         <div className="text-right">
           <h1 className="text-2xl font-bold">{league.name}</h1>
           <p className="text-xs text-muted-foreground">
-            <LocalizedDate value={league.createdAt} />
+            <LocalizedDate
+              value={league.createdAt}
+              options={leagueDateOptions}
+            />
           </p>
         </div>
       </div>
