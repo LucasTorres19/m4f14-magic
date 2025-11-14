@@ -101,6 +101,7 @@ export const playersRouter = createTRPCRouter({
           imageUrl: r.imageUrl ?? null,
           matchCount: Number(r.matchCount ?? 0),
           wins: Number(r.wins ?? 0),
+          podiumMatchCount: Number(r.podiumMatchCount ?? r.matchCount ?? 0),
           podiums: Number(r.podiums ?? 0),
         })),
       } as const;
@@ -443,19 +444,20 @@ export const playersRouter = createTRPCRouter({
       .orderBy(sql`count(*) desc`, sql`max(${orderedMatches.createdAt}) desc`)
       .limit(1);
 
-    const streakChampionId: number | null = streakChampion?.playerId ?? null;
+      const streakChampionId: number | null = streakChampion?.playerId ?? null;
 
-    return rows.map((r) => ({
-      id: r.id,
-      name: r.name,
-      backgroundColor: r.backgroundColor,
-      matchCount: Number(r.matchCount ?? 0),
-      wins: Number(r.wins ?? 0),
-      podiums: Number(r.podiums ?? 0),
-      topDecks: (topByPlayer.get(r.id) ?? []).sort((a, b) => b.count - a.count),
-      isLastWinner: lastWinnerId != null && r.id === lastWinnerId,
-      isStreakChampion: streakChampionId != null && r.id === streakChampionId,
-      uniqueCommanderCount: Number(uniqueByPlayer.get(r.id) ?? 0),
+      return rows.map((r) => ({
+        id: r.id,
+        name: r.name,
+        backgroundColor: r.backgroundColor,
+        matchCount: Number(r.matchCount ?? 0),
+        wins: Number(r.wins ?? 0),
+        podiumMatchCount: Number(r.podiumMatchCount ?? 0),
+        podiums: Number(r.podiums ?? 0),
+        topDecks: (topByPlayer.get(r.id) ?? []).sort((a, b) => b.count - a.count),
+        isLastWinner: lastWinnerId != null && r.id === lastWinnerId,
+        isStreakChampion: streakChampionId != null && r.id === streakChampionId,
+        uniqueCommanderCount: Number(uniqueByPlayer.get(r.id) ?? 0),
       isOtp:
         (matchCount30ByPlayer.get(r.id) ?? 0) >= 5 &&
         (top30ByPlayerCount.get(r.id) ?? 0) / Math.max(1, matchCount30ByPlayer.get(r.id) ?? 1) >= 0.6,
