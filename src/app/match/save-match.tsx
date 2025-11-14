@@ -29,19 +29,11 @@ import { toast } from "sonner";
 
 import { CommanderCombobox } from "@/components/commander-combobox";
 import {
-  getCroppedFile,
-  getCroppedFileName,
-  ImageUploadButton,
-  type SelectedFile,
-} from "@/components/image-upload-button";
-import {
   PlayerCombobox,
   type PlayerSelection,
 } from "@/components/player-combobox";
 import { ScrollArea } from "@/components/ui/scroll-area";
-import { useUploadThing } from "@/components/uploadthing";
 import { TRPCClientError } from "@trpc/client";
-import type { Area } from "react-easy-crop";
 import { useCurrentMatch } from "../_stores/current-match-provider";
 import type { Player } from "../_stores/current-match-store";
 import { useSettings } from "../_stores/settings-provider";
@@ -104,24 +96,6 @@ export default function SaveMatch() {
 
   const settings = useSettings((state) => state);
   const startingHp = settings.startingHp;
-  const [selectedFile, setSelectedFile] = useState<SelectedFile | null>(null);
-  const [croppedArea, setCroppedArea] = useState<Area | null>(null);
-  const { startUpload, routeConfig, isUploading } = useUploadThing(
-    "imageUploader",
-    {
-      onUploadBegin: () => {
-        setErrorMessage(null);
-      },
-      onUploadError: (error: Error) => {
-        const message =
-          error instanceof Error && error.message.length > 0
-            ? error.message
-            : "No pudimos subir las imágenes. Intentá nuevamente.";
-        setErrorMessage(message);
-        toast.error(message);
-      },
-    },
-  );
 
   const playersQuery = api.players.findAll.useQuery(undefined, {
     staleTime: 1000 * 60 * 5,
@@ -161,7 +135,6 @@ export default function SaveMatch() {
   );
 
   const [open, setOpen] = useState(false);
-  const [step, setStep] = useState<1 | 2>(1);
   const [orderedPlayers, setOrderedPlayers] = useState<OrderedPlayer[]>(() =>
     mapToOrderedPlayers(initialOrder),
   );
@@ -185,7 +158,6 @@ export default function SaveMatch() {
 
   useEffect(() => {
     if (!open) {
-      setStep(1);
       setOrderedPlayers(mapToOrderedPlayers(initialOrder));
       setDraggingId(null);
       setActivePointer(null);
@@ -194,7 +166,6 @@ export default function SaveMatch() {
 
   useEffect(() => {
     if (open) {
-      setStep(1);
       setOrderedPlayers(mapToOrderedPlayers(initialOrder));
       setErrorMessage(null);
       setDraggingId(null);
@@ -237,17 +208,6 @@ export default function SaveMatch() {
     setErrorMessage(null);
     return sanitized;
   }, [orderedPlayers, setErrorMessage]);
-
-  const handleContinueToImages = useCallback(() => {
-    const sanitized = sanitizePlayers();
-    if (!sanitized) return;
-    setStep(2);
-  }, [sanitizePlayers, setStep]);
-
-  const handleBackToPlacements = useCallback(() => {
-    setStep(1);
-    setErrorMessage(null);
-  }, [setErrorMessage, setStep]);
 
   const tournamentId = useCurrentMatch((s) => s.tournamentId);
   const tournamentMatchIndex = useCurrentMatch((s) => s.tournamentMatchIndex);
@@ -304,40 +264,6 @@ export default function SaveMatch() {
     async (event: FormEvent<HTMLFormElement>) => {
       event.preventDefault();
       if (matchSave.isPending) return;
-      if (isUploading) {
-        setErrorMessage("Esperá a que las imágenes terminen de subir.");
-        return;
-      }
-      let croppedImage = undefined;
-      let image = undefined;
-
-      if (selectedFile) {
-        if (!croppedArea) {
-          setErrorMessage("No se pudo recortar.");
-          return;
-        }
-        const croppedFile = await getCroppedFile({
-          imageSrc: selectedFile.url,
-          pixelCrop: croppedArea,
-          fileName: getCroppedFileName(selectedFile?.file.name ?? `match`),
-          mimeType: selectedFile?.file.type ?? "image/jpeg",
-        });
-        const files = await startUpload([croppedFile, selectedFile.file]);
-        if (!files) {
-          setErrorMessage("No se pudo subir la imagen.");
-          return;
-        }
-        const [uploadedCroppedFile, uploadedFile] = files.map((f) => ({
-          url: f.url,
-          key: f.key,
-        }));
-        if (!uploadedCroppedFile || !uploadedFile) {
-          setErrorMessage("No se pudo subir la imagen.");
-          return;
-        }
-        croppedImage = uploadedCroppedFile;
-        image = uploadedFile;
-      }
 
       try {
         const sanitizedPlayers = sanitizePlayers();
@@ -347,8 +273,6 @@ export default function SaveMatch() {
           startingHp,
           players: sanitizedPlayers,
           tournamentId: tournamentId ?? undefined,
-          croppedImage,
-          image,
         });
         if (tournamentId && typeof tournamentMatchIndex === "number") {
           try {
@@ -373,13 +297,14 @@ export default function SaveMatch() {
       }
     },
     [
-      startUpload,
-      isUploading,
       matchSave,
       sanitizePlayers,
       startingHp,
-      croppedArea,
-      selectedFile,
+      tournamentId,
+      tournamentMatchIndex,
+      markMatchPlayed,
+      setOpen,
+      setErrorMessage,
     ],
   );
 
@@ -578,7 +503,7 @@ export default function SaveMatch() {
     };
   });
 
-  const isLoading = isUploading || matchSave.isPending;
+  const isLoading = matchSave.isPending;
 
   return (
     <div className="">
@@ -598,129 +523,99 @@ export default function SaveMatch() {
             <DialogHeader>
               <DialogTitle>Finalizar partida</DialogTitle>
               <DialogDescription>
-                {step === 1
-                  ? "Ajustá el podio arrastrando a los invocadores si queres cambiar la posición final."
-                  : "Subí las capturas del duelo que quieras guardar junto a la partida."}
+                Ajustá el podio arrastrando a los invocadores si queres cambiar la posición final.
               </DialogDescription>
             </DialogHeader>
 
             <form className="flex flex-col gap-4 mt-2" onSubmit={handleSubmit}>
-              <div className="text-muted-foreground flex items-center justify-between text-xs">
-                <span>Paso {step} de 2</span>
-                <span>
-                  {step === 1
-                    ? "Ordená y confirmá invocadores"
-                    : "Agregá capturas"}
-                </span>
-              </div>
+              <ul className="flex flex-col gap-2">
+                {orderedWithPlacements.map((player) => {
+                  const availableSuggestions = playerSuggestions.filter(
+                    (suggestion) =>
+                      suggestion.id === player.playerId ||
+                      !usedPlayerIds.has(suggestion.id),
+                  );
+                  return (
+                    <li
+                      key={player.id}
+                      draggable={!comboboxActive}
+                      onDragStart={(event) => handleDragStart(event, player.id)}
+                      onDrop={(event) => handleDropItem(event, player.id)}
+                      onDragOver={(event) => handleDragOverItem(event, player.id)}
+                      onPointerDown={(event) => handlePointerDown(event, player.id)}
+                      onPointerMove={handlePointerMove}
+                      onPointerUp={handlePointerUp}
+                      onPointerCancel={handlePointerUp}
+                      onDragEnd={handleDragEnd}
+                      data-player-id={player.id}
+                      style={{ touchAction: comboboxActive ? "auto" : "none" }}
+                      className={cn(
+                        "border-border bg-muted/50 flex cursor-grab items-center gap-3 rounded-lg border px-3 py-2 transition-colors active:cursor-grabbing",
+                        draggingId === player.id && "opacity-60",
+                      )}
+                    >
+                      <span className="w-[1ch] text-lg font-semibold shrink-0">
+                        {player.placement}
+                      </span>
 
-              {step === 1 ? (
-                <ul className="flex flex-col gap-2">
-                  {orderedWithPlacements.map((player) => {
-                    const availableSuggestions = playerSuggestions.filter(
-                      (suggestion) =>
-                        suggestion.id === player.playerId ||
-                        !usedPlayerIds.has(suggestion.id),
-                    );
-                    return (
-                      <li
-                        key={player.id}
-                        draggable={!comboboxActive}
-                        onDragStart={(event) =>
-                          handleDragStart(event, player.id)
-                        }
-                        onDrop={(event) => handleDropItem(event, player.id)}
-                        onDragOver={(event) =>
-                          handleDragOverItem(event, player.id)
-                        }
-                        onPointerDown={(event) =>
-                          handlePointerDown(event, player.id)
-                        }
-                        onPointerMove={handlePointerMove}
-                        onPointerUp={handlePointerUp}
-                        onPointerCancel={handlePointerUp}
-                        onDragEnd={handleDragEnd}
-                        data-player-id={player.id}
-                        style={{ touchAction: comboboxActive ? "auto" : "none" }}
-                        className={cn(
-                          "border-border bg-muted/50 flex cursor-grab items-center gap-3 rounded-lg border px-3 py-2 transition-colors active:cursor-grabbing",
-                          draggingId === player.id && "opacity-60",
-                        )}
+                      <div
+                        className="text-background flex size-10 shrink-0 items-center justify-center rounded-full text-sm font-semibold"
+                        style={{ backgroundColor: player.backgroundColor }}
                       >
-                        <span className="w-[1ch] text-lg font-semibold shrink-0">
-                          {player.placement}
-                        </span>
+                        {player.initials}
+                      </div>
 
-                        <div
-                          className="text-background flex size-10 shrink-0 items-center justify-center rounded-full text-sm font-semibold"
-                          style={{ backgroundColor: player.backgroundColor }}
-                        >
-                          {player.initials}
+                      <div className="flex grow flex-col gap-2">
+                        <div>
+                          <PlayerCombobox
+                            value={{
+                              id: player.playerId ?? null,
+                              name: player.displayName,
+                              backgroundColor: player.backgroundColor,
+                            }}
+                            onChange={(selection) =>
+                              handlePlayerChange(player.id, selection)
+                            }
+                            ariaLabel={`Nombre del invocador en posición ${player.placement}`}
+                            placeholder="Invocador"
+                            suggestions={availableSuggestions}
+                            onInteractionChange={handleComboboxInteractionChange}
+                          />
                         </div>
-
-                        <div className="flex grow flex-col gap-2">
-                          <div>
-                            <PlayerCombobox
-                              value={{
-                                id: player.playerId ?? null,
-                                name: player.displayName,
-                                backgroundColor: player.backgroundColor,
-                              }}
-                              onChange={(selection) =>
-                                handlePlayerChange(player.id, selection)
-                              }
-                              ariaLabel={`Nombre del invocador en posición ${player.placement}`}
-                              placeholder="Invocador"
-                              suggestions={availableSuggestions}
-                              onInteractionChange={
-                                handleComboboxInteractionChange
-                              }
-                            />
-                          </div>
-                          <div>
-                            <CommanderCombobox
-                              value={player.commander}
-                              onSelect={(commander) =>
-                                handleCommanderChange(player.id, commander)
-                              }
-                              ariaLabel={`Comandante seleccionado por el invocador en posición ${player.placement}`}
-                              placeholder="Comandante"
-                              playerId={player.playerId ?? null}
-                              onInteractionChange={
-                                handleComboboxInteractionChange
-                              }
-                            />
-                          </div>
+                        <div>
+                          <CommanderCombobox
+                            value={player.commander}
+                            onSelect={(commander) =>
+                              handleCommanderChange(player.id, commander)
+                            }
+                            ariaLabel={`Comandante seleccionado por el invocador en posición ${player.placement}`}
+                            placeholder="Comandante"
+                            playerId={player.playerId ?? null}
+                            onInteractionChange={handleComboboxInteractionChange}
+                          />
                         </div>
+                      </div>
 
-                        <GripVertical className="text-muted-foreground size-4 shrink-0" />
-                      </li>
-                    );
-                  })}
-                  <li
-                    onDrop={handleDropToEnd}
-                    onDragOver={(event) => {
-                      event.preventDefault();
-                      event.dataTransfer.dropEffect = "move";
-                    }}
-                    onPointerMove={handlePointerMove}
-                    onPointerUp={handlePointerUp}
-                    onPointerCancel={handlePointerUp}
-                    data-player-id="__drop-end"
-                    style={{ touchAction: comboboxActive ? "auto" : "none" }}
-                    className="border-border/70 text-muted-foreground flex items-center justify-center rounded-lg border border-dashed px-3 py-2 text-xs"
-                  >
-                    Soltá acá para mover al final
-                  </li>
-                </ul>
-              ) : (
-                <ImageUploadButton
-                  onFileSelected={setSelectedFile}
-                  onCroppedAreaChange={setCroppedArea}
-                  disabled={isLoading}
-                  routeConfig={routeConfig}
-                />
-              )}
+                      <GripVertical className="text-muted-foreground size-4 shrink-0" />
+                    </li>
+                  );
+                })}
+                <li
+                  onDrop={handleDropToEnd}
+                  onDragOver={(event) => {
+                    event.preventDefault();
+                    event.dataTransfer.dropEffect = "move";
+                  }}
+                  onPointerMove={handlePointerMove}
+                  onPointerUp={handlePointerUp}
+                  onPointerCancel={handlePointerUp}
+                  data-player-id="__drop-end"
+                  style={{ touchAction: comboboxActive ? "auto" : "none" }}
+                  className="border-border/70 text-muted-foreground flex items-center justify-center rounded-lg border border-dashed px-3 py-2 text-xs"
+                >
+                  Soltá acá para mover al final
+                </li>
+              </ul>
 
               <DialogFooter className="gap-2 sm:flex-row sm:justify-end">
                 <Button
@@ -731,30 +626,10 @@ export default function SaveMatch() {
                 >
                   Cancelar
                 </Button>
-                {step === 2 ? (
-                  <>
-                    <Button
-                      type="button"
-                      variant="outline"
-                      onClick={handleBackToPlacements}
-                      disabled={isLoading}
-                    >
-                      Volver
-                    </Button>
-                    <Button type="submit" disabled={isLoading}>
-                      {isLoading && <Loader2 className="size-4 animate-spin" />}
-                      Finalizar
-                    </Button>
-                  </>
-                ) : (
-                  <Button
-                    type="button"
-                    onClick={handleContinueToImages}
-                    disabled={isLoading}
-                  >
-                    Continuar
-                  </Button>
-                )}
+                <Button type="submit" disabled={isLoading}>
+                  {isLoading && <Loader2 className="size-4 animate-spin" />}
+                  Finalizar
+                </Button>
               </DialogFooter>
 
               {errorMessage ? (
