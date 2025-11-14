@@ -376,6 +376,15 @@ export default function TournamentPage() {
 
   return (
     <main className="mx-auto w-full max-w-5xl p-4 sm:p-6">
+      <div className="mb-4">
+        <Button
+          type="button"
+          variant="outline"
+          onClick={() => router.push("/")}
+        >
+          Volver al menú
+        </Button>
+      </div>
       <h1 className="mb-2 text-2xl font-bold">Liga mágica</h1>
       <p className="mb-6 text-sm text-muted-foreground">
         Donde las grandes leyendas se enfrentan...
