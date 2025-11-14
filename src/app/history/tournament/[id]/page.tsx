@@ -3,13 +3,16 @@ import { api } from "@/trpc/server";
 import Link from "next/link";
 import { LocalizedDate } from "@/components/localized-date";
 
-export default async function TournamentHistoryPage({ params }: { params: { id: string } }) {
-  const id = Number(params.id);
-  if (!Number.isFinite(id) || id <= 0) return null;
+export default async function TournamentHistoryPage(
+  props: PageProps<"/history/tournament/[id]">
+) {
+  const { id } = await props.params;
+  const tournamentId = Number(id);
+  if (!Number.isFinite(tournamentId) || tournamentId <= 0) return null;
 
   const [league, results] = await Promise.all([
-    api.tournament.get({ tournamentId: id }),
-    api.tournament.results({ tournamentId: id }),
+    api.tournament.get({ tournamentId }),
+    api.tournament.results({ tournamentId }),
   ]);
 
   if (!league) {
@@ -149,4 +152,3 @@ export default async function TournamentHistoryPage({ params }: { params: { id: 
     </main>
   );
 }
-
