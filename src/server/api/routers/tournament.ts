@@ -3,7 +3,7 @@ import { z } from "zod";
 
 import { createTRPCRouter, protectedProcedure, publicProcedure } from "@/server/api/trpc";
 import { tournaments, matches, playersToMatches, players } from "@/server/db/schema";
-import { asc, desc, eq, inArray, sql, count } from "drizzle-orm";
+import { asc, desc, eq, inArray, count } from "drizzle-orm";
 
 const leaguePlayerSchema = z.object({
   id: z.number().int().positive().nullable(),
@@ -35,7 +35,7 @@ export const tournamentRouter = createTRPCRouter({
       .where(eq(tournaments.finished, 0))
       .limit(1);
 
-    if (!row) return null as const;
+    if (!row) return null;
 
     let parsed: unknown;
     try {
@@ -180,8 +180,13 @@ export const tournamentRouter = createTRPCRouter({
     return rows.map((r) => {
       let planned = 0;
       try {
-        const parsed = JSON.parse(r.state ?? "{}") as any;
-        planned = Array.isArray(parsed?.matches) ? parsed.matches.length : 0;
+        const parsed: unknown = JSON.parse(r.state ?? "{}");
+        if (typeof parsed === "object" && parsed !== null) {
+          const candidate = parsed as { matches?: unknown };
+          if (Array.isArray(candidate.matches)) {
+            planned = candidate.matches.length;
+          }
+        }
       } catch {}
       return {
         id: r.id,

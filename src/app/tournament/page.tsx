@@ -42,13 +42,11 @@ function loadState(): LeagueState | null {
     const raw = localStorage.getItem(STORAGE_KEY);
     if (!raw) return null;
     const parsed = JSON.parse(raw) as unknown;
-    if (
-      typeof parsed === "object" &&
-      parsed !== null &&
-      Array.isArray((parsed as any).players) &&
-      Array.isArray((parsed as any).matches)
-    ) {
-      return parsed as LeagueState;
+    if (typeof parsed === "object" && parsed !== null) {
+      const candidate = parsed as { players?: unknown; matches?: unknown };
+      if (Array.isArray(candidate.players) && Array.isArray(candidate.matches)) {
+        return parsed as LeagueState;
+      }
     }
   } catch {}
   return null;
@@ -58,18 +56,6 @@ function saveState(state: LeagueState) {
   try {
     localStorage.setItem(STORAGE_KEY, JSON.stringify(state));
   } catch {}
-}
-
-function generateDoubleRoundRobin(n: number): LeagueMatch[] {
-  const matches: LeagueMatch[] = [];
-  for (let i = 0; i < n; i++) {
-    for (let j = i + 1; j < n; j++) {
-      // two rounds per pair
-      matches.push({ a: i, b: j, played: false });
-      matches.push({ a: j, b: i, played: false });
-    }
-  }
-  return matches;
 }
 
 function generateDoubleRoundRobinWithRounds(n: number): { matches: LeagueMatch[]; rounds: number[][] } {
@@ -170,11 +156,6 @@ export default function TournamentPage() {
       setLeagueName("");
     },
   });
-  const markMatchPlayed = api.tournament.markMatchPlayed.useMutation({
-    onSuccess: () => {
-      void refetchActive();
-    },
-  });
   const finishTournament = api.tournament.finish.useMutation({
     onSuccess: () => {
       void refetchActive();
@@ -186,7 +167,7 @@ export default function TournamentPage() {
     },
   });
   const { data: results = [] } = api.tournament.results.useQuery(
-    activeTournament ? { tournamentId: activeTournament.id } : (undefined as any),
+    { tournamentId: activeTournament?.id ?? 0 },
     { enabled: !!activeTournament },
   );
 
@@ -210,7 +191,7 @@ export default function TournamentPage() {
       const stored = loadState();
       if (stored) setState(stored);
     }
-  }, [activeTournament?.id]);
+  }, [activeTournament]);
 
   useEffect(() => {
     saveState(state);
@@ -304,14 +285,17 @@ export default function TournamentPage() {
     } catch {}
 
     try {
-      let cp = [...currentPlayers];
-      for (let i = cp.length - 1; i >= 2; i--) {
-        removePlayerFromMatch(cp[i]!.id);
-        cp.pop();
+      const initialPlayers = [...currentPlayers];
+      for (let i = initialPlayers.length - 1; i >= 2; i--) {
+        const player = initialPlayers[i];
+        if (player) {
+          removePlayerFromMatch(player.id);
+        }
       }
-      while (cp.length < 2) {
+      let playerCount = currentMatchStore?.getState().players.length ?? 0;
+      while (playerCount < 2) {
         addPlayerToMatch(settings);
-        cp.push({} as any); 
+        playerCount++;
       }
     } catch {}
 

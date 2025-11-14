@@ -77,7 +77,7 @@ export default async function TournamentHistoryPage(
 
       <div className="grid gap-6 md:grid-cols-2">
         <section className="rounded-xl border bg-card/70 p-4">
-          <h2 className="mb-3 text-lg font-semibold uppercase tracking-wide">Clausura</h2>
+          <h2 className="mb-3 text-lg font-semibold uppercase tracking-wide">Invocadores</h2>
           {standings.length === 0 ? (
             <p className="text-sm text-muted-foreground">Aún no hay resultados.</p>
           ) : (
@@ -124,7 +124,7 @@ export default async function TournamentHistoryPage(
         </section>
 
         <section className="rounded-xl border bg-card/70 p-4">
-          <h2 className="mb-3 text-lg font-semibold uppercase tracking-wide">Temporada</h2>
+          <h2 className="mb-3 text-lg font-semibold uppercase tracking-wide">Partidas</h2>
           {results.length === 0 ? (
             <p className="text-sm text-muted-foreground">Sin partidos registrados.</p>
           ) : (
@@ -137,7 +137,7 @@ export default async function TournamentHistoryPage(
                 return (
                   <li key={`m-${r.id}`} className="rounded-md border p-3">
                     <div className="flex items-center justify-between">
-                      <span className="text-xs font-medium uppercase tracking-wide text-muted-foreground">Final</span>
+                      <span className="text-xs font-medium uppercase tracking-wide text-muted-foreground"></span>
                       <div className="mx-3 grid grid-cols-2 items-center">
                         <span className="flex items-center gap-2">
                           <span aria-hidden className="inline-block size-3 rounded-full" style={{ backgroundColor: w.backgroundColor }} />
