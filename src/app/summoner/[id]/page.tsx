@@ -66,6 +66,7 @@ type HistoryEntry = {
   self?: { commander?: HistoryCommander | null; placement?: number | null } | null;
   image?: { url: string } | null;
   croppedImage?: { url: string } | null;
+  leagueName?: string | null;
 };
 
 export default function SummonerDetailPage() {
@@ -191,6 +192,7 @@ export default function SummonerDetailPage() {
       image: h.image ?? null,
       croppedImage: h.croppedImage ?? null,
       players: h.players ?? [],
+      leagueName: h.leagueName ?? null,
     }));
   }, [rawHistory]);
 
@@ -586,6 +588,7 @@ export default function SummonerDetailPage() {
                     <th className="py-2 pr-3">Puesto</th>
                     <th className="py-2 pr-3">Jugadores</th>
                     <th className="py-2 pr-3">Vida inicial</th>
+                    <th className="py-2 pr-3">Tipo/liga</th>
                   </tr>
                 </thead>
                 <tbody>
@@ -614,6 +617,15 @@ export default function SummonerDetailPage() {
                       <td className="py-2 pr-3">{row.self?.placement ?? "-"}</td>
                       <td className="py-2 pr-3">{row.players?.length ?? 0}</td>
                       <td className="py-2 pr-3">{row.startingHp ?? "-"}</td>
+                      <td className="py-2 pr-3">
+                        {row.leagueName
+                          ? "Liga: " + row.leagueName
+                          : (row.players?.length ?? 0) === 2
+                          ? "Commander 1v1"
+                          : (row.players?.length ?? 0) >= 3
+                          ? "Commander"
+                          : "-"}
+                      </td>
                     </tr>
                   ))}
                   {(history?.length ?? 0) === 0 && (

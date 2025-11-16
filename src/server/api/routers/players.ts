@@ -13,6 +13,7 @@ import {
   players,
   playersToMatches,
   images,
+  tournaments,
 } from "@/server/db/schema";
 
 export const playersRouter = createTRPCRouter({
@@ -128,11 +129,13 @@ export const playersRouter = createTRPCRouter({
           selfCommanderId: p2mSelf.commanderId,
           image: { id: img.id, url: img.fileUrl },
           croppedImage: { id: cimg.id, url: cimg.fileUrl },
+          leagueName: tournaments.name,
         })
         .from(matches)
         .innerJoin(p2mSelf, eq(p2mSelf.matchId, matches.id))
         .leftJoin(img, eq(img.id, matches.image))
         .leftJoin(cimg, eq(cimg.id, matches.cropped_image))
+        .leftJoin(tournaments, eq(tournaments.id, matches.tournamentId))
         .where(eq(p2mSelf.playerId, input.playerId))
         .orderBy(desc(matches.createdAt))
         .limit(limit);
@@ -214,6 +217,7 @@ export const playersRouter = createTRPCRouter({
         image: r.image,
         croppedImage: r.croppedImage,
         players: playersByMatch.get(r.matchId) ?? [],
+        leagueName: r.leagueName ?? null,
       }));
     }),
   listWithStats: publicProcedure.query(async ({ ctx }) => {
