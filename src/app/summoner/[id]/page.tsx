@@ -279,13 +279,23 @@ export default function SummonerDetailPage() {
     [history, openMatchId]
   );
   const [lightboxUrl, setLightboxUrl] = useState<string | null>(null);
+  
   const podiumPhotos = useMemo(() => {
     return (history ?? []).filter((h) => {
       const place = h.self?.placement;
+      const playerCount = h.players.length;
       const hasImage = Boolean(h.croppedImage?.url ?? h.image?.url);
-      return (place === 1 || place === 2) && hasImage;
+
+      if (!hasImage || place == null) return false;
+
+      if (playerCount === 2) {
+        return place === 1;
+      }
+
+      return place === 1 || place === 2;
     });
   }, [history]);
+  
   const fmt = (ts?: number | null) => (ts ? new Date(ts).toLocaleString() : "");
 
   const [historyPage, setHistoryPage] = useState(1);
