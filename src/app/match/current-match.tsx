@@ -316,7 +316,10 @@ export default function CurrentMatch() {
     "--hit": "min(var(--gap), 2rem)",
     "--cellW": `calc((100% - (var(--cols) - 1) * var(--gap) - 2 * var(--pad)) / var(--cols))`,
     "--cellH": `calc((100% - (var(--rows) - 1) * var(--gap) - 2 * var(--pad)) / var(--rows))`,
-    "--x": `calc(var(--pad) + var(--cellW) + (var(--gap) / 2))`,
+    "--x":
+      n === 2
+        ? "50%"
+        : `calc(var(--pad) + var(--cellW) + (var(--gap) / 2))`,
     "--y": `calc(var(--pad) + var(--cellH) + (var(--gap) / 2))`,
   };
 
