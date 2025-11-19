@@ -1,6 +1,7 @@
 "use client";
 
 import { useCurrentMatch } from "@/app/_stores/current-match-provider";
+import type { Player } from "@/app/_stores/current-match-store";
 import { useSettings } from "@/app/_stores/settings-provider";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
@@ -13,7 +14,7 @@ import {
 } from "lucide-react";
 import { useEffect, useRef, useState } from "react";
 
-export default function Timer() {
+export default function Timer({player}: {player: Player}) {
   const timerLimit = useSettings((s) => s.timerLimit);
   const currentPlayerIndex = useCurrentMatch((s) => s.currentPlayerIndex);
   const players = useCurrentMatch((s) => s.players);
@@ -210,7 +211,7 @@ export default function Timer() {
 
   const isLowTime = timerRemaining <= 30 && timerRemaining > 0;
 
-  if (players.length === 0 || !isTimerVisible) {
+  if (!isTimerVisible || player?.playerId !== currentPlayer?.playerId) {
     return null;
   }
 

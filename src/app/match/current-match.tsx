@@ -111,8 +111,8 @@ function PlayerCurrentMatch({
         className="absolute inset-0 -z-30 rounded-3xl" 
         style={containerStyle} 
       />
-
-      {isActive && isTimerVisible ? (
+       
+         
         <div
           data-swapy-no-drag
           className={cn(
@@ -120,9 +120,11 @@ function PlayerCurrentMatch({
             flipped ? "top-0 rotate-180" : "bottom-0"
           )}
         >
-           <Timer />
+            <Timer player={player} key={player.id} />
         </div>
-      ): null}
+        
+       
+      
 
       {commanderBackground ? (
         <div
@@ -268,8 +270,10 @@ export default function CurrentMatch() {
     instance.onSwap((event) => {
       setSlotItemMap(event.newSlotItemMap.asArray);
     });
-
-    instance.onSwapEnd(({ hasChanged, slotItemMap, ...other }) => {
+    instance.onSwapStart(() => {
+      setTimerVisible(false);
+    })
+    instance.onSwapEnd(({ hasChanged, slotItemMap }) => {
       if (!hasChanged) return;
 
       const normalizedSlotItemMap = slotItemMap.asArray;
@@ -278,10 +282,7 @@ export default function CurrentMatch() {
         .map(({ item }) => item)
         .filter((id): id is string => Boolean(id));
       reorderPlayers(playerOrder);
-      setTimerVisible(false);
-      setTimeout(() => {
-        setTimerVisible(true);
-      }, 0);
+      setTimerVisible(true);
     });
 
     swapyInstanceRef.current = instance;
@@ -290,7 +291,7 @@ export default function CurrentMatch() {
       instance.destroy();
       swapyInstanceRef.current = null;
     };
-  }, [reorderPlayers]);
+  }, []);
 
   useEffect(
     () =>
