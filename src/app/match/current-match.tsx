@@ -274,6 +274,7 @@ export default function CurrentMatch() {
       setTimerVisible(false);
     })
     instance.onSwapEnd(({ hasChanged, slotItemMap }) => {
+      setTimerVisible(true);
       if (!hasChanged) return;
 
       const normalizedSlotItemMap = slotItemMap.asArray;
@@ -282,7 +283,6 @@ export default function CurrentMatch() {
         .map(({ item }) => item)
         .filter((id): id is string => Boolean(id));
       reorderPlayers(playerOrder);
-      setTimerVisible(true);
     });
 
     swapyInstanceRef.current = instance;
