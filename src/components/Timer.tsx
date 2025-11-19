@@ -6,6 +6,7 @@ import { useSettings } from "@/app/_stores/settings-provider";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
 import {
+  ArrowLeft,
   ArrowRight,
   Pause,
   Play,
@@ -20,6 +21,7 @@ export default function Timer({player}: {player: Player}) {
   const players = useCurrentMatch((s) => s.players);
   const timerRemaining = useCurrentMatch((s) => s.timerRemaining);
   const isTimerPaused = useCurrentMatch((s) => s.isTimerPaused);
+  const turnDirection = useCurrentMatch((s) => s.turnDirection);
   const nextTurn = useCurrentMatch((s) => s.nextTurn);
   const pauseTimer = useCurrentMatch((s) => s.pauseTimer);
   const resumeTimer = useCurrentMatch((s) => s.resumeTimer);
@@ -211,7 +213,7 @@ export default function Timer({player}: {player: Player}) {
 
   const isLowTime = timerRemaining <= 30 && timerRemaining > 0;
 
-  if (!isTimerVisible || player?.playerId !== currentPlayer?.playerId) {
+  if (!isTimerVisible || player?.id !== currentPlayer?.id) {
     return null;
   }
 
@@ -289,7 +291,7 @@ export default function Timer({player}: {player: Player}) {
             onClick={handleNextTurn}
             className="h-8 w-8 text-white hover:bg-white/20 hover:text-white rounded-full"
           >
-            <ArrowRight className="size-4" />
+            {turnDirection === "counter-clockwise" ? <ArrowRight className="size-4" /> : <ArrowLeft className="size-4" />}
           </Button>
           <Button
             size="icon"

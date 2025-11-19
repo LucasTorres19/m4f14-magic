@@ -120,7 +120,7 @@ function PlayerCurrentMatch({
             flipped ? "top-0 rotate-180" : "bottom-0"
           )}
         >
-            <Timer player={player} key={player.id} />
+            <Timer player={player} />
         </div>
         
        
