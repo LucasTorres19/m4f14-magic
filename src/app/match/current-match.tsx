@@ -1,37 +1,19 @@
 "use client";
-import ResetButton from "@/components/ResetButton";
-import SettingsDialog from "@/components/SettingsDialog";
 import Timer from "@/components/Timer";
-import TimerSettingsDialog from "@/components/TimerSettingsDialog";
 import { Button } from "@/components/ui/button";
-import {
-  Sheet,
-  SheetContent,
-  SheetDescription,
-  SheetHeader,
-  SheetTitle,
-  SheetTrigger,
-} from "@/components/ui/sheet";
 import { cn } from "@/lib/utils";
 import {
-  History,
-  Home,
   Minus,
-  Plus,
-  RotateCcw,
-  Settings,
-  Timer as TimerIcon,
+  Plus
 } from "lucide-react";
 import Image from "next/image";
-import Link from "next/link";
 import type { CSSProperties } from "react";
 import { useEffect, useMemo, useRef, useState } from "react";
 import { createSwapy, utils, type Swapy } from "swapy";
 import { useCurrentMatch } from "../_stores/current-match-provider";
 import { type Player } from "../_stores/current-match-store";
 import { useStableLongPress } from "../hooks/use-longer-press";
-import PlayersDialog from "./players-dialog";
-import SaveMatch from "./save-match";
+import SettingsButton from "./settings-button";
 
 function Grid(n: number) {
   const cols = Math.max(1, Math.ceil(n / 2));
@@ -130,17 +112,17 @@ function PlayerCurrentMatch({
         style={containerStyle} 
       />
 
-      {isActive && isTimerVisible && (
+      {isActive && isTimerVisible ? (
         <div
           data-swapy-no-drag
           className={cn(
-            "absolute left-1/2 z-20 flex items-center justify-center pointer-events-none -translate-x-1/2",
-            flipped ? "bottom-0 translate-y-1/2 rotate-180" : "top-0 -translate-y-1/2"
+            "absolute inset-x-0 z-20 flex items-center justify-center pointer-events-none",
+            flipped ? "top-0 rotate-180" : "bottom-0"
           )}
         >
-           <Timer attached={true} />
+           <Timer />
         </div>
-      )}
+      ): null}
 
       {commanderBackground ? (
         <div
@@ -258,11 +240,11 @@ export default function CurrentMatch() {
   const players = useCurrentMatch((s) => s.players);
   const currentPlayerIndex = useCurrentMatch((s) => s.currentPlayerIndex);
   const reorderPlayers = useCurrentMatch((s) => s.reorderPlayers);
+  const setTimerVisible = useCurrentMatch((s) => s.setTimerVisible);
   const n = players.length;
   const { cols, rows } = Grid(n);
   const containerRef = useRef<HTMLDivElement | null>(null);
   const swapyInstanceRef = useRef<Swapy | null>(null);
-  const playersRef = useRef(players);
 
   const [slotItemMap, setSlotItemMap] = useState(
     utils.initSlotItemMap(players, "id"),
@@ -272,9 +254,6 @@ export default function CurrentMatch() {
     [players, slotItemMap],
   );
 
-  useEffect(() => {
-    playersRef.current = players;
-  }, [players]);
 
   useEffect(() => {
     const container = containerRef.current;
@@ -284,14 +263,13 @@ export default function CurrentMatch() {
       manualSwap: true,
       animation: "dynamic",
       swapMode: "drop",
-      autoScrollOnDrag: true,
     });
 
     instance.onSwap((event) => {
       setSlotItemMap(event.newSlotItemMap.asArray);
     });
 
-    instance.onSwapEnd(({ hasChanged, slotItemMap }) => {
+    instance.onSwapEnd(({ hasChanged, slotItemMap, ...other }) => {
       if (!hasChanged) return;
 
       const normalizedSlotItemMap = slotItemMap.asArray;
@@ -300,6 +278,10 @@ export default function CurrentMatch() {
         .map(({ item }) => item)
         .filter((id): id is string => Boolean(id));
       reorderPlayers(playerOrder);
+      setTimerVisible(false);
+      setTimeout(() => {
+        setTimerVisible(true);
+      }, 0);
     });
 
     swapyInstanceRef.current = instance;
@@ -343,14 +325,6 @@ export default function CurrentMatch() {
     "--y": `calc(var(--pad) + var(--cellH) + (var(--gap) / 2))`,
   };
 
-  const styleBtn: CSSProperties = {
-    left: "var(--x)",
-    top: "var(--y)",
-    width: "var(--hit)",
-    height: "var(--hit)",
-    transform: "translate(-50%, -50%)",
-  };
-
   const activePlayer = players[currentPlayerIndex];
 
   return (
@@ -366,7 +340,7 @@ export default function CurrentMatch() {
           className={cn("h-full w-full rounded-3xl group-slot data-swapy-highlighted:bg-slate-600/60", activePlayer?.id === player?.id && "z-20")}
         >
           <div
-            key={itemId}
+            key={`${slotId}-${itemId}`}
             data-swapy-item={itemId}
             className="h-full w-full group-item select-none"
           >
@@ -374,6 +348,7 @@ export default function CurrentMatch() {
               <PlayerCurrentMatch 
                 player={player} 
                 flipped={idx < cols} 
+                key={`${slotId}-${itemId}`}
                 isActive={activePlayer?.id === player.id}
               />
             )}
@@ -381,79 +356,7 @@ export default function CurrentMatch() {
         </div>
       ))}
 
-      <div className="pointer-events-none absolute z-40" style={styleBtn}>
-        <Sheet>
-          <SheetTrigger asChild>
-            <Button
-              variant="settings"
-              size="icon"
-              className="pointer-events-auto h-full w-full rounded-full shadow-lg"
-            >
-              <Settings className="size-8 transition-transform hover:animate-spin" />
-            </Button>
-          </SheetTrigger>
-          <SheetContent hideClose side="bottom" className="gap-0 px-2 py-4">
-            <SheetHeader className="p-0">
-              <SheetTitle hidden>Bottom Toolbar</SheetTitle>
-              <SheetDescription hidden>
-                Bottom toolbar with some buttons :D
-              </SheetDescription>
-            </SheetHeader>
-            <div className="relative">
-              <div className="pointer-events-auto -mx-2 overflow-x-auto px-2 pb-1">
-                <div className="flex w-max items-center gap-3 md:w-full md:justify-center">
-                  <Button size="lg" asChild>
-                    <Link href="/">
-                      <Home className="size-5" />
-                    </Link>
-                  </Button>
-
-                  <SettingsDialog
-                    trigger={
-                      <Button
-                        size="lg"
-                        variant={"success"}
-                        className="pointer-events-auto"
-                      >
-                        <Plus className="size-5" />
-                      </Button>
-                    }
-                  />
-
-                  <PlayersDialog />
-
-                  <ResetButton
-                    trigger={
-                      <Button
-                        size="lg"
-                        variant="destructive"
-                        className="pointer-events-auto"
-                      >
-                        <RotateCcw className="size-5" />
-                      </Button>
-                    }
-                  />
-                  <TimerSettingsDialog
-                    trigger={
-                      <Button size="lg" variant="outline">
-                        <TimerIcon className="size-5" />
-                      </Button>
-                    }
-                  />
-
-                  <Button size="lg" asChild>
-                    <Link href="/match/hp-history">
-                      <History className="size-5" />
-                    </Link>
-                  </Button>
-
-                  <SaveMatch />
-                </div>
-              </div>
-            </div>
-          </SheetContent>
-        </Sheet>
-      </div>
+      <SettingsButton />
     </div>
   );
 }

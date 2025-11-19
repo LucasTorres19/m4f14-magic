@@ -6,8 +6,6 @@ import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
 import {
   ArrowRight,
-  GripVertical,
-  Maximize2,
   Pause,
   Play,
   RotateCcw,
@@ -15,13 +13,7 @@ import {
 } from "lucide-react";
 import { useEffect, useRef, useState } from "react";
 
-type TimerProps = {
-  attached?: boolean;
-};
-
-export default function Timer({
-  attached = false,
-}: TimerProps = {}) {
+export default function Timer() {
   const timerLimit = useSettings((s) => s.timerLimit);
   const currentPlayerIndex = useCurrentMatch((s) => s.currentPlayerIndex);
   const players = useCurrentMatch((s) => s.players);
@@ -36,21 +28,14 @@ export default function Timer({
   const setTimerVisible = useCurrentMatch((s) => s.setTimerVisible);
 
   const intervalRef = useRef<NodeJS.Timeout | null>(null);
-  const dragRef = useRef<HTMLDivElement>(null);
   const audioContextRef = useRef<AudioContext | null>(null);
   const explosionAudioRef = useRef<HTMLAudioElement | null>(null);
   const beepTimeoutRef = useRef<NodeJS.Timeout | null>(null);
   
-  const [position, setPosition] = useState({ x: 0, y: 0 });
-  const [size, setSize] = useState({ width: 320, height: 180 });
-  const [isDragging, setIsDragging] = useState(false);
-  const [isResizing, setIsResizing] = useState(false);
   const [hasBeeped, setHasBeeped] = useState(false);
   const [exploding, setExploding] = useState(false);
   
   const hasPrimedRef = useRef(false);
-  const dragStartRef = useRef({ x: 0, y: 0, offsetX: 0, offsetY: 0 });
-  const resizeStartRef = useRef({ x: 0, y: 0, width: 0, height: 0 });
 
   const currentPlayer = players[currentPlayerIndex];
   const isExpired = timerRemaining === 0;
@@ -198,128 +183,6 @@ export default function Timer({
     // eslint-disable-next-line react-hooks/exhaustive-deps
     }, [currentPlayerIndex]);
 
-  // Drag handlers
-  const handleMouseDown = (e: React.MouseEvent) => {
-    if (
-      attached ||
-      !dragRef.current ||
-      (e.target as HTMLElement).closest("button") ||
-      (e.target as HTMLElement).closest(".resize-handle")
-    )
-      return;
-      
-    const rect = dragRef.current.getBoundingClientRect();
-    const currentX = position.x !== 0 ? position.x : rect.left + rect.width / 2;
-    const currentY = position.y !== 0 ? position.y : rect.top;
-    
-    setIsDragging(true);
-    dragStartRef.current = {
-      x: e.clientX,
-      y: e.clientY,
-      offsetX: currentX,
-      offsetY: currentY,
-    };
-    
-    if (position.x === 0 || position.y === 0) {
-      setPosition({ x: currentX, y: currentY });
-    }
-    e.preventDefault();
-  };
-
-  const handleTouchStart = (e: React.TouchEvent) => {
-    if (
-      attached ||
-      !dragRef.current ||
-      (e.target as HTMLElement).closest("button") ||
-      (e.target as HTMLElement).closest(".resize-handle")
-    )
-      return;
-      
-    const rect = dragRef.current.getBoundingClientRect();
-    const currentX = position.x !== 0 ? position.x : rect.left + rect.width / 2;
-    const currentY = position.y !== 0 ? position.y : rect.top;
-    
-    setIsDragging(true);
-    const touch = e.touches[0];
-    dragStartRef.current = {
-      x: touch?.clientX ?? 0,
-      y: touch?.clientY ?? 0,
-      offsetX: currentX,
-      offsetY: currentY,
-    };
-    
-    if (position.x === 0 || position.y === 0) {
-      setPosition({ x: currentX, y: currentY });
-    }
-    e.preventDefault();
-  };
-
-  // Resize handlers
-  const handleResizeStart = (e: React.MouseEvent) => {
-    if (attached) return;
-    e.preventDefault();
-    e.stopPropagation();
-    setIsResizing(true);
-    resizeStartRef.current = {
-      x: e.clientX,
-      y: e.clientY,
-      width: size.width,
-      height: size.height,
-    };
-  };
-
-  useEffect(() => {
-    if (!isDragging && !isResizing) return;
-
-    const handleMouseMove = (e: MouseEvent) => {
-      if (isDragging) {
-        const deltaX = e.clientX - dragStartRef.current.x;
-        const deltaY = e.clientY - dragStartRef.current.y;
-        setPosition({
-          x: dragStartRef.current.offsetX + deltaX,
-          y: dragStartRef.current.offsetY + deltaY,
-        });
-      } else if (isResizing) {
-        const deltaX = e.clientX - resizeStartRef.current.x;
-        const deltaY = e.clientY - resizeStartRef.current.y;
-        setSize({
-          width: Math.max(200, resizeStartRef.current.width + deltaX),
-          height: Math.max(140, resizeStartRef.current.height + deltaY),
-        });
-      }
-    };
-
-    const handleTouchMove = (e: TouchEvent) => {
-      if (isDragging) {
-        const touch = e.touches[0];
-        if (!touch) return;
-        const deltaX = touch.clientX - dragStartRef.current.x;
-        const deltaY = touch.clientY - dragStartRef.current.y;
-        setPosition({
-          x: dragStartRef.current.offsetX + deltaX,
-          y: dragStartRef.current.offsetY + deltaY,
-        });
-      }
-    };
-
-    const handleMouseUp = () => {
-      setIsDragging(false);
-      setIsResizing(false);
-    };
-
-    window.addEventListener("mousemove", handleMouseMove);
-    window.addEventListener("touchmove", handleTouchMove);
-    window.addEventListener("mouseup", handleMouseUp);
-    window.addEventListener("touchend", handleMouseUp);
-
-    return () => {
-      window.removeEventListener("mousemove", handleMouseMove);
-      window.removeEventListener("touchmove", handleTouchMove);
-      window.removeEventListener("mouseup", handleMouseUp);
-      window.removeEventListener("touchend", handleMouseUp);
-    };
-  }, [isDragging, isResizing]);
-
   const formatTime = (seconds: number) => {
     const mins = Math.floor(seconds / 60);
     const secs = seconds % 60;
@@ -352,27 +215,10 @@ export default function Timer({
   }
 
   return (
-    <div
-      ref={dragRef}
-      className={cn(
-        attached ? "absolute pointer-events-none" : "fixed z-50",
-        !attached && "select-none",
-        !attached && (isDragging ? "cursor-grabbing" : "cursor-move"),
-      )}
-      style={attached ? undefined : {
-        top: position.y !== 0 ? `${position.y}px` : "1rem",
-        left: position.x !== 0 ? `${position.x}px` : "50%",
-        width: size.width,
-        height: size.height,
-        transform: "translate(-50%, 0)",
-      }}
-      onMouseDown={handleMouseDown}
-      onTouchStart={handleTouchStart}
-    >
       <div
         className={cn(
-          "relative flex flex-col backdrop-blur-sm border rounded-xl shadow-xl overflow-hidden transition-colors pointer-events-auto",
-          attached ? "w-64 shadow-2xl border-2 bg-black text-white border-white/20" : "h-full w-full bg-background/95",
+          "relative flex items-center justify-between backdrop-blur-sm border rounded-xl shadow-xl overflow-hidden transition-colors pointer-events-auto",
+          "w-auto max-w-full bg-black text-white border-white/20 px-4 py-2 gap-4",
           isExpired && "border-destructive border-2",
         )}
       >
@@ -394,102 +240,67 @@ export default function Timer({
           </div>
         )}
 
-        {/* Header */}
-        <div className={cn(
-          "flex items-center justify-between px-3 py-2 border-b",
-          attached ? "bg-white/10 border-white/10" : "bg-muted/30"
-        )}>
-          <div className="flex items-center gap-2 overflow-hidden">
-            {!attached && <GripVertical className="size-4 text-muted-foreground shrink-0" />}
-            {currentPlayer && (
-              <span className="text-sm font-medium truncate">
-                {currentPlayer.displayName}
-              </span>
-            )}
-          </div>
-          <Button
-            size="icon"
-            variant="ghost"
-            className={cn(
-              "h-6 w-6 shrink-0",
-              attached ? "hover:bg-white/20 hover:text-white" : "hover:bg-destructive/10 hover:text-destructive"
-            )}
-            onClick={(e) => {
-              setTimerVisible(false);
-            }}
-          >
-            <X className="size-3" />
-          </Button>
-        </div>
-
         {/* Timer Display */}
-        <div className="flex-1 flex items-center justify-center min-h-0 py-2">
-          <div
-            className={cn(
-              "font-mono font-bold transition-colors leading-none",
-              isExpired ? "text-destructive" : isLowTime && "text-destructive",
-            )}
-            style={attached ? { fontSize: "3rem" } : { fontSize: `${Math.min(size.width / 4, size.height / 2)}px` }}
-          >
-            {formatTime(timerRemaining)}
-          </div>
+        <div
+          className={cn(
+            "font-mono font-bold transition-colors leading-none text-3xl",
+            isExpired ? "text-destructive" : isLowTime && "text-destructive",
+          )}
+        >
+          {formatTime(timerRemaining)}
         </div>
 
         {/* Controls */}
-        <div className={cn(
-          "flex items-center justify-center gap-2 p-3",
-          attached ? "bg-white/5" : "bg-muted/10"
-        )}>
+        <div className="flex items-center gap-2">
           {isTimerPaused ? (
             <Button
               size="icon"
-              variant="outline"
+              variant="ghost"
               onClick={handleStart}
               disabled={isExpired}
-              className={cn("h-8 w-8", attached && "bg-transparent border-white/20 text-white hover:bg-white/20 hover:text-white")}
+              className="h-8 w-8 text-white hover:bg-white/20 hover:text-white rounded-full"
             >
-              <Play className="size-4" />
+              <Play className="size-4 " />
             </Button>
           ) : (
             <Button
               size="icon"
-              variant="outline"
+              variant="ghost"
               onClick={handlePause}
               disabled={isExpired}
-              className={cn("h-8 w-8", attached && "bg-transparent border-white/20 text-white hover:bg-white/20 hover:text-white")}
+              className="h-8 w-8 text-white hover:bg-white/20 hover:text-white rounded-full"
             >
               <Pause className="size-4" />
             </Button>
           )}
           <Button
             size="icon"
-            variant="outline"
+            variant="ghost"
             onClick={handleReset}
             disabled={isExpired}
-            className={cn("h-8 w-8", attached && "bg-transparent border-white/20 text-white hover:bg-white/20 hover:text-white")}
+            className="h-8 w-8 text-white hover:bg-white/20 hover:text-white rounded-full"
           >
             <RotateCcw className="size-4" />
           </Button>
           <Button
             size="icon"
-            variant="outline"
+            variant="ghost"
             onClick={handleNextTurn}
-            className={cn("h-8 w-8", attached && "bg-transparent border-white/20 text-white hover:bg-white/20 hover:text-white")}
+            className="h-8 w-8 text-white hover:bg-white/20 hover:text-white rounded-full"
           >
             <ArrowRight className="size-4" />
           </Button>
-        </div>
-
-        {/* Resize Handle */}
-        {!attached && (
-          <div
-            className="resize-handle absolute bottom-0 right-0 p-1 cursor-nwse-resize hover:bg-muted/50 rounded-tl-lg transition-colors z-20"
-            onMouseDown={handleResizeStart}
+          <Button
+            size="icon"
+            variant="ghost"
+            className="h-8 w-8 text-white hover:bg-white/20 hover:text-white rounded-full"
+            onClick={(e) => {
+              setTimerVisible(false);
+            }}
           >
-            <Maximize2 className="size-4 text-muted-foreground/50 rotate-90" />
-          </div>
-        )}
+            <X className="size-4" />
+          </Button>
+        </div>
       </div>
-    </div>
   );
 }
