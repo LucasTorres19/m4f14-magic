@@ -26,6 +26,8 @@ export type CurrentMatchState = {
   isTimerPaused: boolean;
   tournamentId: number | null;
   tournamentMatchIndex: number | null;
+  turnDirection: "clockwise" | "counter-clockwise";
+  isTimerVisible: boolean;
 };
 
 export type CurrentMatchActions = {
@@ -54,6 +56,8 @@ export type CurrentMatchActions = {
   resumeTimer: () => void;
   resetTimer: (timeLimit: number) => void;
   updateTimer: (remaining: number) => void;
+  toggleTurnDirection: () => void;
+  setTimerVisible: (visible: boolean) => void;
 };
 
 export type CurrentMatchStore = CurrentMatchState & CurrentMatchActions;
@@ -66,6 +70,8 @@ const defaultInitState: CurrentMatchState = {
   isTimerPaused: false,
   tournamentId: null,
   tournamentMatchIndex: null,
+  turnDirection: "clockwise",
+  isTimerVisible: true,
 };
 
 const generatePlayerId = () => {
@@ -104,6 +110,8 @@ export const initCurrentMatchStore = (
     isTimerPaused: true,
     tournamentId: null,
     tournamentMatchIndex: null,
+    turnDirection: "clockwise",
+    isTimerVisible: true,
   };
 };
 
@@ -229,8 +237,23 @@ export const createCurrentMatchStore = (
 
         nextTurn: () =>
           set((state) => {
-            const nextIndex =
-              (state.currentPlayerIndex + 1) % state.players.length;
+            const direction = state.turnDirection;
+            const n = state.players.length;
+            
+            // Calculate visual order based on grid layout
+            const cols = Math.max(1, Math.ceil(n / 2));
+            const topRow = Array.from({ length: cols }, (_, i) => i);
+            const bottomRow = Array.from({ length: n - cols }, (_, i) => n - 1 - i);
+            const order = [...topRow, ...bottomRow];
+
+            const currentPos = order.indexOf(state.currentPlayerIndex);
+            const nextPos =
+              direction === "clockwise"
+                ? (currentPos + 1) % n
+                : (currentPos - 1 + n) % n;
+            
+            const nextIndex = order[nextPos];
+
             return {
               currentPlayerIndex: nextIndex,
               timerRemaining: state.isTimerPaused ? state.timerRemaining : 0,
@@ -250,6 +273,16 @@ export const createCurrentMatchStore = (
           })),
 
         updateTimer: (remaining) => set(() => ({ timerRemaining: remaining })),
+
+        toggleTurnDirection: () =>
+          set((state) => ({
+            turnDirection:
+              state.turnDirection === "clockwise"
+                ? "counter-clockwise"
+                : "clockwise",
+          })),
+
+        setTimerVisible: (visible) => set(() => ({ isTimerVisible: visible })),
       }),
       { name: "current-match-store", skipHydration: true },
     ),

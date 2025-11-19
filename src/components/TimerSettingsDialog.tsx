@@ -1,5 +1,6 @@
 "use client";
 
+import { useCurrentMatch } from "@/app/_stores/current-match-provider";
 import { useSettings } from "@/app/_stores/settings-provider";
 import { Button } from "@/components/ui/button";
 import {
@@ -14,24 +15,25 @@ import {
 } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Timer } from "lucide-react";
+import { ArrowLeftRight, Timer } from "lucide-react";
 import * as React from "react";
 
 type TimerSettingsDialogProps = {
   trigger: React.ReactNode;
   open?: boolean;
   onOpenChange?: (open: boolean) => void;
-  onShowTimer?: () => void;
 };
 
 export default function TimerSettingsDialog({
   trigger,
   open,
   onOpenChange,
-  onShowTimer,
 }: TimerSettingsDialogProps) {
   const settingsSet = useSettings((s) => s.set);
   const timerLimitStore = useSettings((s) => s.timerLimit);
+  const turnDirection = useCurrentMatch((s) => s.turnDirection);
+  const toggleTurnDirection = useCurrentMatch((s) => s.toggleTurnDirection);
+  const setTimerVisible = useCurrentMatch((s) => s.setTimerVisible);
 
   const [localOpen, setLocalOpen] = React.useState(false);
   const controlled = typeof open === "boolean";
@@ -73,14 +75,18 @@ export default function TimerSettingsDialog({
   };
 
   const handleShowTimer = () => {
-    onShowTimer?.();
+    setTimerVisible(true);
+    setOpen(false); // Optionally close dialog when showing timer
   };
 
   return (
     <Dialog open={isOpen} onOpenChange={setOpen}>
       <DialogTrigger asChild>{trigger}</DialogTrigger>
 
-      <DialogContent className="sm:max-w-md">
+      <DialogContent 
+        className="sm:max-w-md"
+        onOpenAutoFocus={(e) => e.preventDefault()}
+      >
         <DialogHeader>
           <DialogTitle>Timer Settings</DialogTitle>
           <DialogDescription>
@@ -104,6 +110,19 @@ export default function TimerSettingsDialog({
               }
               className="col-span-2"
             />
+          </div>
+
+          <div className="grid grid-cols-4 items-center gap-2">
+            <Label className="col-span-2">Dirección del turno</Label>
+            <Button
+              type="button"
+              variant="outline"
+              onClick={toggleTurnDirection}
+              className="col-span-2 justify-between"
+            >
+              <span>{turnDirection === "clockwise" ? "Horario" : "Anti-horario"}</span>
+              <ArrowLeftRight className="size-4 ml-2" />
+            </Button>
           </div>
 
           <div className="flex flex-col gap-2">

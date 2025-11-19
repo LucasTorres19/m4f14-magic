@@ -54,13 +54,16 @@ type CSSVars = CSSProperties & {
 function PlayerCurrentMatch({
   player,
   flipped = false,
+  isActive = false,
 }: {
   player: Player;
   flipped?: boolean;
+  isActive?: boolean;
 }) {
   const minusIntervalRef = useRef<NodeJS.Timeout | null>(null);
   const plusIntervalRef = useRef<NodeJS.Timeout | null>(null);
   const updateHp = useCurrentMatch((s) => s.updateHp);
+  const isTimerVisible = useCurrentMatch((s) => s.isTimerVisible);
   const commanderBackground =
     player.commander?.artImageUrl ?? player.commander?.imageUrl ?? null;
 
@@ -116,12 +119,29 @@ function PlayerCurrentMatch({
 
   return (
     <div
-      style={containerStyle}
       className={cn(
-        "text-background relative flex h-full w-full items-stretch justify-center overflow-hidden rounded-3xl text-[clamp(3.75rem,10vmin,8rem)] select-none",
+        "text-background relative flex h-full w-full items-stretch justify-center rounded-3xl text-[clamp(3.75rem,10vmin,8rem)] select-none",
         flipped && "flex-row-reverse",
       )}
     >
+      {/* Background layer for opacity isolation */}
+      <div 
+        className="absolute inset-0 -z-30 rounded-3xl" 
+        style={containerStyle} 
+      />
+
+      {isActive && isTimerVisible && (
+        <div
+          data-swapy-no-drag
+          className={cn(
+            "absolute left-1/2 z-20 flex items-center justify-center pointer-events-none -translate-x-1/2",
+            flipped ? "bottom-0 translate-y-1/2 rotate-180" : "top-0 -translate-y-1/2"
+          )}
+        >
+           <Timer attached={true} />
+        </div>
+      )}
+
       {commanderBackground ? (
         <div
           data-swapy-no-drag
@@ -131,7 +151,7 @@ function PlayerCurrentMatch({
             data-swapy-no-drag
             src={commanderBackground}
             fill
-            className={cn("object-cover object-top", flipped && "rotate-180")}
+            className={cn("object-cover object-top rounded-3xl", flipped && "rotate-180")}
             draggable={false}
             alt={player.commander?.name ?? `${player.displayName} commander`}
           />
@@ -236,10 +256,10 @@ function PlayerCurrentMatch({
 
 export default function CurrentMatch() {
   const players = useCurrentMatch((s) => s.players);
+  const currentPlayerIndex = useCurrentMatch((s) => s.currentPlayerIndex);
   const reorderPlayers = useCurrentMatch((s) => s.reorderPlayers);
   const n = players.length;
   const { cols, rows } = Grid(n);
-  const [isTimerVisible, setIsTimerVisible] = useState(true);
   const containerRef = useRef<HTMLDivElement | null>(null);
   const swapyInstanceRef = useRef<Swapy | null>(null);
   const playersRef = useRef(players);
@@ -331,22 +351,19 @@ export default function CurrentMatch() {
     transform: "translate(-50%, -50%)",
   };
 
+  const activePlayer = players[currentPlayerIndex];
+
   return (
     <div
       ref={containerRef}
-      className="relative grid h-dvh w-full gap-3 p-3 min-h-screen overflow-hidden"
+      className="relative grid h-dvh w-full gap-3 p-3 min-h-screen"
       style={styleGrid}
     >
-      <Timer
-        isVisible={isTimerVisible}
-        onVisibilityChange={setIsTimerVisible}
-      />
-
       {slottedItems.map(({ item: player, itemId, slotId }, idx) => (
         <div
           key={slotId}
           data-swapy-slot={slotId}
-          className="h-full w-full rounded-3xl group-slot data-swapy-highlighted:bg-slate-600/60"
+          className={cn("h-full w-full rounded-3xl group-slot data-swapy-highlighted:bg-slate-600/60", activePlayer?.id === player?.id && "z-20")}
         >
           <div
             key={itemId}
@@ -354,7 +371,11 @@ export default function CurrentMatch() {
             className="h-full w-full group-item select-none"
           >
             {player && (
-              <PlayerCurrentMatch player={player} flipped={idx < cols} />
+              <PlayerCurrentMatch 
+                player={player} 
+                flipped={idx < cols} 
+                isActive={activePlayer?.id === player.id}
+              />
             )}
           </div>
         </div>
@@ -418,7 +439,6 @@ export default function CurrentMatch() {
                         <TimerIcon className="size-5" />
                       </Button>
                     }
-                    onShowTimer={() => setIsTimerVisible(true)}
                   />
 
                   <Button size="lg" asChild>

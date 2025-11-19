@@ -7,6 +7,7 @@ import { cn } from "@/lib/utils";
 import {
   ArrowRight,
   GripVertical,
+  Maximize2,
   Pause,
   Play,
   RotateCcw,
@@ -15,13 +16,11 @@ import {
 import { useEffect, useRef, useState } from "react";
 
 type TimerProps = {
-  isVisible?: boolean;
-  onVisibilityChange?: (visible: boolean) => void;
+  attached?: boolean;
 };
 
 export default function Timer({
-  isVisible: externalIsVisible,
-  onVisibilityChange,
+  attached = false,
 }: TimerProps = {}) {
   const timerLimit = useSettings((s) => s.timerLimit);
   const currentPlayerIndex = useCurrentMatch((s) => s.currentPlayerIndex);
@@ -33,28 +32,25 @@ export default function Timer({
   const resumeTimer = useCurrentMatch((s) => s.resumeTimer);
   const updateTimer = useCurrentMatch((s) => s.updateTimer);
   const resetTimer = useCurrentMatch((s) => s.resetTimer);
+  const isTimerVisible = useCurrentMatch((s) => s.isTimerVisible);
+  const setTimerVisible = useCurrentMatch((s) => s.setTimerVisible);
 
   const intervalRef = useRef<NodeJS.Timeout | null>(null);
   const dragRef = useRef<HTMLDivElement>(null);
   const audioContextRef = useRef<AudioContext | null>(null);
   const explosionAudioRef = useRef<HTMLAudioElement | null>(null);
   const beepTimeoutRef = useRef<NodeJS.Timeout | null>(null);
+  
   const [position, setPosition] = useState({ x: 0, y: 0 });
+  const [size, setSize] = useState({ width: 320, height: 180 });
   const [isDragging, setIsDragging] = useState(false);
-  const [internalIsVisible, setInternalIsVisible] = useState(true);
+  const [isResizing, setIsResizing] = useState(false);
   const [hasBeeped, setHasBeeped] = useState(false);
   const [exploding, setExploding] = useState(false);
+  
   const hasPrimedRef = useRef(false);
   const dragStartRef = useRef({ x: 0, y: 0, offsetX: 0, offsetY: 0 });
-
-  const isVisible = externalIsVisible ?? internalIsVisible;
-
-  // Sync external visibility changes
-  useEffect(() => {
-    if (externalIsVisible !== undefined) {
-      setInternalIsVisible(externalIsVisible);
-    }
-  }, [externalIsVisible]);
+  const resizeStartRef = useRef({ x: 0, y: 0, width: 0, height: 0 });
 
   const currentPlayer = players[currentPlayerIndex];
   const isExpired = timerRemaining === 0;
@@ -152,15 +148,12 @@ export default function Timer({
       return;
     }
 
-    // schedule next beep with interval shrinking as we approach 0
-    // interval maps linearly: remaining 10..0 -> 800ms..150ms
     const t = timerRemaining / threshold; // 1..0
     const interval = Math.round(150 + t * (800 - 150));
     const freq = 1200;
 
     beepTimeoutRef.current ??= setTimeout(function tick() {
       playBeep({ freq, durationMs: 100, volume: 0.25 });
-      // reschedule using current state on next tick
       beepTimeoutRef.current = null;
     }, interval);
 
@@ -203,18 +196,22 @@ export default function Timer({
       updateTimer(timerLimit);
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [currentPlayerIndex]); // Only trigger on player change
+    }, [currentPlayerIndex]);
 
   // Drag handlers
   const handleMouseDown = (e: React.MouseEvent) => {
-    if (!dragRef.current || (e.target as HTMLElement).closest("button")) return;
+    if (
+      attached ||
+      !dragRef.current ||
+      (e.target as HTMLElement).closest("button") ||
+      (e.target as HTMLElement).closest(".resize-handle")
+    )
+      return;
+      
     const rect = dragRef.current.getBoundingClientRect();
-    // Calculate current position: getBoundingClientRect gives us the actual viewport position
-    // Since we use translate(-50%, 0), the center X is at rect.left + rect.width / 2
-    // And position.x stores the center position in pixels when dragged
     const currentX = position.x !== 0 ? position.x : rect.left + rect.width / 2;
-    // position.y stores the top position in pixels
     const currentY = position.y !== 0 ? position.y : rect.top;
+    
     setIsDragging(true);
     dragStartRef.current = {
       x: e.clientX,
@@ -222,7 +219,7 @@ export default function Timer({
       offsetX: currentX,
       offsetY: currentY,
     };
-    // Update position state to the calculated position so subsequent drags work correctly
+    
     if (position.x === 0 || position.y === 0) {
       setPosition({ x: currentX, y: currentY });
     }
@@ -230,14 +227,18 @@ export default function Timer({
   };
 
   const handleTouchStart = (e: React.TouchEvent) => {
-    if (!dragRef.current || (e.target as HTMLElement).closest("button")) return;
+    if (
+      attached ||
+      !dragRef.current ||
+      (e.target as HTMLElement).closest("button") ||
+      (e.target as HTMLElement).closest(".resize-handle")
+    )
+      return;
+      
     const rect = dragRef.current.getBoundingClientRect();
-    // Calculate current position: getBoundingClientRect gives us the actual viewport position
-    // Since we use translate(-50%, 0), the center X is at rect.left + rect.width / 2
-    // And position.x stores the center position in pixels when dragged
     const currentX = position.x !== 0 ? position.x : rect.left + rect.width / 2;
-    // position.y stores the top position in pixels
     const currentY = position.y !== 0 ? position.y : rect.top;
+    
     setIsDragging(true);
     const touch = e.touches[0];
     dragStartRef.current = {
@@ -246,38 +247,64 @@ export default function Timer({
       offsetX: currentX,
       offsetY: currentY,
     };
-    // Update position state to the calculated position so subsequent drags work correctly
+    
     if (position.x === 0 || position.y === 0) {
       setPosition({ x: currentX, y: currentY });
     }
     e.preventDefault();
   };
 
+  // Resize handlers
+  const handleResizeStart = (e: React.MouseEvent) => {
+    if (attached) return;
+    e.preventDefault();
+    e.stopPropagation();
+    setIsResizing(true);
+    resizeStartRef.current = {
+      x: e.clientX,
+      y: e.clientY,
+      width: size.width,
+      height: size.height,
+    };
+  };
+
   useEffect(() => {
-    if (!isDragging) return;
+    if (!isDragging && !isResizing) return;
 
     const handleMouseMove = (e: MouseEvent) => {
-      const deltaX = e.clientX - dragStartRef.current.x;
-      const deltaY = e.clientY - dragStartRef.current.y;
-      setPosition({
-        x: dragStartRef.current.offsetX + deltaX,
-        y: dragStartRef.current.offsetY + deltaY,
-      });
+      if (isDragging) {
+        const deltaX = e.clientX - dragStartRef.current.x;
+        const deltaY = e.clientY - dragStartRef.current.y;
+        setPosition({
+          x: dragStartRef.current.offsetX + deltaX,
+          y: dragStartRef.current.offsetY + deltaY,
+        });
+      } else if (isResizing) {
+        const deltaX = e.clientX - resizeStartRef.current.x;
+        const deltaY = e.clientY - resizeStartRef.current.y;
+        setSize({
+          width: Math.max(200, resizeStartRef.current.width + deltaX),
+          height: Math.max(140, resizeStartRef.current.height + deltaY),
+        });
+      }
     };
 
     const handleTouchMove = (e: TouchEvent) => {
-      const touch = e.touches[0];
-      if (!touch) return;
-      const deltaX = touch.clientX - dragStartRef.current.x;
-      const deltaY = touch.clientY - dragStartRef.current.y;
-      setPosition({
-        x: dragStartRef.current.offsetX + deltaX,
-        y: dragStartRef.current.offsetY + deltaY,
-      });
+      if (isDragging) {
+        const touch = e.touches[0];
+        if (!touch) return;
+        const deltaX = touch.clientX - dragStartRef.current.x;
+        const deltaY = touch.clientY - dragStartRef.current.y;
+        setPosition({
+          x: dragStartRef.current.offsetX + deltaX,
+          y: dragStartRef.current.offsetY + deltaY,
+        });
+      }
     };
 
     const handleMouseUp = () => {
       setIsDragging(false);
+      setIsResizing(false);
     };
 
     window.addEventListener("mousemove", handleMouseMove);
@@ -291,7 +318,7 @@ export default function Timer({
       window.removeEventListener("mouseup", handleMouseUp);
       window.removeEventListener("touchend", handleMouseUp);
     };
-  }, [isDragging]);
+  }, [isDragging, isResizing]);
 
   const formatTime = (seconds: number) => {
     const mins = Math.floor(seconds / 60);
@@ -306,7 +333,6 @@ export default function Timer({
 
   const handleNextTurn = () => {
     nextTurn();
-    // Reset timer manually to preserve paused state
     updateTimer(timerLimit);
     setHasBeeped(false);
   };
@@ -319,11 +345,9 @@ export default function Timer({
     pauseTimer();
   };
 
-  const timePercentage =
-    timerLimit > 0 ? (timerRemaining / timerLimit) * 100 : 0;
   const isLowTime = timerRemaining <= 30 && timerRemaining > 0;
 
-  if (players.length === 0 || !isVisible) {
+  if (players.length === 0 || !isTimerVisible) {
     return null;
   }
 
@@ -331,12 +355,15 @@ export default function Timer({
     <div
       ref={dragRef}
       className={cn(
-        "fixed z-50 cursor-move select-none",
-        isDragging && "cursor-grabbing",
+        attached ? "absolute pointer-events-none" : "fixed z-50",
+        !attached && "select-none",
+        !attached && (isDragging ? "cursor-grabbing" : "cursor-move"),
       )}
-      style={{
+      style={attached ? undefined : {
         top: position.y !== 0 ? `${position.y}px` : "1rem",
         left: position.x !== 0 ? `${position.x}px` : "50%",
+        width: size.width,
+        height: size.height,
         transform: "translate(-50%, 0)",
       }}
       onMouseDown={handleMouseDown}
@@ -344,13 +371,14 @@ export default function Timer({
     >
       <div
         className={cn(
-          "bg-background/95 backdrop-blur-sm border rounded-xl shadow-xl p-6 min-w-[280px] transition-all",
+          "relative flex flex-col backdrop-blur-sm border rounded-xl shadow-xl overflow-hidden transition-colors pointer-events-auto",
+          attached ? "w-64 shadow-2xl border-2 bg-black text-white border-white/20" : "h-full w-full bg-background/95",
           isExpired && "border-destructive border-2",
         )}
       >
         {/* Explosion visual overlay */}
         {exploding && (
-          <div className="pointer-events-none absolute inset-0 z-10 flex items-center justify-center">
+          <div className="pointer-events-none absolute inset-0 z-10 flex items-center justify-center overflow-hidden rounded-xl">
             <span
               className={cn(
                 "block rounded-full bg-destructive/30",
@@ -365,104 +393,102 @@ export default function Timer({
             />
           </div>
         )}
-        <div className="flex items-center justify-between mb-3">
-          <GripVertical className="size-5 text-muted-foreground" />
-          {currentPlayer && (
-            <div
-              className={cn(
-                "text-base font-medium text-center flex-1",
-                isExpired && "text-destructive font-bold",
-              )}
-            >
-              Turno: {currentPlayer.displayName}
-            </div>
-          )}
+
+        {/* Header */}
+        <div className={cn(
+          "flex items-center justify-between px-3 py-2 border-b",
+          attached ? "bg-white/10 border-white/10" : "bg-muted/30"
+        )}>
+          <div className="flex items-center gap-2 overflow-hidden">
+            {!attached && <GripVertical className="size-4 text-muted-foreground shrink-0" />}
+            {currentPlayer && (
+              <span className="text-sm font-medium truncate">
+                {currentPlayer.displayName}
+              </span>
+            )}
+          </div>
           <Button
             size="icon"
             variant="ghost"
-            className="h-8 w-8 hover:bg-destructive/10 hover:text-destructive"
+            className={cn(
+              "h-6 w-6 shrink-0",
+              attached ? "hover:bg-white/20 hover:text-white" : "hover:bg-destructive/10 hover:text-destructive"
+            )}
             onClick={(e) => {
-              e.stopPropagation();
-              const newVisible = false;
-              setInternalIsVisible(newVisible);
-              onVisibilityChange?.(newVisible);
+              setTimerVisible(false);
             }}
           >
-            <X className="size-4" />
+            <X className="size-3" />
           </Button>
         </div>
-        <div className="flex items-center justify-center gap-2 mb-4">
+
+        {/* Timer Display */}
+        <div className="flex-1 flex items-center justify-center min-h-0 py-2">
           <div
             className={cn(
-              "text-5xl font-mono font-bold transition-colors",
+              "font-mono font-bold transition-colors leading-none",
               isExpired ? "text-destructive" : isLowTime && "text-destructive",
             )}
+            style={attached ? { fontSize: "3rem" } : { fontSize: `${Math.min(size.width / 4, size.height / 2)}px` }}
           >
             {formatTime(timerRemaining)}
           </div>
         </div>
-        {isExpired && (
-          <div className="text-center mb-3 text-destructive font-semibold text-lg animate-pulse">
-            ⏰ Turno Finalizado
-          </div>
-        )}
-        <div className="flex gap-3 justify-center">
+
+        {/* Controls */}
+        <div className={cn(
+          "flex items-center justify-center gap-2 p-3",
+          attached ? "bg-white/5" : "bg-muted/10"
+        )}>
           {isTimerPaused ? (
             <Button
-              size="icon-lg"
+              size="icon"
               variant="outline"
               onClick={handleStart}
-              aria-label="Start"
               disabled={isExpired}
-              className="h-12 w-12"
+              className={cn("h-8 w-8", attached && "bg-transparent border-white/20 text-white hover:bg-white/20 hover:text-white")}
             >
-              <Play className="size-6" />
+              <Play className="size-4" />
             </Button>
           ) : (
             <Button
-              size="icon-lg"
+              size="icon"
               variant="outline"
               onClick={handlePause}
-              aria-label="Pause"
               disabled={isExpired}
-              className="h-12 w-12"
+              className={cn("h-8 w-8", attached && "bg-transparent border-white/20 text-white hover:bg-white/20 hover:text-white")}
             >
-              <Pause className="size-6" />
+              <Pause className="size-4" />
             </Button>
           )}
           <Button
-            size="icon-lg"
+            size="icon"
             variant="outline"
             onClick={handleReset}
-            aria-label="Reset"
             disabled={isExpired}
-            className="h-12 w-12"
+            className={cn("h-8 w-8", attached && "bg-transparent border-white/20 text-white hover:bg-white/20 hover:text-white")}
           >
-            <RotateCcw className="size-6" />
+            <RotateCcw className="size-4" />
           </Button>
           <Button
-            size="icon-lg"
+            size="icon"
             variant="outline"
             onClick={handleNextTurn}
-            aria-label="Next"
-            className="h-12 w-12"
+            className={cn("h-8 w-8", attached && "bg-transparent border-white/20 text-white hover:bg-white/20 hover:text-white")}
           >
-            <ArrowRight className="size-6" />
+            <ArrowRight className="size-4" />
           </Button>
         </div>
-        <div className="mt-4 h-2 bg-muted rounded-full overflow-hidden">
+
+        {/* Resize Handle */}
+        {!attached && (
           <div
-            className={cn(
-              "h-full transition-all duration-1000",
-              isExpired
-                ? "bg-destructive"
-                : isLowTime
-                  ? "bg-destructive"
-                  : "bg-primary",
-            )}
-            style={{ width: `${Math.max(0, timePercentage)}%` }}
-          />
-        </div>
+            className="resize-handle absolute bottom-0 right-0 p-1 cursor-nwse-resize hover:bg-muted/50 rounded-tl-lg transition-colors z-20"
+            onMouseDown={handleResizeStart}
+          >
+            <Maximize2 className="size-4 text-muted-foreground/50 rotate-90" />
+          </div>
+        )}
       </div>
     </div>
   );
