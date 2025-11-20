@@ -221,7 +221,7 @@ export default function Timer({player}: {player: Player}) {
       <div
         className={cn(
           "relative flex items-center justify-between backdrop-blur-sm border rounded-xl shadow-xl overflow-hidden transition-colors pointer-events-auto",
-          "w-auto max-w-full bg-black text-white border-white/20 px-4 py-2 gap-4",
+          "w-auto max-w-full bg-black text-white border-white/20 px-4 py-2 gap-4 opacity-[.85]",
           isExpired && "border-destructive border-2",
         )}
       >
