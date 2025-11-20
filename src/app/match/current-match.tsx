@@ -3,17 +3,34 @@ import Timer from "@/components/Timer";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
 import {
+  DndContext,
+  DragOverlay,
+  KeyboardSensor,
+  PointerSensor,
+  closestCenter,
+  useSensor,
+  useSensors,
+  type DragEndEvent,
+  type DragStartEvent,
+} from "@dnd-kit/core";
+import {
+  SortableContext,
+  arrayMove,
+  rectSortingStrategy,
+  sortableKeyboardCoordinates,
+} from "@dnd-kit/sortable";
+import {
   Minus,
   Plus
 } from "lucide-react";
 import Image from "next/image";
 import type { CSSProperties } from "react";
-import { useEffect, useMemo, useRef, useState } from "react";
-import { createSwapy, utils, type Swapy } from "swapy";
+import { useEffect, useRef, useState } from "react";
 import { useCurrentMatch } from "../_stores/current-match-provider";
 import { type Player } from "../_stores/current-match-store";
 import { useStableLongPress } from "../hooks/use-longer-press";
 import SettingsButton from "./settings-button";
+import { SortablePlayerCard } from "./sortable-player-card";
 
 function Grid(n: number) {
   const cols = Math.max(1, Math.ceil(n / 2));
@@ -114,7 +131,6 @@ function PlayerCurrentMatch({
        
          
         <div
-          data-swapy-no-drag
           className={cn(
             "absolute inset-x-0 z-20 flex items-center justify-center pointer-events-none",
             flipped ? "top-0 rotate-180" : "bottom-0"
@@ -128,11 +144,9 @@ function PlayerCurrentMatch({
 
       {commanderBackground ? (
         <div
-          data-swapy-no-drag
           className="pointer-events-none absolute inset-0 -z-20 bg-cover bg-top opacity-70"
         >
           <Image
-            data-swapy-no-drag
             src={commanderBackground}
             fill
             className={cn("object-cover object-top rounded-3xl", flipped && "rotate-180")}
@@ -143,7 +157,6 @@ function PlayerCurrentMatch({
       ) : null}
       {!commanderBackground && (
         <span
-          data-swapy-no-drag
           className={cn(
             "text-background absolute text-2xl select-none",
             flipped
@@ -155,8 +168,11 @@ function PlayerCurrentMatch({
         </span>
       )}
       <Button
-        data-swapy-no-drag
         {...minusAttrs}
+        onPointerDown={(e) => {
+          e.stopPropagation();
+          minusAttrs.onPointerDown(e);
+        }}
         size="icon-lg"
         onContextMenu={(e) => e.preventDefault()}
         className={cn(
@@ -167,7 +183,6 @@ function PlayerCurrentMatch({
         onClick={() => updateHp(player.id, -1)}
       >
         <Minus
-          data-swapy-no-drag
           className={cn(
             "text-background/80 group-active:text-background size-8",
             commanderBackground && "text-white/80 group-active:text-white",
@@ -177,7 +192,6 @@ function PlayerCurrentMatch({
         />
 
         <span
-          data-swapy-no-drag
           className={cn(
             "text-background text-5xl select-none",
             flipped && "rotate-180",
@@ -189,8 +203,11 @@ function PlayerCurrentMatch({
       </Button>
 
       <Button
-        data-swapy-no-drag
         {...plusAttrs}
+        onPointerDown={(e) => {
+          e.stopPropagation();
+          plusAttrs.onPointerDown(e);
+        }}
         onContextMenu={(e) => e.preventDefault()}
         size="icon-lg"
         className={cn(
@@ -201,7 +218,6 @@ function PlayerCurrentMatch({
         onClick={() => updateHp(player.id, 1)}
       >
         <Plus
-          data-swapy-no-drag
           className={cn(
             "text-background/80 group-active:text-background size-8",
             commanderBackground && "text-white/80 group-active:text-white",
@@ -210,7 +226,6 @@ function PlayerCurrentMatch({
           strokeWidth={4}
         />
         <span
-          data-swapy-no-drag
           className={cn(
             "text-background text-5xl select-none",
             flipped && "rotate-180",
@@ -242,69 +257,37 @@ export default function CurrentMatch() {
   const players = useCurrentMatch((s) => s.players);
   const currentPlayerIndex = useCurrentMatch((s) => s.currentPlayerIndex);
   const reorderPlayers = useCurrentMatch((s) => s.reorderPlayers);
-  const setTimerVisible = useCurrentMatch((s) => s.setTimerVisible);
   const n = players.length;
   const { cols, rows } = Grid(n);
-  const containerRef = useRef<HTMLDivElement | null>(null);
-  const swapyInstanceRef = useRef<Swapy | null>(null);
+  
+  const [activeId, setActiveId] = useState<string | null>(null);
 
-  const [slotItemMap, setSlotItemMap] = useState(
-    utils.initSlotItemMap(players, "id"),
-  );
-  const slottedItems = useMemo(
-    () => utils.toSlottedItems(players, "id", slotItemMap),
-    [players, slotItemMap],
-  );
-
-
-  useEffect(() => {
-    const container = containerRef.current;
-    if (!container) return;
-    const instance = createSwapy(container, {
-      dragOnHold: false,
-      manualSwap: true,
-      animation: "dynamic",
-      swapMode: "drop",
-    });
-
-    instance.onSwap((event) => {
-      setSlotItemMap(event.newSlotItemMap.asArray);
-    });
-    instance.onSwapStart(() => {
-      setTimerVisible(false);
+  const sensors = useSensors(
+    useSensor(PointerSensor),
+    useSensor(KeyboardSensor, {
+      coordinateGetter: sortableKeyboardCoordinates,
     })
-    instance.onSwapEnd(({ hasChanged, slotItemMap }) => {
-      setTimerVisible(true);
-      if (!hasChanged) return;
-
-      const normalizedSlotItemMap = slotItemMap.asArray;
-      setSlotItemMap(normalizedSlotItemMap);
-      const playerOrder = normalizedSlotItemMap
-        .map(({ item }) => item)
-        .filter((id): id is string => Boolean(id));
-      reorderPlayers(playerOrder);
-    });
-
-    swapyInstanceRef.current = instance;
-
-    return () => {
-      instance.destroy();
-      swapyInstanceRef.current = null;
-    };
-  }, []);
-
-  useEffect(
-    () =>
-      utils.dynamicSwapy(
-        swapyInstanceRef.current,
-        players,
-        "id",
-        slotItemMap,
-        setSlotItemMap,
-      ),
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-    [players],
   );
+
+  const handleDragStart = (event: DragStartEvent) => {
+    setActiveId(event.active.id as string);
+  };
+
+  const handleDragEnd = (event: DragEndEvent) => {
+    const { active, over } = event;
+
+    if (over && active.id !== over.id) {
+      const oldIndex = players.findIndex((p) => p.id === active.id);
+      const newIndex = players.findIndex((p) => p.id === over.id);
+      
+      if (oldIndex !== -1 && newIndex !== -1) {
+        const newPlayers = arrayMove(players, oldIndex, newIndex);
+        reorderPlayers(newPlayers.map((p) => p.id));
+      }
+    }
+
+    setActiveId(null);
+  };
 
   const GAP = "0.75rem";
   const PAD = "0.75rem";
@@ -327,37 +310,48 @@ export default function CurrentMatch() {
   };
 
   const activePlayer = players[currentPlayerIndex];
+  const activeDragPlayer = activeId ? players.find((p) => p.id === activeId) : null;
 
   return (
-    <div
-      ref={containerRef}
-      className="relative grid h-dvh w-full gap-3 p-3 min-h-screen"
-      style={styleGrid}
+    <DndContext
+      sensors={sensors}
+      collisionDetection={closestCenter}
+      onDragStart={handleDragStart}
+      onDragEnd={handleDragEnd}
     >
-      {slottedItems.map(({ item: player, itemId, slotId }, idx) => (
-        <div
-          key={slotId}
-          data-swapy-slot={slotId}
-          className={cn("h-full w-full rounded-3xl group-slot data-swapy-highlighted:bg-slate-600/60", activePlayer?.id === player?.id && "z-20")}
+      <div
+        className="relative grid h-dvh w-full gap-3 p-3 min-h-screen"
+        style={styleGrid}
+      >
+        <SortableContext
+          items={players.map((p) => p.id)}
+          strategy={rectSortingStrategy}
         >
-          <div
-            key={`${slotId}-${itemId}`}
-            data-swapy-item={itemId}
-            className="h-full w-full group-item select-none"
-          >
-            {player && (
-              <PlayerCurrentMatch 
-                player={player} 
-                flipped={idx < cols} 
-                key={`${slotId}-${itemId}`}
+          {players.map((player, idx) => (
+            <SortablePlayerCard key={player.id} id={player.id}>
+              <PlayerCurrentMatch
+                player={player}
+                flipped={idx < cols}
                 isActive={activePlayer?.id === player.id}
               />
-            )}
-          </div>
-        </div>
-      ))}
+            </SortablePlayerCard>
+          ))}
+        </SortableContext>
 
-      <SettingsButton />
-    </div>
+        <DragOverlay>
+          {activeDragPlayer ? (
+            <div className="h-full w-full">
+               <PlayerCurrentMatch
+                player={activeDragPlayer}
+                flipped={players.findIndex(p => p.id === activeId) < cols}
+                isActive={activePlayer?.id === activeDragPlayer.id}
+              />
+            </div>
+          ) : null}
+        </DragOverlay>
+
+        <SettingsButton />
+      </div>
+    </DndContext>
   );
 }
