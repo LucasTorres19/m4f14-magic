@@ -19,16 +19,12 @@ import {
   rectSortingStrategy,
   sortableKeyboardCoordinates,
 } from "@dnd-kit/sortable";
-import {
-  Minus,
-  Plus
-} from "lucide-react";
+import { Minus, Plus } from "lucide-react";
 import Image from "next/image";
 import type { CSSProperties } from "react";
-import { useEffect, useRef, useState } from "react";
+import { useState } from "react";
 import { useCurrentMatch } from "../_stores/current-match-provider";
 import { type Player } from "../_stores/current-match-store";
-import { useStableLongPress } from "../hooks/use-longer-press";
 import SettingsButton from "./settings-button";
 import { SortablePlayerCard } from "./sortable-player-card";
 
@@ -53,16 +49,12 @@ type CSSVars = CSSProperties & {
 function PlayerCurrentMatch({
   player,
   flipped = false,
-  isActive = false,
 }: {
   player: Player;
   flipped?: boolean;
   isActive?: boolean;
 }) {
-  const minusIntervalRef = useRef<NodeJS.Timeout | null>(null);
-  const plusIntervalRef = useRef<NodeJS.Timeout | null>(null);
   const updateHp = useCurrentMatch((s) => s.updateHp);
-  const isTimerVisible = useCurrentMatch((s) => s.isTimerVisible);
   const commanderBackground =
     player.commander?.artImageUrl ?? player.commander?.imageUrl ?? null;
 
@@ -70,51 +62,6 @@ function PlayerCurrentMatch({
     backgroundColor: commanderBackground ? "" : player.backgroundColor,
     opacity: commanderBackground ? undefined : 0.7,
   };
-
-  const minusAttrs = useStableLongPress(
-    () => {
-      if (minusIntervalRef.current) clearInterval(minusIntervalRef.current);
-      minusIntervalRef.current = setInterval(() => updateHp(player.id, -1), 50);
-    },
-    {
-      onFinish: () => {
-        if (minusIntervalRef.current) clearInterval(minusIntervalRef.current);
-        minusIntervalRef.current = null;
-      },
-      onCancel: () => {
-        if (minusIntervalRef.current) clearInterval(minusIntervalRef.current);
-        minusIntervalRef.current = null;
-      },
-      threshold: 500,
-    },
-  );
-  const plusAttrs = useStableLongPress(
-    () => {
-      if (plusIntervalRef.current) clearInterval(plusIntervalRef.current);
-      plusIntervalRef.current = setInterval(() => updateHp(player.id, 1), 50);
-    },
-    {
-      onFinish: () => {
-        if (plusIntervalRef.current) clearInterval(plusIntervalRef.current);
-        plusIntervalRef.current = null;
-      },
-      onCancel: () => {
-        if (plusIntervalRef.current) clearInterval(plusIntervalRef.current);
-        plusIntervalRef.current = null;
-      },
-      threshold: 500,
-    },
-  );
-
-  useEffect(() => {
-    // clean up just in case
-    return () => {
-      if (plusIntervalRef.current) clearInterval(plusIntervalRef.current);
-      plusIntervalRef.current = null;
-      if (minusIntervalRef.current) clearInterval(minusIntervalRef.current);
-      minusIntervalRef.current = null;
-    };
-  }, []);
 
   return (
     <div
@@ -124,32 +71,29 @@ function PlayerCurrentMatch({
       )}
     >
       {/* Background layer for opacity isolation */}
-      <div 
-        className="absolute inset-0 -z-30 rounded-3xl" 
-        style={containerStyle} 
+      <div
+        className="absolute inset-0 -z-30 rounded-3xl"
+        style={containerStyle}
       />
-       
-         
-        <div
-          className={cn(
-            "absolute inset-x-0 z-20 flex items-center justify-center pointer-events-none",
-            flipped ? "top-0 rotate-180" : "bottom-0"
-          )}
-        >
-            <Timer player={player} />
-        </div>
-        
-       
-      
+
+      <div
+        className={cn(
+          "absolute inset-x-0 z-20 flex items-center justify-center pointer-events-none",
+          flipped ? "top-0 rotate-180" : "bottom-0",
+        )}
+      >
+        <Timer player={player} />
+      </div>
 
       {commanderBackground ? (
-        <div
-          className="pointer-events-none absolute inset-0 -z-20 bg-cover bg-top opacity-70"
-        >
+        <div className="pointer-events-none absolute inset-0 -z-20 bg-cover bg-top opacity-70">
           <Image
             src={commanderBackground}
             fill
-            className={cn("object-cover object-top rounded-3xl", flipped && "rotate-180")}
+            className={cn(
+              "object-cover object-top rounded-3xl",
+              flipped && "rotate-180",
+            )}
             draggable={false}
             alt={player.commander?.name ?? `${player.displayName} commander`}
           />
@@ -168,10 +112,8 @@ function PlayerCurrentMatch({
         </span>
       )}
       <Button
-        {...minusAttrs}
         onPointerDown={(e) => {
           e.stopPropagation();
-          minusAttrs.onPointerDown(e);
         }}
         size="icon-lg"
         onContextMenu={(e) => e.preventDefault()}
@@ -203,10 +145,8 @@ function PlayerCurrentMatch({
       </Button>
 
       <Button
-        {...plusAttrs}
         onPointerDown={(e) => {
           e.stopPropagation();
-          plusAttrs.onPointerDown(e);
         }}
         onContextMenu={(e) => e.preventDefault()}
         size="icon-lg"
@@ -259,14 +199,14 @@ export default function CurrentMatch() {
   const reorderPlayers = useCurrentMatch((s) => s.reorderPlayers);
   const n = players.length;
   const { cols, rows } = Grid(n);
-  
+
   const [activeId, setActiveId] = useState<string | null>(null);
 
   const sensors = useSensors(
     useSensor(PointerSensor),
     useSensor(KeyboardSensor, {
       coordinateGetter: sortableKeyboardCoordinates,
-    })
+    }),
   );
 
   const handleDragStart = (event: DragStartEvent) => {
@@ -279,7 +219,7 @@ export default function CurrentMatch() {
     if (over && active.id !== over.id) {
       const oldIndex = players.findIndex((p) => p.id === active.id);
       const newIndex = players.findIndex((p) => p.id === over.id);
-      
+
       if (oldIndex !== -1 && newIndex !== -1) {
         const newPlayers = arrayMove(players, oldIndex, newIndex);
         reorderPlayers(newPlayers.map((p) => p.id));
@@ -303,14 +243,14 @@ export default function CurrentMatch() {
     "--cellW": `calc((100% - (var(--cols) - 1) * var(--gap) - 2 * var(--pad)) / var(--cols))`,
     "--cellH": `calc((100% - (var(--rows) - 1) * var(--gap) - 2 * var(--pad)) / var(--rows))`,
     "--x":
-      n === 2
-        ? "50%"
-        : `calc(var(--pad) + var(--cellW) + (var(--gap) / 2))`,
+      n === 2 ? "50%" : `calc(var(--pad) + var(--cellW) + (var(--gap) / 2))`,
     "--y": `calc(var(--pad) + var(--cellH) + (var(--gap) / 2))`,
   };
 
   const activePlayer = players[currentPlayerIndex];
-  const activeDragPlayer = activeId ? players.find((p) => p.id === activeId) : null;
+  const activeDragPlayer = activeId
+    ? players.find((p) => p.id === activeId)
+    : null;
 
   return (
     <DndContext
@@ -341,10 +281,9 @@ export default function CurrentMatch() {
         <DragOverlay>
           {activeDragPlayer ? (
             <div className="h-full w-full">
-               <PlayerCurrentMatch
+              <PlayerCurrentMatch
                 player={activeDragPlayer}
-                flipped={players.findIndex(p => p.id === activeId) < cols}
-                isActive={activePlayer?.id === activeDragPlayer.id}
+                flipped={players.findIndex((p) => p.id === activeId) < cols}
               />
             </div>
           ) : null}
