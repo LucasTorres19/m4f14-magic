@@ -354,6 +354,12 @@ export default function SummonerDetailPage() {
                         <Swords className="h-4 w-4 mr-1" /> {playerStats.matchCount} partidas
                       </span>
                       <span className="inline-flex items-center gap-1 py-1 px-2 rounded-full bg-primary/10 text-primary">
+                        <Trophy className="h-4 w-4 mr-1" /> {playerStats.wins} victorias
+                      </span>
+                      <span className="inline-flex items-center gap-1 py-1 px-2 rounded-full bg-primary/10 text-primary">
+                        <Boxes className="h-4 w-4 mr-1" /> {playerStats.podiums} podios
+                      </span>
+                      <span className="inline-flex items-center gap-1 py-1 px-2 rounded-full bg-primary/10 text-primary">
                         <Trophy className="h-4 w-4 mr-1" /> {pct(playerStats.wins, playerStats.matchCount)}% winrate
                       </span>
                       <span className="inline-flex items-center gap-1 py-1 px-2 rounded-full bg-primary/10 text-primary">
