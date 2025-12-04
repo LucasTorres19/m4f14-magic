@@ -560,7 +560,7 @@ export default function SummonerDetailPage() {
                       <td className="py-2 pr-3 font-medium">{row.name ?? "Desconocido"}</td>
                       <td className="py-2 pr-3">{row.matchCount ?? 0}</td>
                       <td className="py-2 pr-3">
-                        {row.wins ?? 0} ({pct(row.wins, row.matchCount)}%)
+                        {pct(row.wins, row.matchCount)}% ({row.wins ?? 0})
                       </td>
                       <td className="py-2 pr-3">
                         {row.podiums ?? 0} ({pct(row.podiums, row.podiumMatchCount ?? row.matchCount)}%)
