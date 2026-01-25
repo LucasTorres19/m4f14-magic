@@ -13,9 +13,10 @@ const leagueDateOptions: Intl.DateTimeFormatOptions = {
 export default async function TournamentHistoryPage({
   params,
 }: {
-  params: { id: string };
+  params: Promise<{ id: string }>;
 }) {
-  const tournamentId = Number(params.id);
+  const { id } = await params;
+  const tournamentId = Number(id);
   if (!Number.isFinite(tournamentId) || tournamentId <= 0) return null;
 
   const [league, results] = await Promise.all([
