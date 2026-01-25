@@ -600,42 +600,51 @@ export default function SummonerDetailPage() {
                   </tr>
                 </thead>
                 <tbody>
-                  {(paginatedHistory ?? []).map((row) => (
-                    <tr
-                      key={row.matchId}
-                      className="border-b hover:bg-muted/30 cursor-pointer"
-                      onClick={() => setOpenMatchId(row.matchId)}
-                    >
-                      <td className="py-2 pr-3 whitespace-nowrap">{fmt(row.createdAt)}</td>
-                      <td className="py-2 pr-3">
-                        <div className="flex items-center gap-2 min-w-0">
-                          <div className="relative h-10 w-10 rounded overflow-hidden bg-muted shrink-0">
-                            <Image
-                              src={row.self?.commander?.artImageUrl ?? row.self?.commander?.imageUrl ?? "/placeholder.svg"}
-                              alt={row.self?.commander?.name ?? "Commander"}
-                              fill
-                              className="object-cover"
-                              sizes="40px"
-                              unoptimized
-                            />
+                  {(paginatedHistory ?? []).map((row) => {
+                    const commander = row.self?.commander;
+                    const commanderImage =
+                      commander?.artImageUrl ??
+                      commander?.imageUrl ??
+                      (commander ? "/placeholder.svg" : "/web-app-manifest-192x192.png");
+                    const commanderLabel = commander?.name ?? (commander ? "Desconocido" : "sin comandante");
+
+                    return (
+                      <tr
+                        key={row.matchId}
+                        className="border-b hover:bg-muted/30 cursor-pointer"
+                        onClick={() => setOpenMatchId(row.matchId)}
+                      >
+                        <td className="py-2 pr-3 whitespace-nowrap">{fmt(row.createdAt)}</td>
+                        <td className="py-2 pr-3">
+                          <div className="flex items-center gap-2 min-w-0">
+                            <div className="relative h-10 w-10 rounded overflow-hidden bg-muted shrink-0">
+                              <Image
+                                src={commanderImage}
+                                alt={commanderLabel}
+                                fill
+                                className="object-cover"
+                                sizes="40px"
+                                unoptimized
+                              />
+                            </div>
+                            <span className="truncate">{commanderLabel}</span>
                           </div>
-                          <span className="truncate">{row.self?.commander?.name ?? "Desconocido"}</span>
-                        </div>
-                      </td>
-                      <td className="py-2 pr-3">{row.self?.placement ?? "-"}</td>
-                      <td className="py-2 pr-3">{row.players?.length ?? 0}</td>
-                      <td className="py-2 pr-3">{row.startingHp ?? "-"}</td>
-                      <td className="py-2 pr-3">
-                        {row.leagueName
-                          ? "Liga: " + row.leagueName
-                          : (row.players?.length ?? 0) === 2
-                          ? "Commander 1v1"
-                          : (row.players?.length ?? 0) >= 3
-                          ? "Commander"
-                          : "-"}
-                      </td>
-                    </tr>
-                  ))}
+                        </td>
+                        <td className="py-2 pr-3">{row.self?.placement ?? "-"}</td>
+                        <td className="py-2 pr-3">{row.players?.length ?? 0}</td>
+                        <td className="py-2 pr-3">{row.startingHp ?? "-"}</td>
+                        <td className="py-2 pr-3">
+                          {row.leagueName
+                            ? "Liga: " + row.leagueName
+                            : (row.players?.length ?? 0) === 2
+                            ? "Commander 1v1"
+                            : (row.players?.length ?? 0) >= 3
+                            ? "Commander"
+                            : "-"}
+                        </td>
+                      </tr>
+                    );
+                  })}
                   {(history?.length ?? 0) === 0 && (
                     <tr>
                       <td className="py-6 text-center text-muted-foreground" colSpan={5}>
