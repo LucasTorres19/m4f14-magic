@@ -389,6 +389,13 @@ export default function TournamentPage() {
       <p className="mb-6 text-sm text-muted-foreground">
         Donde las grandes leyendas se enfrentan...
       </p>
+      {activeTournament && (
+        <div className="mb-6 flex justify-end">
+          <Button type="button" variant="secondary" onClick={endLeague}>
+            Finalizar torneo
+          </Button>
+        </div>
+      )}
 
       {!activeTournament && (
         <section className="mb-6">
