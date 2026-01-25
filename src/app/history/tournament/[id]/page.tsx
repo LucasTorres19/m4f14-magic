@@ -10,11 +10,12 @@ const leagueDateOptions: Intl.DateTimeFormatOptions = {
   year: "numeric",
 };
 
-export default async function TournamentHistoryPage(
-  props: PageProps<"/history/tournament/[id]">,
-) {
-  const { id } = await props.params;
-  const tournamentId = Number(id);
+export default async function TournamentHistoryPage({
+  params,
+}: {
+  params: { id: string };
+}) {
+  const tournamentId = Number(params.id);
   if (!Number.isFinite(tournamentId) || tournamentId <= 0) return null;
 
   const [league, results] = await Promise.all([
@@ -259,4 +260,3 @@ export default async function TournamentHistoryPage(
     </main>
   );
 }
-
