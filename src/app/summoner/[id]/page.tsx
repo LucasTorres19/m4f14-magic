@@ -319,17 +319,43 @@ export default function SummonerDetailPage() {
 
   const [historyPage, setHistoryPage] = useState(1);
   const pageSize = 10;
+  const [historyCommanderFilter, setHistoryCommanderFilter] = useState<string>("all");
+  const historyCommanderOptions = useMemo(() => {
+    const map = new Map<string, { label: string; key: string }>();
+    for (const h of history ?? []) {
+      const rawName = (h.self?.commander?.name ?? "").trim();
+      if (!rawName) continue;
+      const key = rawName.toLowerCase();
+      if (!map.has(key)) {
+        map.set(key, { label: rawName, key });
+      }
+    }
+    return Array.from(map.values()).sort((a, b) => collator.compare(a.label, b.label));
+  }, [history, collator]);
+
+  useEffect(() => {
+    setHistoryPage(1);
+  }, [historyCommanderFilter]);
+
+  const filteredHistory = useMemo(() => {
+    if (historyCommanderFilter === "all") return history ?? [];
+    return (history ?? []).filter((h) => {
+      const name = (h.self?.commander?.name ?? "").trim().toLowerCase();
+      return name === historyCommanderFilter;
+    });
+  }, [history, historyCommanderFilter]);
+
   const totalPages = useMemo(
-    () => Math.max(1, Math.ceil((history?.length ?? 0) / pageSize)),
-    [history]
+    () => Math.max(1, Math.ceil((filteredHistory?.length ?? 0) / pageSize)),
+    [filteredHistory]
   );
   useEffect(() => {
     if (historyPage > totalPages) setHistoryPage(totalPages);
   }, [totalPages, historyPage]);
   const paginatedHistory = useMemo(() => {
     const start = (historyPage - 1) * pageSize;
-    return (history ?? []).slice(start, start + pageSize);
-  }, [history, historyPage]);
+    return (filteredHistory ?? []).slice(start, start + pageSize);
+  }, [filteredHistory, historyPage]);
 
   return (
     <div className="min-h-screen text-foreground relative overflow-hidden">
@@ -631,9 +657,27 @@ export default function SummonerDetailPage() {
 
         {!isLoading && !isError && (
           <div className="mt-10 space-y-3">
-            <div className="flex items-center justify-between">
+            <div className="flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
               <h2 className="text-xl font-semibold">Historial de partidas</h2>
-              {historyLoading && <span className="text-sm text-muted-foreground">Cargandoâ€¦</span>}
+              <div className="flex flex-col gap-2 md:flex-row md:items-center md:gap-3">
+                <label htmlFor="historyCommander" className="text-sm text-muted-foreground">
+                  Comandante:
+                </label>
+                <select
+                  id="historyCommander"
+                  className="h-9 w-full max-w-full rounded-md border bg-background px-3 text-sm md:w-auto"
+                  value={historyCommanderFilter}
+                  onChange={(e) => setHistoryCommanderFilter(e.target.value)}
+                >
+                  <option value="all">Todos</option>
+                  {historyCommanderOptions.map((opt) => (
+                    <option key={opt.key} value={opt.key}>
+                      {opt.label}
+                    </option>
+                  ))}
+                </select>
+                {historyLoading && <span className="text-sm text-muted-foreground">Cargando</span>}
+              </div>
             </div>
 
             <Card className="p-4 overflow-x-auto">
@@ -694,7 +738,7 @@ export default function SummonerDetailPage() {
                       </tr>
                     );
                   })}
-                  {(history?.length ?? 0) === 0 && (
+                  {(filteredHistory?.length ?? 0) === 0 && (
                     <tr>
                       <td className="py-6 text-center text-muted-foreground" colSpan={5}>
                         AÃºn no hay partidas registradas.
@@ -704,11 +748,11 @@ export default function SummonerDetailPage() {
                 </tbody>
               </table>
 
-              {((history?.length ?? 0) > pageSize) && (
+              {((filteredHistory?.length ?? 0) > pageSize) && (
                 <div className="mt-3 flex items-center justify-between">
                   <span className="text-sm text-muted-foreground">
                     {(() => {
-                      const total = history?.length ?? 0;
+                      const total = filteredHistory?.length ?? 0;
                       const start = Math.min((historyPage - 1) * pageSize + 1, total);
                       const end = Math.min(historyPage * pageSize, total);
                       return `Mostrando ${start}–${end} de ${total}`;

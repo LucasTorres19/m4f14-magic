@@ -590,61 +590,71 @@ export default function TournamentPage() {
                     />
                   </div>
                 )}
-                <div className="flex flex-wrap items-center gap-2">
+                <div className="flex flex-col gap-2">
                   {!activeTournament && (
                     <>
-                      <span className="text-sm text-muted-foreground">Formato:</span>
-                      <Button
-                        type="button"
-                        variant={
-                          (state.mode ?? "double") === "single" ? "default" : "outline"
-                        }
-                        size="sm"
-                        onClick={() =>
-                          setState((s) => ({ ...s, mode: "single" }))
-                        }
-                      >
-                        Ida
-                      </Button>
-                      <Button
-                        type="button"
-                        variant={
-                          (state.mode ?? "double") === "double" ? "default" : "outline"
-                        }
-                        size="sm"
-                        onClick={() =>
-                          setState((s) => ({ ...s, mode: "double" }))
-                        }
-                      >
-                        Ida y vuelta
-                      </Button>
-                      <span className="text-sm text-muted-foreground ml-2">
-                        Desempate:
-                      </span>
-                      <Button
-                        type="button"
-                        variant={
-                          state.tiebreakerEnabled ? "default" : "outline"
-                        }
-                        size="sm"
-                        onClick={() =>
-                          setState((s) => ({ ...s, tiebreakerEnabled: true }))
-                        }
-                      >
-                        Activado
-                      </Button>
-                      <Button
-                        type="button"
-                        variant={
-                          state.tiebreakerEnabled ? "outline" : "default"
-                        }
-                        size="sm"
-                        onClick={() =>
-                          setState((s) => ({ ...s, tiebreakerEnabled: false }))
-                        }
-                      >
-                        Desactivado
-                      </Button>
+                      <div className="flex flex-wrap items-center gap-2">
+                        <span className="text-sm text-muted-foreground">
+                          Formato:
+                        </span>
+                        <Button
+                          type="button"
+                          variant={
+                            (state.mode ?? "double") === "single"
+                              ? "default"
+                              : "outline"
+                          }
+                          size="sm"
+                          onClick={() =>
+                            setState((s) => ({ ...s, mode: "single" }))
+                          }
+                        >
+                          Ida
+                        </Button>
+                        <Button
+                          type="button"
+                          variant={
+                            (state.mode ?? "double") === "double"
+                              ? "default"
+                              : "outline"
+                          }
+                          size="sm"
+                          onClick={() =>
+                            setState((s) => ({ ...s, mode: "double" }))
+                          }
+                        >
+                          Ida y vuelta
+                        </Button>
+                      </div>
+                      <div className="flex flex-wrap items-center gap-2">
+                        <span className="text-sm text-muted-foreground">
+                          Desempate:
+                        </span>
+                        <Button
+                          type="button"
+                          variant={
+                            state.tiebreakerEnabled ? "default" : "outline"
+                          }
+                          size="sm"
+                          onClick={() =>
+                            setState((s) => ({ ...s, tiebreakerEnabled: true }))
+                          }
+                        >
+                          Activado
+                        </Button>
+                        <Button
+                          type="button"
+                          variant={
+                            state.tiebreakerEnabled ? "outline" : "default"
+                          }
+                          size="sm"
+                          onClick={() =>
+                            setState((s) => ({ ...s, tiebreakerEnabled: false }))
+                          }
+                        >
+                          Desactivado
+                        </Button>
+                      </div>
                     </>
                   )}
                 </div>
