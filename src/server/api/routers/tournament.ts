@@ -25,7 +25,41 @@ const leagueStateSchema = z.object({
   rounds: z.array(z.array(z.number().int().nonnegative())).optional().default([]),
   currentRound: z.number().int().nonnegative().optional().default(0),
   mode: z.enum(["single", "double"]).optional().default("double"),
+  tiebreakerEnabled: z.boolean().optional().default(false),
 });
+
+function generateRoundRobinForIndices(
+  playerIndices: number[],
+): { matches: Array<z.infer<typeof leagueMatchSchema>>; rounds: number[][] } {
+  const hasBye = playerIndices.length % 2 === 1;
+  const N = hasBye ? playerIndices.length + 1 : playerIndices.length;
+  const arr = [
+    ...playerIndices,
+    ...(hasBye ? [-1] : []),
+  ];
+  const rounds: number[][] = [];
+  const matches: Array<z.infer<typeof leagueMatchSchema>> = [];
+  const roundsCount = N - 1;
+  for (let r = 0; r < roundsCount; r++) {
+    const roundIdxs: number[] = [];
+    for (let i = 0; i < N / 2; i++) {
+      const a = arr[i]!;
+      const b = arr[N - 1 - i]!;
+      if (a === -1 || b === -1) continue;
+      const idx = matches.length;
+      matches.push({ a, b, played: false });
+      roundIdxs.push(idx);
+    }
+    if (roundIdxs.length > 0) {
+      rounds.push(roundIdxs);
+    }
+    const fixed = arr[0]!;
+    const rest = arr.slice(1);
+    rest.unshift(rest.pop()!);
+    arr.splice(0, arr.length, fixed, ...rest);
+  }
+  return { matches, rounds };
+}
 
 export const tournamentRouter = createTRPCRouter({
   getActive: publicProcedure.query(async ({ ctx }) => {
@@ -121,6 +155,67 @@ export const tournamentRouter = createTRPCRouter({
       if (!allPlayed) throw new TRPCError({ code: "BAD_REQUEST", message: "Round has pending matches" });
 
       const nextState = { ...state, currentRound: cr + 1 };
+
+      await ctx.db
+        .update(tournaments)
+        .set({ state: JSON.stringify(nextState) })
+        .where(eq(tournaments.id, row.id));
+
+      return { ok: true } as const;
+    }),
+  addTiebreakerRound: protectedProcedure
+    .input(
+      z.object({
+        tournamentId: z.number().int().positive(),
+        playerIndices: z.array(z.number().int().nonnegative()).min(2),
+      }),
+    )
+    .mutation(async ({ ctx, input }) => {
+      const [row] = await ctx.db
+        .select({ id: tournaments.id, state: tournaments.state, finished: tournaments.finished })
+        .from(tournaments)
+        .where(eq(tournaments.id, input.tournamentId))
+        .limit(1);
+
+      if (!row) throw new TRPCError({ code: "NOT_FOUND", message: "Tournament not found" });
+      if (row.finished === 1) throw new TRPCError({ code: "BAD_REQUEST", message: "Tournament is finished" });
+
+      const state = leagueStateSchema.parse(JSON.parse(row.state));
+      if (!state.tiebreakerEnabled) {
+        throw new TRPCError({ code: "BAD_REQUEST", message: "Tiebreaker is disabled" });
+      }
+
+      const unique = Array.from(new Set(input.playerIndices));
+      if (unique.length !== input.playerIndices.length) {
+        throw new TRPCError({ code: "BAD_REQUEST", message: "Duplicate player indices" });
+      }
+
+      if (unique.some((idx) => idx < 0 || idx >= state.players.length)) {
+        throw new TRPCError({ code: "BAD_REQUEST", message: "Invalid player indices" });
+      }
+
+      if (!state.matches.every((m) => m.played)) {
+        throw new TRPCError({ code: "BAD_REQUEST", message: "Tournament has pending matches" });
+      }
+
+      const { matches: newMatches, rounds: newRoundsRaw } =
+        generateRoundRobinForIndices(unique);
+
+      if (newMatches.length === 0 || newRoundsRaw.length === 0) {
+        throw new TRPCError({ code: "BAD_REQUEST", message: "No matches generated" });
+      }
+
+      const baseIndex = state.matches.length;
+      const newRounds = newRoundsRaw.map((round) =>
+        round.map((idx) => idx + baseIndex),
+      );
+
+      const nextState = {
+        ...state,
+        matches: [...state.matches, ...newMatches],
+        rounds: [...(state.rounds ?? []), ...newRounds],
+        currentRound: (state.rounds ?? []).length,
+      };
 
       await ctx.db
         .update(tournaments)

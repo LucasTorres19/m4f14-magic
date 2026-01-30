@@ -40,6 +40,7 @@ type LeagueState = {
   rounds?: number[][];
   currentRound?: number;
   mode?: "single" | "double";
+  tiebreakerEnabled?: boolean;
 };
 
 const STORAGE_KEY = "tournament-league-v1";
@@ -183,6 +184,11 @@ export default function TournamentPage() {
       void refetchActive();
     },
   });
+  const addTiebreakerRound = api.tournament.addTiebreakerRound.useMutation({
+    onSuccess: () => {
+      void refetchActive();
+    },
+  });
   const { data: results = [] } = api.tournament.results.useQuery(
     { tournamentId: activeTournament?.id ?? 0 },
     { enabled: !!activeTournament },
@@ -193,6 +199,7 @@ export default function TournamentPage() {
     started: false,
     matches: [],
     mode: "double",
+    tiebreakerEnabled: false,
   });
   const [leagueName, setLeagueName] = useState<string>("");
 
@@ -231,6 +238,10 @@ export default function TournamentPage() {
     pendingCurrentRound.length === 0 &&
     (currentRoundMatchIdxs.length > 0 || rounds.length === 0);
 
+  const isAllMatchesPlayed = effectiveState.matches.every((m) => m.played);
+  const isResultsComplete = results.length >= effectiveState.matches.length;
+  const tiebreakerEnabled = effectiveState.tiebreakerEnabled ?? false;
+
   const resultsByMatchId = useMemo(() => {
     const map = new Map<number, { winnerName: string; loserName: string }>();
     for (const r of results) {
@@ -242,6 +253,83 @@ export default function TournamentPage() {
     }
     return map;
   }, [results]);
+
+  const standings = useMemo(() => {
+    const pts = new Map<
+      number,
+      {
+        name: string;
+        color: string;
+        points: number;
+        wins: number;
+        played: number;
+        last: ("W" | "L")[];
+      }
+    >();
+    for (const r of results) {
+      const sorted = [...r.players].sort((a, b) => a.placement - b.placement);
+      const w = sorted[0];
+      const l = sorted[1];
+      if (!w || !l) continue;
+      for (const p of [w, l]) {
+        const entry =
+          pts.get(p.id) ?? {
+            name: p.name,
+            color: p.backgroundColor,
+            points: 0,
+            wins: 0,
+            played: 0,
+            last: [],
+          };
+        entry.played += 1;
+        if (p.id === w.id) {
+          entry.wins += 1;
+          entry.points += 3;
+          entry.last.unshift("W");
+        } else {
+          entry.last.unshift("L");
+        }
+        entry.last = entry.last.slice(0, 5);
+        pts.set(p.id, entry);
+      }
+    }
+    return Array.from(pts.entries())
+      .map(([id, v]) => ({ id, ...v }))
+      .sort(
+        (a, b) =>
+          b.points - a.points ||
+          b.wins - a.wins ||
+          a.name.localeCompare(b.name),
+      );
+  }, [results]);
+
+  const tiedLeaders = useMemo(() => {
+    if (!tiebreakerEnabled) return [];
+    if (!isAllMatchesPlayed) return [];
+    if (!isResultsComplete) return [];
+    if (standings.length < 2) return [];
+    const topPoints = standings[0]?.points ?? 0;
+    const tied = standings.filter((row) => row.points === topPoints);
+    return tied.length > 1 ? tied : [];
+  }, [isAllMatchesPlayed, isResultsComplete, standings, tiebreakerEnabled]);
+
+  useEffect(() => {
+    if (!activeTournament) return;
+    if (!tiebreakerEnabled) return;
+    if (!isAllMatchesPlayed) return;
+    if (!isResultsComplete) return;
+    if (tiedLeaders.length < 2) return;
+    if (addTiebreakerRound.isPending) return;
+    void createTiebreakerRound();
+  }, [
+    activeTournament,
+    addTiebreakerRound.isPending,
+    createTiebreakerRound,
+    isAllMatchesPlayed,
+    isResultsComplete,
+    tiebreakerEnabled,
+    tiedLeaders,
+  ]);
 
   function addLeaguePlayer(sel: PlayerSelection) {
     const name = sel.name.trim();
@@ -288,6 +376,7 @@ export default function TournamentPage() {
         rounds,
         currentRound: 0,
         mode: state.mode ?? "double",
+        tiebreakerEnabled: state.tiebreakerEnabled ?? false,
       },
     });
   }
@@ -298,6 +387,26 @@ export default function TournamentPage() {
     } else {
       setState({ players: [], started: false, matches: [] });
     }
+  }
+
+  async function createTiebreakerRound() {
+    if (!activeTournament) return;
+    if (!tiebreakerEnabled) return;
+    if (tiedLeaders.length < 2) return;
+    const tiedNames = new Set(
+      tiedLeaders.map((leader) => leader.name.trim().toLowerCase()),
+    );
+    const tiedIndices = effectiveState.players
+      .map((p, idx) => ({ idx, name: p.name.trim().toLowerCase() }))
+      .filter((p) => tiedNames.has(p.name))
+      .map((p) => p.idx);
+
+    if (tiedIndices.length < 2) return;
+
+    await addTiebreakerRound.mutateAsync({
+      tournamentId: activeTournament.id,
+      playerIndices: tiedIndices,
+    });
   }
 
   async function openScheduledMatch(match: LeagueMatch, index: number) {
@@ -503,6 +612,33 @@ export default function TournamentPage() {
                       >
                         Ida y vuelta
                       </Button>
+                      <span className="text-sm text-muted-foreground ml-2">
+                        Desempate:
+                      </span>
+                      <Button
+                        type="button"
+                        variant={
+                          state.tiebreakerEnabled ? "default" : "outline"
+                        }
+                        size="sm"
+                        onClick={() =>
+                          setState((s) => ({ ...s, tiebreakerEnabled: true }))
+                        }
+                      >
+                        Activado
+                      </Button>
+                      <Button
+                        type="button"
+                        variant={
+                          state.tiebreakerEnabled ? "outline" : "default"
+                        }
+                        size="sm"
+                        onClick={() =>
+                          setState((s) => ({ ...s, tiebreakerEnabled: false }))
+                        }
+                      >
+                        Desactivado
+                      </Button>
                     </>
                   )}
                 </div>
@@ -705,6 +841,20 @@ export default function TournamentPage() {
                           disabled={!isCurrentRoundComplete}
                         >
                           Siguiente ronda
+                        </Button>
+                      )}
+                    {activeTournament &&
+                      tiebreakerEnabled &&
+                      tiedLeaders.length > 1 &&
+                      isAllMatchesPlayed &&
+                      isResultsComplete && (
+                        <Button
+                          size="sm"
+                          variant="secondary"
+                          onClick={createTiebreakerRound}
+                          disabled={addTiebreakerRound.isPending}
+                        >
+                          Generar desempate
                         </Button>
                       )}
                   </div>

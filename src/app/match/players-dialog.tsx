@@ -1,5 +1,6 @@
 "use client";
 
+import Image from "next/image";
 import Wizard from "@/app/_icons/wizard.svg";
 import { CommanderCombobox } from "@/components/commander-combobox";
 import { PlayerCombobox } from "@/components/player-combobox";
@@ -151,7 +152,7 @@ export default function PlayersDialog() {
     <Dialog>
       <DialogTrigger asChild>
         <Button size="lg" className="pointer-events-auto px-4">
-          <Wizard className="size-5" />
+          <Image src={Wizard} alt="Invocadores" width={20} height={20} />
         </Button>
       </DialogTrigger>
 
