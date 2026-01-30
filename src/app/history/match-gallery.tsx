@@ -1,6 +1,5 @@
 "use client";
 
-import type { inferRouterOutputs } from "@trpc/server";
 import { ImageOff, X } from "lucide-react";
 import Image from "next/image";
 import { useEffect, useState } from "react";
@@ -8,11 +7,10 @@ import { createPortal } from "react-dom";
 
 import { AspectRatio } from "@/components/ui/aspect-ratio";
 import { cn } from "@/lib/utils";
-import type { AppRouter } from "@/server/api/root";
+import type { MatchSummary } from "./history-types";
 import UploadImageDialog from "./upload-image-dialog";
 
-type MatchesOutput = inferRouterOutputs<AppRouter>["matches"]["findAll"];
-export type MatchImage = MatchesOutput[number]["image"];
+export type MatchImage = MatchSummary["image"];
 
 type MatchGalleryProps = {
   matchId: number;

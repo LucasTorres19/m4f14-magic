@@ -17,15 +17,22 @@ export const matchesRouter = createTRPCRouter({
       z
         .object({
           limit: z.number().int().min(1).max(100).default(25),
+          cursor: z
+            .object({
+              id: z.number().int(),
+              createdAt: z.number().int(),
+            })
+            .optional(),
         })
         .optional(),
     )
     .query(async ({ ctx, input }) => {
       const limit = input?.limit ?? 25;
+      const cursor = input?.cursor;
 
       const origImage = alias(images, "orig_image");
       const croppedImage = alias(images, "cropped_image");
-      const matchRows = await ctx.db
+      let matchQuery = ctx.db
         .select({
           id: matches.id,
           startingHp: matches.startingHp,
@@ -43,15 +50,36 @@ export const matchesRouter = createTRPCRouter({
         .from(matches)
         .leftJoin(origImage, eq(origImage.id, matches.image))
         .leftJoin(croppedImage, eq(croppedImage.id, matches.cropped_image))
-        .where(sql`${matches.tournamentId} is null`)
-        .orderBy(desc(matches.createdAt))
-        .limit(limit);
+        .where(
+          cursor
+            ? sql`${matches.tournamentId} is null and (${matches.createdAt} < ${cursor.createdAt} or (${matches.createdAt} = ${cursor.createdAt} and ${matches.id} < ${cursor.id}))`
+            : sql`${matches.tournamentId} is null`,
+        )
+        .orderBy(desc(matches.createdAt), desc(matches.id))
+        .limit(limit + 1);
+
+      const matchRows = await matchQuery;
 
       if (matchRows.length === 0) {
-        return [];
+        return { items: [], nextCursor: null };
       }
 
-      const matchIds = matchRows.map((match) => match.id);
+      const hasNextPage = matchRows.length > limit;
+      const slicedMatches = hasNextPage ? matchRows.slice(0, limit) : matchRows;
+      let nextCursor: { id: number; createdAt: number } | null = null;
+
+      if (hasNextPage) {
+        const last = slicedMatches.at(-1);
+        if (last) {
+          const createdAt =
+            last.createdAt instanceof Date
+              ? Math.floor(last.createdAt.getTime() / 1000)
+              : last.createdAt;
+          nextCursor = { id: last.id, createdAt };
+        }
+      }
+
+      const matchIds = slicedMatches.map((match) => match.id);
 
       const playerRows = await ctx.db
         .select({
@@ -116,28 +144,31 @@ export const matchesRouter = createTRPCRouter({
         });
       }
 
-      return matchRows.map((match) => ({
-        id: match.id,
-        croppedImage: match.croppedImage,
-        image: match.image,
-        startingHp: match.startingHp,
-        createdAt: match.createdAt,
-        updatedAt: match.updatedAt,
-        players:
-          playersByMatch.get(match.id)?.map((player) => ({
-            id: player.playerId,
-            name: player.name,
-            backgroundColor: player.backgroundColor,
-            placement: player.placement,
-            commander: player.commander
-              ? {
-                  id: player.commander.id,
-                  name: player.commander.name,
-                  imageUrl: player.commander.imageUrl,
-                  artImageUrl: player.commander.artImageUrl,
-                }
-              : null,
-          })) ?? [],
-      }));
+      return {
+        items: slicedMatches.map((match) => ({
+          id: match.id,
+          croppedImage: match.croppedImage,
+          image: match.image,
+          startingHp: match.startingHp,
+          createdAt: match.createdAt,
+          updatedAt: match.updatedAt,
+          players:
+            playersByMatch.get(match.id)?.map((player) => ({
+              id: player.playerId,
+              name: player.name,
+              backgroundColor: player.backgroundColor,
+              placement: player.placement,
+              commander: player.commander
+                ? {
+                    id: player.commander.id,
+                    name: player.commander.name,
+                    imageUrl: player.commander.imageUrl,
+                    artImageUrl: player.commander.artImageUrl,
+                  }
+                : null,
+            })) ?? [],
+        })),
+        nextCursor,
+      };
     }),
 });
