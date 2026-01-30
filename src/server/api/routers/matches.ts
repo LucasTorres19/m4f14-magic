@@ -32,7 +32,7 @@ export const matchesRouter = createTRPCRouter({
 
       const origImage = alias(images, "orig_image");
       const croppedImage = alias(images, "cropped_image");
-      let matchQuery = ctx.db
+      const matchQuery = ctx.db
         .select({
           id: matches.id,
           startingHp: matches.startingHp,

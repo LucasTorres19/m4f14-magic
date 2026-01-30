@@ -18,6 +18,7 @@ import { Label } from "@/components/ui/label";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { api } from "@/trpc/react";
 import { Plus } from "lucide-react";
+import Image from "next/image";
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { useShallow } from "zustand/react/shallow";
 import { useCurrentMatch } from "../_stores/current-match-provider";
@@ -151,7 +152,7 @@ export default function PlayersDialog() {
     <Dialog>
       <DialogTrigger asChild>
         <Button size="lg" className="pointer-events-auto px-4">
-          <img src={WizardUrl} alt="Invocadores" width={20} height={20} />
+          <Image src={WizardUrl} alt="Invocadores" width={20} height={20} />
         </Button>
       </DialogTrigger>
 

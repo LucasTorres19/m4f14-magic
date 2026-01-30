@@ -94,7 +94,7 @@ export function HistoryFeed({
           hasNextPage &&
           !isFetchingNextPage
         ) {
-          fetchNextPage();
+          void fetchNextPage();
         }
       },
       { rootMargin: "200px" },
