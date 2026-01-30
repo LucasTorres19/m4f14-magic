@@ -95,17 +95,17 @@ export const playersRouter = createTRPCRouter({
         id: player.id,
         name: player.name,
         backgroundColor: player.backgroundColor,
-        commanders: rows.map((r) => ({
-          commanderId: r.commanderId ?? 0,
-          name: r.name ?? null,
-          artImageUrl: r.artImageUrl ?? null,
-          imageUrl: r.imageUrl ?? null,
-          matchCount: Number(r.matchCount ?? 0),
-          wins: Number(r.wins ?? 0),
-          podiumMatchCount: Number(r.podiumMatchCount ?? r.matchCount ?? 0),
-          podiums: Number(r.podiums ?? 0),
-        })),
-      } as const;
+          commanders: rows.map((r) => ({
+            commanderId: r.commanderId ?? 0,
+            name: r.name ?? null,
+            artImageUrl: r.artImageUrl ?? null,
+            imageUrl: r.imageUrl ?? null,
+            matchCount: Number(r.matchCount ?? 0),
+            wins: Number(r.wins ?? 0),
+          podiumMatchCount: Number(r.podiumMatchCount ?? 0),
+            podiums: Number(r.podiums ?? 0),
+          })),
+        } as const;
     }),
   history: publicProcedure
     .input(

@@ -157,8 +157,10 @@ export default function SummonerDetailPage() {
         va = winrate(a.wins ?? 0, a.matchCount ?? 0);
         vb = winrate(b.wins ?? 0, b.matchCount ?? 0);
       } else {
-        va = (a.podiums ?? 0) / Math.max(1, (a.podiumMatchCount ?? a.matchCount ?? 0));
-        vb = (b.podiums ?? 0) / Math.max(1, (b.podiumMatchCount ?? b.matchCount ?? 0));
+        const aEligible = a.podiumMatchCount ?? 0;
+        const bEligible = b.podiumMatchCount ?? 0;
+        va = aEligible > 0 ? (a.podiums ?? 0) / aEligible : 0;
+        vb = bEligible > 0 ? (b.podiums ?? 0) / bEligible : 0;
       }
       if (va === vb) {
         const byName = collator.compare(a.name ?? "", b.name ?? "");
@@ -228,8 +230,9 @@ export default function SummonerDetailPage() {
       games += 1;
 
       const placement = m.self?.placement ?? null;
+      const playerCount = m.players?.length ?? 0;
       const isWin = placement === 1;
-      const isPodium = placement === 1 || placement === 2;
+      const isPodium = playerCount >= 3 && (placement === 1 || placement === 2);
 
       if (isWin) {
         currentWins += 1;
@@ -363,7 +366,7 @@ export default function SummonerDetailPage() {
                         <Trophy className="h-4 w-4 mr-1" /> {pct(playerStats.wins, playerStats.matchCount)}% winrate
                       </span>
                       <span className="inline-flex items-center gap-1 py-1 px-2 rounded-full bg-primary/10 text-primary">
-                        <Boxes className="h-4 w-4 mr-1" /> {pct(playerStats.podiums, playerStats.podiumMatchCount ?? playerStats.matchCount)}% podio
+                        <Boxes className="h-4 w-4 mr-1" /> {pct(playerStats.podiums, playerStats.podiumMatchCount ?? 0)}% podio
                       </span>
 
                       {Boolean(playerStats.isOtp) && (
@@ -563,7 +566,7 @@ export default function SummonerDetailPage() {
                         {pct(row.wins, row.matchCount)}% ({row.wins ?? 0})
                       </td>
                       <td className="py-2 pr-3">
-                        {row.podiums ?? 0} ({pct(row.podiums, row.podiumMatchCount ?? row.matchCount)}%)
+                        {row.podiums ?? 0} ({pct(row.podiums, row.podiumMatchCount ?? 0)}%)
                       </td>
                     </tr>
                   ))}
@@ -635,7 +638,7 @@ export default function SummonerDetailPage() {
                         <td className="py-2 pr-3">{row.startingHp ?? "-"}</td>
                         <td className="py-2 pr-3">
                           {row.leagueName
-                            ? "Liga: " + row.leagueName
+                            ? "" + row.leagueName
                             : (row.players?.length ?? 0) === 2
                             ? "Commander 1v1"
                             : (row.players?.length ?? 0) >= 3
