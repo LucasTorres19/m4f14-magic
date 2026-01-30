@@ -292,6 +292,34 @@ export default function SummonerDetailPage() {
     return { currentWins, bestWins, currentPodiums, bestPodiums, milestones };
   }, [history]);
 
+  const matchTypeStats = useMemo(() => {
+    const base = {
+      commander: { label: "Commander", matches: 0, wins: 0 },
+      commander1v1: { label: "Commander 1v1", matches: 0, wins: 0 },
+      leagues: { label: "Ligas", matches: 0, wins: 0 },
+    };
+
+    for (const m of history ?? []) {
+      const isLeague = Boolean(m.leagueName);
+      const playerCount = m.players?.length ?? 0;
+      const placement = m.self?.placement ?? null;
+      const isWin = placement === 1;
+
+      if (isLeague) {
+        base.leagues.matches += 1;
+        if (isWin) base.leagues.wins += 1;
+      } else if (playerCount === 2) {
+        base.commander1v1.matches += 1;
+        if (isWin) base.commander1v1.wins += 1;
+      } else if (playerCount >= 3) {
+        base.commander.matches += 1;
+        if (isWin) base.commander.wins += 1;
+      }
+    }
+
+    return base;
+  }, [history]);
+
   const [openMatchId, setOpenMatchId] = useState<number | null>(null);
   const openEntry = useMemo(
     () => history?.find((h) => h.matchId === openMatchId) ?? null,
@@ -485,10 +513,10 @@ export default function SummonerDetailPage() {
         {!isLoading && !isError && history.length > 0 && (
           <div className="mb-10 space-y-3">
             <div className="flex items-center justify-between">
-              <h2 className="text-xl font-semibold">Rachas e hitos</h2>
+              <h2 className="text-xl font-semibold">Estadísticas</h2>
             </div>
             <Card className="p-4">
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                 <div>
                   <h3 className="font-medium mb-2">Rachas</h3>
                   <ul className="space-y-2 text-sm">
@@ -523,6 +551,29 @@ export default function SummonerDetailPage() {
                     ) : (
                       <li className="text-muted-foreground">Sin hitos aún.</li>
                     )}
+                  </ul>
+                </div>
+                <div>
+                  <h3 className="font-medium mb-2">Partidas</h3>
+                  <ul className="space-y-2 text-sm">
+                    <li className="flex items-center justify-between">
+                      <span>Commander</span>
+                      <span className="font-medium">
+                        {matchTypeStats.commander.matches} Total ({pct(matchTypeStats.commander.wins, matchTypeStats.commander.matches)} % winrate)
+                      </span>
+                    </li>
+                    <li className="flex items-center justify-between">
+                      <span>Commander 1v1</span>
+                      <span className="font-medium">
+                        {matchTypeStats.commander1v1.matches} Total ({pct(matchTypeStats.commander1v1.wins, matchTypeStats.commander1v1.matches)} % winrate)
+                      </span>
+                    </li>
+                    <li className="flex items-center justify-between">
+                      <span>Ligas</span>
+                      <span className="font-medium">
+                        {matchTypeStats.leagues.matches} Total ({pct(matchTypeStats.leagues.wins, matchTypeStats.leagues.matches)} % winrate)
+                      </span>
+                    </li>
                   </ul>
                 </div>
               </div>
