@@ -173,6 +173,20 @@ export default function SummonerDetailPage() {
     return rows;
   }, [detail?.commanders, sortKey, sortDir, collator]);
 
+  const [commanderPage, setCommanderPage] = useState(1);
+  const commanderPageSize = 10;
+  const commanderTotalPages = useMemo(
+    () => Math.max(1, Math.ceil((sortedRows?.length ?? 0) / commanderPageSize)),
+    [sortedRows]
+  );
+  useEffect(() => {
+    if (commanderPage > commanderTotalPages) setCommanderPage(commanderTotalPages);
+  }, [commanderTotalPages, commanderPage]);
+  const paginatedCommanders = useMemo(() => {
+    const start = (commanderPage - 1) * commanderPageSize;
+    return (sortedRows ?? []).slice(start, start + commanderPageSize);
+  }, [sortedRows, commanderPage]);
+
   const { data: rawHistory, isLoading: historyLoading } = api.players.history.useQuery(
     { playerId, limit: 100 },
     { enabled: Number.isFinite(playerId) }
@@ -546,7 +560,7 @@ export default function SummonerDetailPage() {
                   </tr>
                 </thead>
                 <tbody>
-                  {sortedRows.map((row) => (
+                  {paginatedCommanders.map((row) => (
                     <tr key={row.commanderId} className="border-b hover:bg-muted/30">
                       <td className="py-2 pr-3">
                         <div className="relative h-12 w-12 rounded overflow-hidden bg-muted">
@@ -579,6 +593,38 @@ export default function SummonerDetailPage() {
                   )}
                 </tbody>
               </table>
+
+              {sortedRows.length > commanderPageSize && (
+                <div className="mt-3 flex items-center justify-between">
+                  <span className="text-sm text-muted-foreground">
+                    {(() => {
+                      const total = sortedRows.length;
+                      const start = Math.min((commanderPage - 1) * commanderPageSize + 1, total);
+                      const end = Math.min(commanderPage * commanderPageSize, total);
+                      return `Mostrando ${start}â€“${end} de ${total}`;
+                    })()}
+                  </span>
+                  <div className="flex items-center gap-2">
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={() => setCommanderPage((p) => Math.max(1, p - 1))}
+                      disabled={commanderPage === 1}
+                    >
+                      Anterior
+                    </Button>
+                    <span className="text-sm">PÃ¡gina {commanderPage} de {commanderTotalPages}</span>
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={() => setCommanderPage((p) => Math.min(commanderTotalPages, p + 1))}
+                      disabled={commanderPage === commanderTotalPages}
+                    >
+                      Siguiente
+                    </Button>
+                  </div>
+                </div>
+              )}
             </Card>
           </>
         )}
