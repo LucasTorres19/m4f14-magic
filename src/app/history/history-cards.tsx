@@ -35,8 +35,8 @@ const matchTimeOptions: Intl.DateTimeFormatOptions = {
 };
 
 const placementTitles: Record<number, string> = {
-  1: "CampeÃ³n",
-  2: "SubcampeÃ³n",
+  1: "Campeón",
+  2: "Subcampeón",
   3: "Tercero",
 };
 
@@ -83,7 +83,7 @@ const contrastColor = (hex: string) => {
 };
 
 const placementBadge = (placement: number) => {
-  const title = placementTitles[placement] ?? `PosiciÃ³n ${placement}`;
+  const title = placementTitles[placement] ?? `Posición ${placement}`;
   const ordinal =
     placement === 1
       ? "1ro"
@@ -99,11 +99,11 @@ export const EmptyHistoryState = () => (
   <div className="ornate-border relative mx-auto mt-12 flex max-w-xl flex-col items-center gap-4 rounded-3xl border border-primary/30 bg-card/70 px-6 py-12 text-center shadow-lg backdrop-blur">
     <Sparkles className="text-primary size-10 animate-pulse" />
     <h2 className="text-foreground text-2xl font-semibold tracking-wide">
-      AÃºn no hay duelos registrados
+      Aún no hay duelos registrados
     </h2>
     <p className="text-muted-foreground text-sm leading-relaxed">
-      Guarda una partida desde el tablero principal para construir la colecciÃ³n
-      de comandantes y fotografÃ­as de tu grupo.
+      Guarda una partida desde el tablero principal para construir la colección
+      de comandantes y fotografías de tu grupo.
     </p>
   </div>
 );

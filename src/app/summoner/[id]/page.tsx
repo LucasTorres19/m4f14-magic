@@ -613,7 +613,7 @@ export default function SummonerDetailPage() {
                   {sortedRows.length === 0 && (
                     <tr>
                       <td className="py-6 text-center text-muted-foreground" colSpan={5}>
-                        AÃºn no hay partidas con comandantes.
+                        Aún no hay partidas con comandantes.
                       </td>
                     </tr>
                   )}
@@ -741,7 +741,7 @@ export default function SummonerDetailPage() {
                   {(filteredHistory?.length ?? 0) === 0 && (
                     <tr>
                       <td className="py-6 text-center text-muted-foreground" colSpan={5}>
-                        AÃºn no hay partidas registradas.
+                        Aún no hay partidas registradas.
                       </td>
                     </tr>
                   )}
