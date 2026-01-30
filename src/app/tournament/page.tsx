@@ -1,6 +1,6 @@
 "use client";
 
-import { useContext, useEffect, useMemo, useState } from "react";
+import { useCallback, useContext, useEffect, useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
 import { Loader2 } from "lucide-react";
 
@@ -313,24 +313,6 @@ export default function TournamentPage() {
     return tied.length > 1 ? tied : [];
   }, [isAllMatchesPlayed, isResultsComplete, standings, tiebreakerEnabled]);
 
-  useEffect(() => {
-    if (!activeTournament) return;
-    if (!tiebreakerEnabled) return;
-    if (!isAllMatchesPlayed) return;
-    if (!isResultsComplete) return;
-    if (tiedLeaders.length < 2) return;
-    if (addTiebreakerRound.isPending) return;
-    void createTiebreakerRound();
-  }, [
-    activeTournament,
-    addTiebreakerRound.isPending,
-    createTiebreakerRound,
-    isAllMatchesPlayed,
-    isResultsComplete,
-    tiebreakerEnabled,
-    tiedLeaders,
-  ]);
-
   function addLeaguePlayer(sel: PlayerSelection) {
     const name = sel.name.trim();
     if (name.length === 0) return;
@@ -389,7 +371,7 @@ export default function TournamentPage() {
     }
   }
 
-  async function createTiebreakerRound() {
+  const createTiebreakerRound = useCallback(async () => {
     if (!activeTournament) return;
     if (!tiebreakerEnabled) return;
     if (tiedLeaders.length < 2) return;
@@ -407,7 +389,31 @@ export default function TournamentPage() {
       tournamentId: activeTournament.id,
       playerIndices: tiedIndices,
     });
-  }
+  }, [
+    activeTournament,
+    addTiebreakerRound,
+    effectiveState.players,
+    tiedLeaders,
+    tiebreakerEnabled,
+  ]);
+
+  useEffect(() => {
+    if (!activeTournament) return;
+    if (!tiebreakerEnabled) return;
+    if (!isAllMatchesPlayed) return;
+    if (!isResultsComplete) return;
+    if (tiedLeaders.length < 2) return;
+    if (addTiebreakerRound.isPending) return;
+    void createTiebreakerRound();
+  }, [
+    activeTournament,
+    addTiebreakerRound.isPending,
+    createTiebreakerRound,
+    isAllMatchesPlayed,
+    isResultsComplete,
+    tiebreakerEnabled,
+    tiedLeaders,
+  ]);
 
   async function openScheduledMatch(match: LeagueMatch, index: number) {
     const a = effectiveState.players[match.a];

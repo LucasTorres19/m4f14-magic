@@ -298,7 +298,7 @@ export default function Timer({player}: {player: Player}) {
             size="icon"
             variant="ghost"
             className="h-8 w-8 text-white hover:bg-white/20 hover:text-white rounded-full"
-            onClick={(e) => {
+            onClick={(_event) => {
               setTimerVisible(false);
             }}
           >
