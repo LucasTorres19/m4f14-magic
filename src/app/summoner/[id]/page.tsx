@@ -601,7 +601,7 @@ export default function SummonerDetailPage() {
                       const total = sortedRows.length;
                       const start = Math.min((commanderPage - 1) * commanderPageSize + 1, total);
                       const end = Math.min(commanderPage * commanderPageSize, total);
-                      return `Mostrando ${start}â€“${end} de ${total}`;
+                      return `Mostrando ${start} - ${end} de ${total}`;
                     })()}
                   </span>
                   <div className="flex items-center gap-2">
@@ -613,7 +613,7 @@ export default function SummonerDetailPage() {
                     >
                       Anterior
                     </Button>
-                    <span className="text-sm">PÃ¡gina {commanderPage} de {commanderTotalPages}</span>
+                    <span className="text-sm">Página {commanderPage} de {commanderTotalPages}</span>
                     <Button
                       variant="outline"
                       size="sm"
