@@ -69,6 +69,38 @@ type HistoryEntry = {
   leagueName?: string | null;
 };
 
+const DAY_MS = 24 * 60 * 60 * 1000;
+const HEATMAP_DAY_LABELS = ["D", "L", "M", "M", "J", "V", "S"];
+
+function toLocalDayKey(ts: number) {
+  const date = new Date(ts);
+  const year = date.getFullYear();
+  const month = String(date.getMonth() + 1).padStart(2, "0");
+  const day = String(date.getDate()).padStart(2, "0");
+  return `${year}-${month}-${day}`;
+}
+
+function normalizeDay(date: Date) {
+  const normalized = new Date(date);
+  normalized.setHours(0, 0, 0, 0);
+  return normalized;
+}
+
+function getHeatmapLevel(count: number, maxCount: number) {
+  if (count <= 0) return 0;
+  if (maxCount <= 1) return 4;
+  return Math.min(4, Math.ceil((count / maxCount) * 4));
+}
+
+function getHeatmapCellClass(level: number, isCurrentYear: boolean) {
+  if (!isCurrentYear) return "bg-muted/20 border-border/30 opacity-45";
+  if (level === 0) return "bg-muted/50 border-border/40";
+  if (level === 1) return "bg-emerald-500/20 border-emerald-500/30";
+  if (level === 2) return "bg-emerald-500/40 border-emerald-500/40";
+  if (level === 3) return "bg-emerald-500/65 border-emerald-500/50";
+  return "bg-emerald-500 border-emerald-500/70";
+}
+
 export default function SummonerDetailPage() {
   const params = useParams();
   const rawId = params?.id;
@@ -188,7 +220,7 @@ export default function SummonerDetailPage() {
   }, [sortedRows, commanderPage]);
 
   const { data: rawHistory, isLoading: historyLoading } = api.players.history.useQuery(
-    { playerId, limit: 100 },
+    { playerId, limit: 2000 },
     { enabled: Number.isFinite(playerId) }
   );
 
@@ -372,6 +404,119 @@ export default function SummonerDetailPage() {
       return name === historyCommanderFilter;
     });
   }, [history, historyCommanderFilter]);
+
+  const heatmapYears = useMemo(() => {
+    const years = new Set<number>();
+    for (const entry of filteredHistory) {
+      if (!Number.isFinite(entry.createdAt)) continue;
+      years.add(new Date(entry.createdAt).getFullYear());
+    }
+    return Array.from(years).sort((a, b) => b - a);
+  }, [filteredHistory]);
+
+  const [selectedHeatmapYear, setSelectedHeatmapYear] = useState<number | null>(null);
+
+  useEffect(() => {
+    if (heatmapYears.length === 0) {
+      setSelectedHeatmapYear(null);
+      return;
+    }
+
+    setSelectedHeatmapYear((current) =>
+      current != null && heatmapYears.includes(current) ? current : heatmapYears[0]!,
+    );
+  }, [heatmapYears]);
+
+  const heatmapDateFormatter = useMemo(
+    () =>
+      new Intl.DateTimeFormat("es-AR", {
+        weekday: "long",
+        day: "numeric",
+        month: "long",
+        year: "numeric",
+      }),
+    [],
+  );
+  const heatmapMonthFormatter = useMemo(() => new Intl.DateTimeFormat("es-AR", { month: "short" }), []);
+
+  const heatmapData = useMemo(() => {
+    if (selectedHeatmapYear == null) return null;
+
+    const countsByDay = new Map<string, number>();
+    let totalMatches = 0;
+
+    for (const entry of filteredHistory) {
+      if (!Number.isFinite(entry.createdAt)) continue;
+      const matchDate = new Date(entry.createdAt);
+      if (matchDate.getFullYear() !== selectedHeatmapYear) continue;
+
+      const key = toLocalDayKey(entry.createdAt);
+      countsByDay.set(key, (countsByDay.get(key) ?? 0) + 1);
+      totalMatches += 1;
+    }
+
+    const yearStart = normalizeDay(new Date(selectedHeatmapYear, 0, 1));
+    const yearEnd = normalizeDay(new Date(selectedHeatmapYear, 11, 31));
+    const gridStart = normalizeDay(new Date(yearStart));
+    gridStart.setDate(gridStart.getDate() - gridStart.getDay());
+    const gridEnd = normalizeDay(new Date(yearEnd));
+    gridEnd.setDate(gridEnd.getDate() + (6 - gridEnd.getDay()));
+
+    const days: {
+      key: string;
+      label: string;
+      count: number;
+      isCurrentYear: boolean;
+      level: number;
+    }[] = [];
+
+    let maxCount = 0;
+    let activeDays = 0;
+    for (const count of countsByDay.values()) {
+      if (count > 0) activeDays += 1;
+      if (count > maxCount) maxCount = count;
+    }
+
+    for (let time = gridStart.getTime(); time <= gridEnd.getTime(); time += DAY_MS) {
+      const date = new Date(time);
+      const key = toLocalDayKey(time);
+      const count = countsByDay.get(key) ?? 0;
+      const isCurrentYear = date.getFullYear() === selectedHeatmapYear;
+      const label = heatmapDateFormatter.format(date);
+
+      days.push({
+        key,
+        label,
+        count,
+        isCurrentYear,
+        level: getHeatmapLevel(count, maxCount),
+      });
+    }
+
+    const weekCount = Math.ceil(days.length / 7);
+    const monthLabels: { label: string; column: number }[] = [];
+    let lastColumn = -1;
+
+    for (let month = 0; month < 12; month += 1) {
+      const monthStart = normalizeDay(new Date(selectedHeatmapYear, month, 1));
+      const column = Math.floor((monthStart.getTime() - gridStart.getTime()) / DAY_MS / 7);
+      if (column === lastColumn) continue;
+      monthLabels.push({
+        label: heatmapMonthFormatter.format(monthStart).replace(".", ""),
+        column,
+      });
+      lastColumn = column;
+    }
+
+    return {
+      totalMatches,
+      activeDays,
+      maxCount,
+      weekCount,
+      monthLabels,
+      days,
+    };
+  }, [filteredHistory, heatmapDateFormatter, heatmapMonthFormatter, selectedHeatmapYear]);
 
   const totalPages = useMemo(
     () => Math.max(1, Math.ceil((filteredHistory?.length ?? 0) / pageSize)),
@@ -831,6 +976,69 @@ export default function SummonerDetailPage() {
                 </div>
               )}
 
+            </Card>
+          </div>
+        )}
+
+        {!isLoading && !isError && heatmapYears.length > 0 && heatmapData && selectedHeatmapYear != null && (
+          <div className="mt-10 space-y-3">
+            <div className="flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
+              <div className="space-y-1">
+              </div>
+              <div className="flex flex-col gap-2 md:flex-row md:items-center md:gap-3">
+                <select
+                  id="heatmapYear"
+                  className="h-9 w-full max-w-full rounded-md border bg-background px-3 text-sm md:w-auto"
+                  value={selectedHeatmapYear}
+                  onChange={(e) => setSelectedHeatmapYear(Number(e.target.value))}
+                >
+                  {heatmapYears.map((year) => (
+                    <option key={year} value={year}>
+                      {year}
+                    </option>
+                  ))}
+                </select>
+              </div>
+            </div>
+
+            <Card className="p-4 md:p-5">
+              <div className="overflow-x-auto pb-2">
+                <div className="min-w-[780px] md:min-w-0">
+                  <div className="ml-6 pb-2">
+                    <div
+                      className="grid w-full gap-1 text-[10px] uppercase tracking-wide text-muted-foreground"
+                      style={{ gridTemplateColumns: `repeat(${heatmapData.weekCount}, minmax(0, 1fr))` }}
+                    >
+                      {heatmapData.monthLabels.map((month) => (
+                        <span
+                          key={`${selectedHeatmapYear}-${month.label}-${month.column}`}
+                          style={{ gridColumnStart: month.column + 1 }}
+                          className="min-w-max"
+                        >
+                          {month.label}
+                        </span>
+                      ))}
+                    </div>
+                  </div>
+
+                  <div className="flex items-start gap-2">
+                  
+                    <div
+                      className="grid w-full grid-flow-col grid-rows-7 gap-1"
+                      style={{ gridTemplateColumns: `repeat(${heatmapData.weekCount}, minmax(0, 1fr))` }}
+                    >
+                      {heatmapData.days.map((day) => (
+                        <div
+                          key={day.key}
+                          className={`aspect-square w-full rounded-[3px] border transition-colors ${getHeatmapCellClass(day.level, day.isCurrentYear)}`}
+                          title={`${day.count} ${day.count === 1 ? "partida" : "partidas"} el ${day.label}`}
+                          aria-label={`${day.count} ${day.count === 1 ? "partida" : "partidas"} el ${day.label}`}
+                        />
+                      ))}
+                    </div>
+                  </div>
+                </div>
+              </div>
             </Card>
           </div>
         )}

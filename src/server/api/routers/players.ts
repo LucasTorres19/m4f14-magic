@@ -109,7 +109,7 @@ export const playersRouter = createTRPCRouter({
     }),
   history: publicProcedure
     .input(
-      z.object({ playerId: z.number().int().positive(), limit: z.number().int().min(1).max(200).optional() })
+      z.object({ playerId: z.number().int().positive(), limit: z.number().int().min(1).max(5000).optional() })
     )
     .query(async ({ ctx, input }) => {
       const limit = input.limit ?? 50;
