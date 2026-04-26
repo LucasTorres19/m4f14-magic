@@ -1101,31 +1101,37 @@ export default function SummonerDetailPage() {
                 <div>
                   <h3 className="font-medium mb-2">Participantes</h3>
                   <ul className="divide-y">
-                    {openEntry.players.map((p) => (
-                      <li key={p.playerId} className="py-2 flex items-center justify-between gap-3">
-                        <div className="flex items-center gap-2 min-w-0">
-                          <span
-                            className="inline-flex h-3 w-3 rounded-full border"
-                            style={{ backgroundColor: p.backgroundColor ?? "#CBD5E1" }}
-                            aria-hidden
-                          />
-                          <span className="truncate">{p.name}</span>
-                        </div>
-                        <div className="flex items-center gap-3">
-                          <span className="text-xs text-muted-foreground">Puesto {p.placement}</span>
-                          <div className="relative h-10 w-10 rounded overflow-hidden bg-muted shrink-0">
-                            <Image
-                              src={p.commander?.artImageUrl ?? p.commander?.imageUrl ?? "/placeholder.svg"}
-                              alt={p.commander?.name ?? "Commander"}
-                              fill
-                              className="object-cover"
-                              sizes="40px"
-                              unoptimized
+                    {openEntry.players.map((p) => {
+                      const commanderImage = p.commander?.artImageUrl ?? p.commander?.imageUrl;
+
+                      return (
+                        <li key={p.playerId} className="py-2 flex items-center justify-between gap-3">
+                          <div className="flex items-center gap-2 min-w-0">
+                            <span
+                              className="inline-flex h-3 w-3 rounded-full border"
+                              style={{ backgroundColor: p.backgroundColor ?? "#CBD5E1" }}
+                              aria-hidden
                             />
+                            <span className="truncate">{p.name}</span>
                           </div>
-                        </div>
-                      </li>
-                    ))}
+                          <div className="flex items-center gap-3">
+                            <span className="text-xs text-muted-foreground">Puesto {p.placement}</span>
+                            {commanderImage && (
+                              <div className="relative h-10 w-10 rounded overflow-hidden bg-muted shrink-0">
+                                <Image
+                                  src={commanderImage}
+                                  alt={p.commander?.name ?? "Commander"}
+                                  fill
+                                  className="object-cover"
+                                  sizes="40px"
+                                  unoptimized
+                                />
+                              </div>
+                            )}
+                          </div>
+                        </li>
+                      );
+                    })}
                   </ul>
                 </div>
               </div>
