@@ -1086,16 +1086,18 @@ export default function SummonerDetailPage() {
             </DialogHeader>
             {openEntry && (
               <div className="space-y-4">
-                <div className="relative w-full aspect-video bg-muted rounded overflow-hidden">
-                  <Image
-                    src={openEntry.croppedImage?.url ?? openEntry.image?.url ?? "/placeholder.svg"}
-                    alt="Imagen del duelo"
-                    fill
-                    className="object-cover"
-                    sizes="(max-width: 768px) 100vw, 800px"
-                    unoptimized
-                  />
-                </div>
+                {(openEntry.croppedImage?.url ?? openEntry.image?.url) && (
+                  <div className="relative w-full aspect-video bg-muted rounded overflow-hidden">
+                    <Image
+                      src={openEntry.croppedImage?.url ?? openEntry.image?.url ?? ""}
+                      alt="Imagen del duelo"
+                      fill
+                      className="object-cover"
+                      sizes="(max-width: 768px) 100vw, 800px"
+                      unoptimized
+                    />
+                  </div>
+                )}
                 <div>
                   <h3 className="font-medium mb-2">Participantes</h3>
                   <ul className="divide-y">
