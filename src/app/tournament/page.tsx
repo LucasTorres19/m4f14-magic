@@ -18,6 +18,7 @@ import {
 } from "@/app/_stores/current-match-provider";
 import { useSettings } from "@/app/_stores/settings-provider";
 import { randomHexColor } from "@/utils/gen";
+import { calculateLeagueStandings } from "@/lib/league-standings";
 import { cn } from "@/lib/utils";
 
 type LeaguePlayer = {
@@ -255,52 +256,7 @@ export default function TournamentPage() {
   }, [results]);
 
   const standings = useMemo(() => {
-    const pts = new Map<
-      number,
-      {
-        name: string;
-        color: string;
-        points: number;
-        wins: number;
-        played: number;
-        last: ("W" | "L")[];
-      }
-    >();
-    for (const r of results) {
-      const sorted = [...r.players].sort((a, b) => a.placement - b.placement);
-      const w = sorted[0];
-      const l = sorted[1];
-      if (!w || !l) continue;
-      for (const p of [w, l]) {
-        const entry =
-          pts.get(p.id) ?? {
-            name: p.name,
-            color: p.backgroundColor,
-            points: 0,
-            wins: 0,
-            played: 0,
-            last: [],
-          };
-        entry.played += 1;
-        if (p.id === w.id) {
-          entry.wins += 1;
-          entry.points += 3;
-          entry.last.unshift("W");
-        } else {
-          entry.last.unshift("L");
-        }
-        entry.last = entry.last.slice(0, 5);
-        pts.set(p.id, entry);
-      }
-    }
-    return Array.from(pts.entries())
-      .map(([id, v]) => ({ id, ...v }))
-      .sort(
-        (a, b) =>
-          b.points - a.points ||
-          b.wins - a.wins ||
-          a.name.localeCompare(b.name),
-      );
+    return calculateLeagueStandings(results);
   }, [results]);
 
   const tiedLeaders = useMemo(() => {
@@ -701,54 +657,7 @@ export default function TournamentPage() {
                   </h2>
                 </div>
                 {(() => {
-                  const pts = new Map<
-                    number,
-                    {
-                      name: string;
-                      color: string;
-                      points: number;
-                      wins: number;
-                      played: number;
-                      last: ("W" | "L")[];
-                    }
-                  >();
-                  for (const r of results) {
-                    const sorted = [...r.players].sort(
-                      (a, b) => a.placement - b.placement,
-                    );
-                    const w = sorted[0];
-                    const l = sorted[1];
-                    if (!w || !l) continue;
-                    for (const p of [w, l]) {
-                      const entry =
-                        pts.get(p.id) ?? {
-                          name: p.name,
-                          color: p.backgroundColor,
-                          points: 0,
-                          wins: 0,
-                          played: 0,
-                          last: [],
-                        };
-                      entry.played += 1;
-                      if (p.id === w.id) {
-                        entry.wins += 1;
-                        entry.points += 3;
-                        entry.last.unshift("W");
-                      } else {
-                        entry.last.unshift("L");
-                      }
-                      entry.last = entry.last.slice(0, 5);
-                      pts.set(p.id, entry);
-                    }
-                  }
-                  const rows = Array.from(pts.entries())
-                    .map(([id, v]) => ({ id, ...v }))
-                    .sort(
-                      (a, b) =>
-                        b.points - a.points ||
-                        b.wins - a.wins ||
-                        a.name.localeCompare(b.name),
-                    );
+                  const rows = standings;
                   if (rows.length === 0)
                     return (
                       <p className="text-sm text-muted-foreground">
@@ -1015,4 +924,3 @@ export default function TournamentPage() {
     </main>
   );
 }
-
