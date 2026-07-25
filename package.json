@@ -19,6 +19,7 @@
     "lint:fix": "next lint --fix",
     "preview": "next build && next start",
     "start": "next start",
+    "test": "tsx --test src/lib/league-standings.test.ts",
     "typecheck": "tsc --noEmit"
   },
   "dependencies": {
