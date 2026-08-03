@@ -1,5 +1,5 @@
 import { TRPCError } from "@trpc/server";
-import { eq, inArray } from "drizzle-orm";
+import { and, eq, inArray } from "drizzle-orm";
 import { z } from "zod";
 
 import { utapi } from "@/app/api/uploadthing/core";
@@ -306,5 +306,91 @@ export const matchRouter = createTRPCRouter({
         croppedImage: transaction.croppedImage,
         image: transaction.image,
       };
+    }),
+  updatePlacements: protectedProcedure
+    .input(
+      z.object({
+        matchId: z.number().positive().int(),
+        placements: z
+          .array(
+            z.object({
+              playerId: z.number().positive().int(),
+              placement: z.number().positive().int(),
+            }),
+          )
+          .min(1)
+          .refine(
+            (arr) =>
+              new Set(arr.map((item) => item.playerId)).size === arr.length,
+            { message: "Each player must appear once" },
+          )
+          .refine(
+            (arr) =>
+              new Set(arr.map((item) => item.placement)).size === arr.length,
+            { message: "Each placement must be unique" },
+          ),
+      }),
+    )
+    .mutation(async ({ ctx, input }) => {
+      const updated = await ctx.db.transaction(async (tx) => {
+        const existing = await tx
+          .select({
+            playerId: playersToMatches.playerId,
+            placement: playersToMatches.placement,
+          })
+          .from(playersToMatches)
+          .where(eq(playersToMatches.matchId, input.matchId));
+
+        if (existing.length === 0) {
+          throw new TRPCError({
+            code: "NOT_FOUND",
+            message: "Match not found or has no players.",
+          });
+        }
+
+        const existingIds = new Set(existing.map((row) => row.playerId));
+        if (
+          existingIds.size !== input.placements.length ||
+          input.placements.some((row) => !existingIds.has(row.playerId))
+        ) {
+          throw new TRPCError({
+            code: "BAD_REQUEST",
+            message: "Placements must include every player in the match.",
+          });
+        }
+
+        // Avoid unique (matchId, placement) conflicts while swapping.
+        for (const row of existing) {
+          await tx
+            .update(playersToMatches)
+            .set({ placement: -row.playerId })
+            .where(
+              and(
+                eq(playersToMatches.matchId, input.matchId),
+                eq(playersToMatches.playerId, row.playerId),
+              ),
+            );
+        }
+
+        for (const row of input.placements) {
+          await tx
+            .update(playersToMatches)
+            .set({ placement: row.placement })
+            .where(
+              and(
+                eq(playersToMatches.matchId, input.matchId),
+                eq(playersToMatches.playerId, row.playerId),
+              ),
+            );
+        }
+
+        return input.placements;
+      });
+
+      revalidatePath("/history");
+      revalidatePath("/analytics");
+      revalidatePath("/summoner");
+
+      return { placements: updated } as const;
     }),
 });
