@@ -1,4 +1,4 @@
-import { useSortable } from "@dnd-kit/sortable";
+import { arraySwap, useSortable } from "@dnd-kit/sortable";
 import { CSS } from "@dnd-kit/utilities";
 import { type CSSProperties, type ReactNode } from "react";
 
@@ -15,19 +15,27 @@ export function SortablePlayerCard({ id, children }: SortablePlayerCardProps) {
     transform,
     transition,
     isDragging,
-  } = useSortable({ id });
+  } = useSortable({
+    id,
+    getNewIndex: ({ id, items, activeIndex, overIndex }) => {
+      if (activeIndex < 0 || overIndex < 0) return items.indexOf(id);
+      return arraySwap(items, activeIndex, overIndex).indexOf(id);
+    },
+  });
 
   const style: CSSProperties = {
     transform: CSS.Transform.toString(transform),
     transition,
     zIndex: isDragging ? 50 : "auto",
-    opacity: isDragging ? 0.3 : 1,
+    opacity: isDragging ? 0 : 1,
     touchAction: "none",
+    willChange: "transform",
   };
 
   return (
     <div
       ref={setNodeRef}
+      data-player-id={id}
       style={style}
       {...attributes}
       {...listeners}
