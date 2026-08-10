@@ -15,8 +15,7 @@ import {
 } from "@dnd-kit/core";
 import {
   SortableContext,
-  arrayMove,
-  rectSortingStrategy,
+  rectSwappingStrategy,
   sortableKeyboardCoordinates,
 } from "@dnd-kit/sortable";
 import { Minus, Plus } from "lucide-react";
@@ -221,7 +220,11 @@ export default function CurrentMatch() {
       const newIndex = players.findIndex((p) => p.id === over.id);
 
       if (oldIndex !== -1 && newIndex !== -1) {
-        const newPlayers = arrayMove(players, oldIndex, newIndex);
+        const newPlayers = [...players];
+        [newPlayers[oldIndex], newPlayers[newIndex]] = [
+          newPlayers[newIndex]!,
+          newPlayers[oldIndex]!,
+        ];
         reorderPlayers(newPlayers.map((p) => p.id));
       }
     }
@@ -265,7 +268,7 @@ export default function CurrentMatch() {
       >
         <SortableContext
           items={players.map((p) => p.id)}
-          strategy={rectSortingStrategy}
+          strategy={rectSwappingStrategy}
         >
           {players.map((player, idx) => (
             <SortablePlayerCard key={player.id} id={player.id}>

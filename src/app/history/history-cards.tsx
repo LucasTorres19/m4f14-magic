@@ -3,9 +3,11 @@
 import { ArrowRight, Camera, Sparkles } from "lucide-react";
 import Image from "next/image";
 import Link from "next/link";
+import { useEffect, useState } from "react";
 
 import { LocalizedDate } from "@/components/localized-date";
 import { cn } from "@/lib/utils";
+import EditPlacementsDialog from "./edit-placements-dialog";
 import { MatchGallery } from "./match-gallery";
 import type { LeagueSummary, MatchSummary, PlayerSummary } from "./history-types";
 
@@ -209,7 +211,13 @@ export const MatchCard = ({ match, gradient }: MatchCardProps) => {
     match.createdAt instanceof Date
       ? match.createdAt.toISOString()
       : match.createdAt;
-  const playerCount = match.players.length;
+  const [players, setPlayers] = useState(match.players);
+
+  useEffect(() => {
+    setPlayers(match.players);
+  }, [match.players]);
+
+  const playerCount = players.length;
 
   return (
     <article className="ornate-border relative overflow-hidden rounded-3xl border border-primary/30 bg-card/70 shadow-xl backdrop-blur">
@@ -245,23 +253,32 @@ export const MatchCard = ({ match, gradient }: MatchCardProps) => {
               .
             </p>
           </div>
-          <div className="flex items-end gap-6 text-sm">
-            <div className="grow text-center md:text-right">
-              <p className="text-muted-foreground uppercase tracking-wider">
-                Invocadores
-              </p>
-              <p className="text-foreground text-2xl font-bold">
-                {playerCount}
-              </p>
+          <div className="flex flex-col items-end gap-4 text-sm">
+            <div className="flex items-end gap-6">
+              <div className="grow text-center md:text-right">
+                <p className="text-muted-foreground uppercase tracking-wider">
+                  Invocadores
+                </p>
+                <p className="text-foreground text-2xl font-bold">
+                  {playerCount}
+                </p>
+              </div>
+              <div className="grow text-center md:text-right">
+                <p className="text-muted-foreground uppercase tracking-wider">
+                  Vida inicial
+                </p>
+                <p className="text-foreground text-2xl font-bold">
+                  {match.startingHp}
+                </p>
+              </div>
             </div>
-            <div className="grow text-center md:text-right">
-              <p className="text-muted-foreground uppercase tracking-wider">
-                Vida inicial
-              </p>
-              <p className="text-foreground text-2xl font-bold">
-                {match.startingHp}
-              </p>
-            </div>
+            {players.length > 0 ? (
+              <EditPlacementsDialog
+                matchId={match.id}
+                players={players}
+                onSaved={setPlayers}
+              />
+            ) : null}
           </div>
         </header>
 
@@ -273,18 +290,20 @@ export const MatchCard = ({ match, gradient }: MatchCardProps) => {
           />
 
           <div className="grid gap-4 sm:grid-cols-2">
-            {match.players.length === 0 ? (
+            {players.length === 0 ? (
               <div className="col-span-2 flex h-full min-h-[180px] flex-col items-center justify-center gap-3 rounded-2xl border border-dashed border-white/15 bg-background/60 p-6 text-center text-sm text-muted-foreground">
                 <Camera className="size-8 text-muted-foreground/70" />
                 <p>Esta partida no tiene invocadores registrados.</p>
               </div>
             ) : (
-              match.players.map((player) => (
-                <PlayerCommanderCard
-                  key={`${match.id}-${player.id}`}
-                  player={player}
-                />
-              ))
+              [...players]
+                .sort((a, b) => a.placement - b.placement)
+                .map((player) => (
+                  <PlayerCommanderCard
+                    key={`${match.id}-${player.id}`}
+                    player={player}
+                  />
+                ))
             )}
           </div>
         </div>
