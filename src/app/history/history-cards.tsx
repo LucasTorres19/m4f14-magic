@@ -313,9 +313,11 @@ const PlayerCommanderCard = ({ player }: { player: PlayerSummary }) => {
     : undefined;
 
   return (
-    <div
+    <Link
+      href={`/summoner/${player.id}`}
+      aria-label={`Ver perfil de ${safeName}`}
       className={cn(
-        "group relative flex h-full flex-col overflow-hidden rounded-2xl border border-white/12 bg-card/70 shadow-lg transition-transform duration-200 hover:-translate-y-1",
+        "group relative flex h-full flex-col overflow-hidden rounded-2xl border border-white/12 bg-card/70 shadow-lg transition-transform duration-200 hover:-translate-y-1 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2 focus-visible:ring-offset-background",
         player.placement === 1
           ? "ring-2 ring-amber-300/60 ring-offset-2 ring-offset-background"
           : "",
@@ -376,6 +378,6 @@ const PlayerCommanderCard = ({ player }: { player: PlayerSummary }) => {
           <p className="text-foreground text-sm font-medium">{commanderName}</p>
         </div>
       </div>
-    </div>
+    </Link>
   );
 };
