@@ -23,6 +23,7 @@ import {
   ChevronUp,
   Droplets,
   Flame,
+  HeartCrack,
   Layers,
   Swords,
   Trophy,
@@ -58,7 +59,9 @@ type PlayerListStatsRow = {
   wins: number;
   podiumMatchCount?: number;
   podiums: number;
+  lastPlaceCount?: number;
   isCebollita?: boolean;
+  isCuloRoto?: boolean;
   isLastWinner?: boolean;
   isStreakChampion?: boolean;
   isMostDiverse?: boolean;
@@ -164,6 +167,7 @@ export default function SummonerDetailPage() {
       const wins = Number(p.wins ?? 0);
       const podiumMatchCount = Number(p.podiumMatchCount ?? 0);
       const podiums = Number(p.podiums ?? 0);
+      const lastPlaceCount = Number(p.lastPlaceCount ?? 0);
       const seconds = Math.max(0, podiums - wins);
       const uniqueCommanderCount = Number(p.uniqueCommanderCount ?? 0);
       const topDecks = (p.topDecks ?? []).map((d) => ({
@@ -178,14 +182,19 @@ export default function SummonerDetailPage() {
         wins,
         podiumMatchCount,
         podiums,
+        lastPlaceCount,
         uniqueCommanderCount,
         seconds,
         topDecks,
-      } as PlayerListStatsRow & { seconds: number };
+      } as PlayerListStatsRow & { seconds: number; lastPlaceCount: number };
     });
 
     const maxSeconds = base.reduce(
       (m, p) => (p.seconds > m ? p.seconds : m),
+      0,
+    );
+    const maxLastPlaceCount = base.reduce(
+      (m, p) => (p.lastPlaceCount > m ? p.lastPlaceCount : m),
       0,
     );
     const maxUnique = base.reduce(
@@ -201,6 +210,8 @@ export default function SummonerDetailPage() {
         ({
           ...p,
           isCebollita: maxSeconds > 0 && p.seconds === maxSeconds,
+          isCuloRoto:
+            maxLastPlaceCount > 0 && p.lastPlaceCount === maxLastPlaceCount,
           isMostDiverse:
             maxUnique > 0 && (p.uniqueCommanderCount ?? 0) === maxUnique,
           isOtp: Boolean(p.isOtp),
@@ -956,6 +967,41 @@ export default function SummonerDetailPage() {
                                     (playerStats.wins ?? 0),
                                 )}
                               </strong>
+                            </div>
+                          </TooltipContent>
+                        </Tooltip>
+                      )}
+
+                      {Boolean(playerStats.isCuloRoto) && (
+                        <Tooltip>
+                          <TooltipTrigger asChild>
+                            <span
+                              className="culo-roto-badge"
+                              role="img"
+                              aria-label="Culo roto"
+                            >
+                              <HeartCrack
+                                width={16}
+                                height={16}
+                                className="crack"
+                              />
+                              <span className="label">Culo roto</span>
+                              <span aria-hidden className="broken-heat" />
+                            </span>
+                          </TooltipTrigger>
+                          <TooltipContent
+                            side="top"
+                            align="center"
+                            className="max-w-[280px] leading-relaxed"
+                          >
+                            <p className="font-semibold">¿Culo roto?</p>
+                            <p className="text-sm">
+                              Mayor cantidad de últimos puestos en partidas de
+                              más de dos jugadores.
+                            </p>
+                            <div className="mt-2 text-xs">
+                              cantidad:{" "}
+                              <strong>{playerStats.lastPlaceCount ?? 0}</strong>
                             </div>
                           </TooltipContent>
                         </Tooltip>
