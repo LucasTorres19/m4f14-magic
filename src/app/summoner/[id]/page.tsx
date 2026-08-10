@@ -21,6 +21,7 @@ import {
   CalendarDays,
   ChevronDown,
   ChevronUp,
+  Crown,
   Droplets,
   Flame,
   HeartCrack,
@@ -62,6 +63,7 @@ type PlayerListStatsRow = {
   lastPlaceCount?: number;
   isCebollita?: boolean;
   isCuloRoto?: boolean;
+  isChampion?: boolean;
   isLastWinner?: boolean;
   isStreakChampion?: boolean;
   isMostDiverse?: boolean;
@@ -197,6 +199,7 @@ export default function SummonerDetailPage() {
       (m, p) => (p.lastPlaceCount > m ? p.lastPlaceCount : m),
       0,
     );
+    const maxWins = base.reduce((m, p) => (p.wins > m ? p.wins : m), 0);
     const maxUnique = base.reduce(
       (m, p) =>
         p.uniqueCommanderCount && p.uniqueCommanderCount > m
@@ -212,6 +215,7 @@ export default function SummonerDetailPage() {
           isCebollita: maxSeconds > 0 && p.seconds === maxSeconds,
           isCuloRoto:
             maxLastPlaceCount > 0 && p.lastPlaceCount === maxLastPlaceCount,
+          isChampion: maxWins > 0 && p.wins === maxWins,
           isMostDiverse:
             maxUnique > 0 && (p.uniqueCommanderCount ?? 0) === maxUnique,
           isOtp: Boolean(p.isOtp),
@@ -902,6 +906,35 @@ export default function SummonerDetailPage() {
                         )}
                         % podio
                       </span>
+
+                      {Boolean(playerStats.isChampion) && (
+                        <Tooltip>
+                          <TooltipTrigger asChild>
+                            <span
+                              className="champion-badge"
+                              role="img"
+                              aria-label="Campeón"
+                            >
+                              <Crown width={16} height={16} className="crown" />
+                              <span className="label">Campeón</span>
+                              <span aria-hidden className="gold-shine" />
+                            </span>
+                          </TooltipTrigger>
+                          <TooltipContent
+                            side="top"
+                            align="center"
+                            className="max-w-[280px] leading-relaxed"
+                          >
+                            <p className="font-semibold">¿Campeón?</p>
+                            <p className="text-sm">
+                              Mayor cantidad de victorias.
+                            </p>
+                            <div className="mt-2 text-xs">
+                              victorias: <strong>{playerStats.wins}</strong>
+                            </div>
+                          </TooltipContent>
+                        </Tooltip>
+                      )}
 
                       {Boolean(playerStats.isOtp) && (
                         <Tooltip>

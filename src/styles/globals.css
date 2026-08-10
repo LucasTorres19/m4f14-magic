@@ -598,6 +598,108 @@
   }
 }
 
+.champion-badge {
+  --gold: 255, 205, 70;
+  --deep-gold: 180, 116, 20;
+  --shine: 255, 245, 190;
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+  padding: 0.2rem 0.6rem;
+  border-radius: 9999px;
+  font-size: 0.75rem;
+  line-height: 1rem;
+  color: rgb(255 248 220);
+  position: relative;
+  isolation: isolate;
+  overflow: hidden;
+  background: linear-gradient(
+    120deg,
+    rgba(var(--deep-gold), 0.9) 0%,
+    rgba(var(--gold), 0.72) 45%,
+    rgba(var(--shine), 0.86) 52%,
+    rgba(var(--deep-gold), 0.88) 100%
+  );
+  border: 1px solid rgba(var(--shine), 0.45);
+  box-shadow:
+    0 0 14px rgba(var(--gold), 0.34),
+    inset 0 0 10px rgba(var(--shine), 0.28);
+  animation: championGlow 1.7s ease-in-out infinite alternate;
+}
+.champion-badge .label {
+  color: rgb(255 250 224);
+  text-shadow: 0 1px 1px rgba(84, 45, 0, 0.55);
+}
+.champion-badge .crown {
+  color: rgb(255 245 178);
+  fill: rgba(var(--gold), 0.32);
+  filter: drop-shadow(0 0 5px rgba(var(--shine), 0.65))
+    drop-shadow(0 1px 0 rgba(var(--deep-gold), 0.8));
+  animation: crownFloat 1.2s ease-in-out infinite alternate;
+}
+.champion-badge .gold-shine {
+  position: absolute;
+  inset: -8px -18px;
+  z-index: -1;
+  pointer-events: none;
+  background:
+    linear-gradient(
+      105deg,
+      transparent 18%,
+      rgba(var(--shine), 0.45) 38%,
+      transparent 58%
+    ),
+    radial-gradient(
+      110px 34px at 50% 50%,
+      rgba(var(--gold), 0.25),
+      transparent 68%
+    );
+  filter: blur(5px);
+  animation: goldSweep 2s ease-in-out infinite;
+}
+
+@keyframes championGlow {
+  from {
+    box-shadow:
+      0 0 10px rgba(var(--gold), 0.24),
+      inset 0 0 8px rgba(var(--shine), 0.2);
+  }
+  to {
+    box-shadow:
+      0 0 20px rgba(var(--gold), 0.48),
+      inset 0 0 16px rgba(var(--shine), 0.34);
+  }
+}
+@keyframes crownFloat {
+  from {
+    transform: translateY(0) rotate(-2deg);
+  }
+  to {
+    transform: translateY(-1px) rotate(2deg);
+  }
+}
+@keyframes goldSweep {
+  0% {
+    transform: translateX(-35%);
+    opacity: 0.45;
+  }
+  50% {
+    opacity: 1;
+  }
+  100% {
+    transform: translateX(35%);
+    opacity: 0.55;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .champion-badge,
+  .champion-badge .crown,
+  .champion-badge .gold-shine {
+    animation: none !important;
+  }
+}
+
 .culo-roto-badge {
   --crack: 255, 230, 170;
   --bruise: 155, 45, 90;
