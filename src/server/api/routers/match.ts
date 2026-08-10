@@ -13,6 +13,8 @@ import {
 } from "@/server/db/schema";
 import { revalidatePath } from "next/cache";
 
+const PLACEMENT_EDIT_WINDOW_DAYS = 7;
+
 const imageInputSchema = z.object({
   url: z.string().url(),
   key: z.string().min(1),
@@ -333,6 +335,35 @@ export const matchRouter = createTRPCRouter({
     )
     .mutation(async ({ ctx, input }) => {
       const updated = await ctx.db.transaction(async (tx) => {
+        const [matchRow] = await tx
+          .select({
+            id: matches.id,
+            createdAt: matches.createdAt,
+          })
+          .from(matches)
+          .where(eq(matches.id, input.matchId))
+          .limit(1);
+
+        if (!matchRow) {
+          throw new TRPCError({
+            code: "NOT_FOUND",
+            message: "Match not found.",
+          });
+        }
+
+        const editDeadline = new Date(matchRow.createdAt);
+        editDeadline.setDate(
+          editDeadline.getDate() + PLACEMENT_EDIT_WINDOW_DAYS,
+        );
+
+        if (editDeadline < new Date()) {
+          throw new TRPCError({
+            code: "FORBIDDEN",
+            message:
+              "Placements can only be edited for matches created in the last 7 days.",
+          });
+        }
+
         const existing = await tx
           .select({
             playerId: playersToMatches.playerId,
@@ -383,6 +414,11 @@ export const matchRouter = createTRPCRouter({
               ),
             );
         }
+
+        await tx
+          .update(matches)
+          .set({ updatedAt: new Date() })
+          .where(eq(matches.id, input.matchId));
 
         return input.placements;
       });
