@@ -24,8 +24,10 @@ import {
   Boxes,
   ChevronDown,
   ChevronUp,
+  Crown,
   Droplets,
   Flame,
+  HeartCrack,
   Layers,
   Swords,
   Trophy,
@@ -44,6 +46,7 @@ type ApiPlayer = {
   wins?: number | string | null;
   podiumMatchCount?: number | string | null;
   podiums?: number | string | null;
+  lastPlaceCount?: number | string | null;
   isLastWinner?: boolean | null;
   isStreakChampion?: boolean | null;
   topDecks?: {
@@ -63,10 +66,13 @@ type PlayerUI = Required<Pick<ApiPlayer, "id">> & {
   wins: number;
   podiumMatchCount: number;
   podiums: number;
+  lastPlaceCount: number;
   seconds: number;
   isLastWinner: boolean;
   isStreakChampion: boolean;
   isCebollita: boolean;
+  isCuloRoto: boolean;
+  isChampion: boolean;
   isOtp: boolean;
   topDecks: {
     commanderId: number;
@@ -105,6 +111,7 @@ export default function SummonerPage() {
       const wins = Number(p.wins ?? 0);
       const podiumMatchCount = Number(p.podiumMatchCount ?? 0);
       const podiums = Number(p.podiums ?? 0);
+      const lastPlaceCount = Number(p.lastPlaceCount ?? 0);
       const seconds = Math.max(0, podiums - wins);
       const uniqueCommanderCount = Number(p.uniqueCommanderCount ?? 0);
       const topDecks = (p.topDecks ?? []).map((d) => ({
@@ -121,10 +128,13 @@ export default function SummonerPage() {
         wins,
         podiumMatchCount,
         podiums,
+        lastPlaceCount,
         seconds,
         isLastWinner: Boolean(p.isLastWinner),
         isStreakChampion: Boolean(p.isStreakChampion),
         isCebollita: false,
+        isCuloRoto: false,
+        isChampion: false,
         uniqueCommanderCount,
         isMostDiverse: false,
         isOtp: Boolean(p.isOtp),
@@ -136,6 +146,11 @@ export default function SummonerPage() {
       (m, p) => (p.seconds > m ? p.seconds : m),
       0,
     );
+    const maxLastPlaceCount = base.reduce(
+      (m, p) => (p.lastPlaceCount > m ? p.lastPlaceCount : m),
+      0,
+    );
+    const maxWins = base.reduce((m, p) => (p.wins > m ? p.wins : m), 0);
     const maxUnique = base.reduce(
       (m, p) => (p.uniqueCommanderCount > m ? p.uniqueCommanderCount : m),
       0,
@@ -144,6 +159,9 @@ export default function SummonerPage() {
     return base.map((p) => ({
       ...p,
       isCebollita: maxSeconds > 0 && p.seconds === maxSeconds,
+      isCuloRoto:
+        maxLastPlaceCount > 0 && p.lastPlaceCount === maxLastPlaceCount,
+      isChampion: maxWins > 0 && p.wins === maxWins,
       isMostDiverse: maxUnique > 0 && p.uniqueCommanderCount === maxUnique,
       isOtp: Boolean(p.isOtp),
     }));
@@ -348,6 +366,41 @@ export default function SummonerPage() {
                           % podio
                         </span>
 
+                        {player.isChampion && (
+                          <Tooltip>
+                            <TooltipTrigger asChild>
+                              <span
+                                className="champion-badge"
+                                role="img"
+                                aria-label="Campeón"
+                              >
+                                <Crown
+                                  width={16}
+                                  height={16}
+                                  className="crown"
+                                />
+                                <span className="label">Campeón</span>
+                                <span aria-hidden className="gold-shine" />
+                              </span>
+                            </TooltipTrigger>
+
+                            <TooltipContent
+                              side="top"
+                              align="center"
+                              className="max-w-[280px] leading-relaxed"
+                            >
+                              <p className="font-semibold">¿Campeón?</p>
+                              <p className="text-sm">
+                                Mayor cantidad de victorias.
+                              </p>
+
+                              <div className="mt-2 text-xs">
+                                victorias: <strong>{player.wins}</strong>
+                              </div>
+                            </TooltipContent>
+                          </Tooltip>
+                        )}
+
                         {player.isCebollita && (
                           <Tooltip>
                             <TooltipTrigger asChild>
@@ -378,6 +431,43 @@ export default function SummonerPage() {
 
                               <div className="mt-2 text-xs">
                                 cantidad: <strong>{player.seconds ?? 0}</strong>
+                              </div>
+                            </TooltipContent>
+                          </Tooltip>
+                        )}
+
+                        {player.isCuloRoto && (
+                          <Tooltip>
+                            <TooltipTrigger asChild>
+                              <span
+                                className="culo-roto-badge"
+                                role="img"
+                                aria-label="Culo roto"
+                              >
+                                <HeartCrack
+                                  width={16}
+                                  height={16}
+                                  className="crack"
+                                />
+                                <span className="label">Culo roto</span>
+                                <span aria-hidden className="broken-heat" />
+                              </span>
+                            </TooltipTrigger>
+
+                            <TooltipContent
+                              side="top"
+                              align="center"
+                              className="max-w-[280px] leading-relaxed"
+                            >
+                              <p className="font-semibold">¿Culo roto?</p>
+                              <p className="text-sm">
+                                Mayor cantidad de últimos puestos en partidas de
+                                más de dos jugadores.
+                              </p>
+
+                              <div className="mt-2 text-xs">
+                                cantidad:{" "}
+                                <strong>{player.lastPlaceCount ?? 0}</strong>
                               </div>
                             </TooltipContent>
                           </Tooltip>
