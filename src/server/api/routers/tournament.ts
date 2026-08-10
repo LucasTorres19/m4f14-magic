@@ -1,9 +1,19 @@
 import { TRPCError } from "@trpc/server";
 import { z } from "zod";
 
-import { createTRPCRouter, protectedProcedure, publicProcedure } from "@/server/api/trpc";
-import { tournaments, matches, playersToMatches, players } from "@/server/db/schema";
-import { asc, desc, eq, inArray, count } from "drizzle-orm";
+import {
+  createTRPCRouter,
+  protectedProcedure,
+  publicProcedure,
+} from "@/server/api/trpc";
+import { writeAuditLog } from "@/server/audit";
+import {
+  matches,
+  players,
+  playersToMatches,
+  tournaments,
+} from "@/server/db/schema";
+import { asc, count, desc, eq, inArray } from "drizzle-orm";
 
 const leaguePlayerSchema = z.object({
   id: z.number().int().positive().nullable(),
@@ -22,21 +32,22 @@ const leagueStateSchema = z.object({
   players: z.array(leaguePlayerSchema),
   started: z.boolean(),
   matches: z.array(leagueMatchSchema),
-  rounds: z.array(z.array(z.number().int().nonnegative())).optional().default([]),
+  rounds: z
+    .array(z.array(z.number().int().nonnegative()))
+    .optional()
+    .default([]),
   currentRound: z.number().int().nonnegative().optional().default(0),
   mode: z.enum(["single", "double"]).optional().default("double"),
   tiebreakerEnabled: z.boolean().optional().default(false),
 });
 
-function generateRoundRobinForIndices(
-  playerIndices: number[],
-): { matches: Array<z.infer<typeof leagueMatchSchema>>; rounds: number[][] } {
+function generateRoundRobinForIndices(playerIndices: number[]): {
+  matches: Array<z.infer<typeof leagueMatchSchema>>;
+  rounds: number[][];
+} {
   const hasBye = playerIndices.length % 2 === 1;
   const N = hasBye ? playerIndices.length + 1 : playerIndices.length;
-  const arr = [
-    ...playerIndices,
-    ...(hasBye ? [-1] : []),
-  ];
+  const arr = [...playerIndices, ...(hasBye ? [-1] : [])];
   const rounds: number[][] = [];
   const matches: Array<z.infer<typeof leagueMatchSchema>> = [];
   const roundsCount = N - 1;
@@ -61,10 +72,29 @@ function generateRoundRobinForIndices(
   return { matches, rounds };
 }
 
+const summarizeTournamentState = (
+  state: z.infer<typeof leagueStateSchema>,
+) => ({
+  mode: state.mode,
+  playerCount: state.players.length,
+  players: state.players.map((player) => ({
+    id: player.id,
+    name: player.name,
+  })),
+  plannedMatchCount: state.matches.length,
+  currentRound: state.currentRound,
+  tiebreakerEnabled: state.tiebreakerEnabled,
+});
+
 export const tournamentRouter = createTRPCRouter({
   getActive: publicProcedure.query(async ({ ctx }) => {
     const [row] = await ctx.db
-      .select({ id: tournaments.id, name: tournaments.name, state: tournaments.state, finished: tournaments.finished })
+      .select({
+        id: tournaments.id,
+        name: tournaments.name,
+        state: tournaments.state,
+        finished: tournaments.finished,
+      })
       .from(tournaments)
       .where(eq(tournaments.finished, 0))
       .limit(1);
@@ -75,42 +105,104 @@ export const tournamentRouter = createTRPCRouter({
     try {
       parsed = JSON.parse(row.state ?? "{}");
     } catch {
-      throw new TRPCError({ code: "INTERNAL_SERVER_ERROR", message: "Invalid tournament state" });
+      throw new TRPCError({
+        code: "INTERNAL_SERVER_ERROR",
+        message: "Invalid tournament state",
+      });
     }
 
     const state = leagueStateSchema.parse(parsed);
-    return { id: row.id, name: row.name, finished: row.finished === 1, state } as const;
+    return {
+      id: row.id,
+      name: row.name,
+      finished: row.finished === 1,
+      state,
+    } as const;
   }),
 
   create: protectedProcedure
-    .input(z.object({ name: z.string().min(1).max(256), state: leagueStateSchema }))
+    .input(
+      z.object({ name: z.string().min(1).max(256), state: leagueStateSchema }),
+    )
     .mutation(async ({ ctx, input }) => {
       const [inserted] = await ctx.db
         .insert(tournaments)
-        .values({ name: input.name, state: JSON.stringify(input.state), finished: 0 })
-        .returning({ id: tournaments.id, name: tournaments.name, state: tournaments.state, finished: tournaments.finished });
+        .values({
+          name: input.name,
+          state: JSON.stringify(input.state),
+          finished: 0,
+        })
+        .returning({
+          id: tournaments.id,
+          name: tournaments.name,
+          state: tournaments.state,
+          finished: tournaments.finished,
+        });
 
-      if (!inserted) throw new TRPCError({ code: "INTERNAL_SERVER_ERROR", message: "Failed to create tournament" });
+      if (!inserted)
+        throw new TRPCError({
+          code: "INTERNAL_SERVER_ERROR",
+          message: "Failed to create tournament",
+        });
 
       const state = leagueStateSchema.parse(JSON.parse(inserted.state));
-      return { id: inserted.id, name: inserted.name, finished: inserted.finished === 1, state } as const;
+      await writeAuditLog({
+        action: "tournament.created",
+        entityType: "tournament",
+        entityId: inserted.id,
+        summary: `Tournament "${inserted.name}" created with ${state.players.length} players`,
+        metadata: {
+          id: inserted.id,
+          name: inserted.name,
+          ...summarizeTournamentState(state),
+        },
+        headers: ctx.headers,
+      });
+      return {
+        id: inserted.id,
+        name: inserted.name,
+        finished: inserted.finished === 1,
+        state,
+      } as const;
     }),
 
   markMatchPlayed: protectedProcedure
-    .input(z.object({ tournamentId: z.number().int().positive(), matchIndex: z.number().int().nonnegative(), matchId: z.number().int().positive().optional() }))
+    .input(
+      z.object({
+        tournamentId: z.number().int().positive(),
+        matchIndex: z.number().int().nonnegative(),
+        matchId: z.number().int().positive().optional(),
+      }),
+    )
     .mutation(async ({ ctx, input }) => {
       const [row] = await ctx.db
-        .select({ id: tournaments.id, state: tournaments.state, finished: tournaments.finished })
+        .select({
+          id: tournaments.id,
+          name: tournaments.name,
+          state: tournaments.state,
+          finished: tournaments.finished,
+        })
         .from(tournaments)
         .where(eq(tournaments.id, input.tournamentId))
         .limit(1);
 
-      if (!row) throw new TRPCError({ code: "NOT_FOUND", message: "Tournament not found" });
-      if (row.finished === 1) throw new TRPCError({ code: "BAD_REQUEST", message: "Tournament is finished" });
+      if (!row)
+        throw new TRPCError({
+          code: "NOT_FOUND",
+          message: "Tournament not found",
+        });
+      if (row.finished === 1)
+        throw new TRPCError({
+          code: "BAD_REQUEST",
+          message: "Tournament is finished",
+        });
 
       const state = leagueStateSchema.parse(JSON.parse(row.state));
       if (input.matchIndex < 0 || input.matchIndex >= state.matches.length)
-        throw new TRPCError({ code: "BAD_REQUEST", message: "Invalid match index" });
+        throw new TRPCError({
+          code: "BAD_REQUEST",
+          message: "Invalid match index",
+        });
 
       state.matches[input.matchIndex]!.played = true;
       if (input.matchId) state.matches[input.matchIndex]!.id = input.matchId;
@@ -120,16 +212,52 @@ export const tournamentRouter = createTRPCRouter({
         .set({ state: JSON.stringify(state) })
         .where(eq(tournaments.id, row.id));
 
+      const playedMatch = state.matches[input.matchIndex]!;
+      await writeAuditLog({
+        action: "tournament.match_marked_played",
+        entityType: "tournament",
+        entityId: row.id,
+        summary: `Match ${input.matchIndex + 1} marked played in "${row.name}"`,
+        metadata: {
+          tournamentId: row.id,
+          tournamentName: row.name,
+          matchIndex: input.matchIndex,
+          linkedMatchId: playedMatch.id ?? null,
+          players: [state.players[playedMatch.a], state.players[playedMatch.b]]
+            .filter(Boolean)
+            .map((player) => ({
+              id: player?.id ?? null,
+              name: player?.name ?? null,
+            })),
+        },
+        headers: ctx.headers,
+      });
       return { ok: true } as const;
     }),
 
   finish: protectedProcedure
     .input(z.object({ tournamentId: z.number().int().positive() }))
     .mutation(async ({ ctx, input }) => {
+      const [row] = await ctx.db
+        .select({ id: tournaments.id, name: tournaments.name })
+        .from(tournaments)
+        .where(eq(tournaments.id, input.tournamentId))
+        .limit(1);
+
       await ctx.db
         .update(tournaments)
         .set({ finished: 1 })
         .where(eq(tournaments.id, input.tournamentId));
+      if (row) {
+        await writeAuditLog({
+          action: "tournament.finished",
+          entityType: "tournament",
+          entityId: row.id,
+          summary: `Tournament "${row.name}" finished`,
+          metadata: { tournamentId: row.id, tournamentName: row.name },
+          headers: ctx.headers,
+        });
+      }
       return { ok: true } as const;
     }),
 
@@ -137,22 +265,45 @@ export const tournamentRouter = createTRPCRouter({
     .input(z.object({ tournamentId: z.number().int().positive() }))
     .mutation(async ({ ctx, input }) => {
       const [row] = await ctx.db
-        .select({ id: tournaments.id, state: tournaments.state, finished: tournaments.finished })
+        .select({
+          id: tournaments.id,
+          name: tournaments.name,
+          state: tournaments.state,
+          finished: tournaments.finished,
+        })
         .from(tournaments)
         .where(eq(tournaments.id, input.tournamentId))
         .limit(1);
 
-      if (!row) throw new TRPCError({ code: "NOT_FOUND", message: "Tournament not found" });
+      if (!row)
+        throw new TRPCError({
+          code: "NOT_FOUND",
+          message: "Tournament not found",
+        });
       const state = leagueStateSchema.parse(JSON.parse(row.state));
 
       const rounds = state.rounds ?? [];
       const cr = state.currentRound ?? 0;
-      if (rounds.length === 0) throw new TRPCError({ code: "BAD_REQUEST", message: "Rounds not defined" });
-      if (cr >= rounds.length - 1) throw new TRPCError({ code: "BAD_REQUEST", message: "Already at last round" });
+      if (rounds.length === 0)
+        throw new TRPCError({
+          code: "BAD_REQUEST",
+          message: "Rounds not defined",
+        });
+      if (cr >= rounds.length - 1)
+        throw new TRPCError({
+          code: "BAD_REQUEST",
+          message: "Already at last round",
+        });
 
       const roundMatches = rounds[cr] ?? [];
-      const allPlayed = roundMatches.every((idx) => state.matches[idx]?.played === true);
-      if (!allPlayed) throw new TRPCError({ code: "BAD_REQUEST", message: "Round has pending matches" });
+      const allPlayed = roundMatches.every(
+        (idx) => state.matches[idx]?.played === true,
+      );
+      if (!allPlayed)
+        throw new TRPCError({
+          code: "BAD_REQUEST",
+          message: "Round has pending matches",
+        });
 
       const nextState = { ...state, currentRound: cr + 1 };
 
@@ -161,6 +312,19 @@ export const tournamentRouter = createTRPCRouter({
         .set({ state: JSON.stringify(nextState) })
         .where(eq(tournaments.id, row.id));
 
+      await writeAuditLog({
+        action: "tournament.round_advanced",
+        entityType: "tournament",
+        entityId: row.id,
+        summary: `Tournament "${row.name}" advanced to round ${nextState.currentRound + 1}`,
+        metadata: {
+          tournamentId: row.id,
+          tournamentName: row.name,
+          previousRound: cr,
+          nextRound: nextState.currentRound,
+        },
+        headers: ctx.headers,
+      });
       return { ok: true } as const;
     }),
   addTiebreakerRound: protectedProcedure
@@ -172,37 +336,65 @@ export const tournamentRouter = createTRPCRouter({
     )
     .mutation(async ({ ctx, input }) => {
       const [row] = await ctx.db
-        .select({ id: tournaments.id, state: tournaments.state, finished: tournaments.finished })
+        .select({
+          id: tournaments.id,
+          name: tournaments.name,
+          state: tournaments.state,
+          finished: tournaments.finished,
+        })
         .from(tournaments)
         .where(eq(tournaments.id, input.tournamentId))
         .limit(1);
 
-      if (!row) throw new TRPCError({ code: "NOT_FOUND", message: "Tournament not found" });
-      if (row.finished === 1) throw new TRPCError({ code: "BAD_REQUEST", message: "Tournament is finished" });
+      if (!row)
+        throw new TRPCError({
+          code: "NOT_FOUND",
+          message: "Tournament not found",
+        });
+      if (row.finished === 1)
+        throw new TRPCError({
+          code: "BAD_REQUEST",
+          message: "Tournament is finished",
+        });
 
       const state = leagueStateSchema.parse(JSON.parse(row.state));
       if (!state.tiebreakerEnabled) {
-        throw new TRPCError({ code: "BAD_REQUEST", message: "Tiebreaker is disabled" });
+        throw new TRPCError({
+          code: "BAD_REQUEST",
+          message: "Tiebreaker is disabled",
+        });
       }
 
       const unique = Array.from(new Set(input.playerIndices));
       if (unique.length !== input.playerIndices.length) {
-        throw new TRPCError({ code: "BAD_REQUEST", message: "Duplicate player indices" });
+        throw new TRPCError({
+          code: "BAD_REQUEST",
+          message: "Duplicate player indices",
+        });
       }
 
       if (unique.some((idx) => idx < 0 || idx >= state.players.length)) {
-        throw new TRPCError({ code: "BAD_REQUEST", message: "Invalid player indices" });
+        throw new TRPCError({
+          code: "BAD_REQUEST",
+          message: "Invalid player indices",
+        });
       }
 
       if (!state.matches.every((m) => m.played)) {
-        throw new TRPCError({ code: "BAD_REQUEST", message: "Tournament has pending matches" });
+        throw new TRPCError({
+          code: "BAD_REQUEST",
+          message: "Tournament has pending matches",
+        });
       }
 
       const { matches: newMatches, rounds: newRoundsRaw } =
         generateRoundRobinForIndices(unique);
 
       if (newMatches.length === 0 || newRoundsRaw.length === 0) {
-        throw new TRPCError({ code: "BAD_REQUEST", message: "No matches generated" });
+        throw new TRPCError({
+          code: "BAD_REQUEST",
+          message: "No matches generated",
+        });
       }
 
       const baseIndex = state.matches.length;
@@ -222,6 +414,28 @@ export const tournamentRouter = createTRPCRouter({
         .set({ state: JSON.stringify(nextState) })
         .where(eq(tournaments.id, row.id));
 
+      await writeAuditLog({
+        action: "tournament.tiebreaker_round_added",
+        entityType: "tournament",
+        entityId: row.id,
+        summary: `Tiebreaker round added to "${row.name}"`,
+        metadata: {
+          tournamentId: row.id,
+          tournamentName: row.name,
+          playerIndices: unique,
+          players: unique.map((idx) => {
+            const player = state.players[idx];
+            return {
+              index: idx,
+              id: player?.id ?? null,
+              name: player?.name ?? null,
+            };
+          }),
+          addedMatchCount: newMatches.length,
+          addedRoundCount: newRounds.length,
+        },
+        headers: ctx.headers,
+      });
       return { ok: true } as const;
     }),
 
@@ -247,15 +461,35 @@ export const tournamentRouter = createTRPCRouter({
         .from(playersToMatches)
         .innerJoin(players, eq(players.id, playersToMatches.playerId))
         .where(inArray(playersToMatches.matchId, ids))
-        .orderBy(asc(playersToMatches.matchId), asc(playersToMatches.placement));
+        .orderBy(
+          asc(playersToMatches.matchId),
+          asc(playersToMatches.placement),
+        );
 
-      const byMatch = new Map<number, { id: number; name: string; backgroundColor: string; placement: number }[]>();
+      const byMatch = new Map<
+        number,
+        {
+          id: number;
+          name: string;
+          backgroundColor: string;
+          placement: number;
+        }[]
+      >();
       for (const r of rows) {
         if (!byMatch.has(r.matchId)) byMatch.set(r.matchId, []);
-        byMatch.get(r.matchId)!.push({ id: r.id, name: r.name ?? "Invocador", backgroundColor: r.backgroundColor ?? "#1f2937", placement: r.placement });
+        byMatch.get(r.matchId)!.push({
+          id: r.id,
+          name: r.name ?? "Invocador",
+          backgroundColor: r.backgroundColor ?? "#1f2937",
+          placement: r.placement,
+        });
       }
 
-      return matchRows.map((m) => ({ id: m.id, createdAt: m.createdAt, players: byMatch.get(m.id) ?? [] }));
+      return matchRows.map((m) => ({
+        id: m.id,
+        createdAt: m.createdAt,
+        players: byMatch.get(m.id) ?? [],
+      }));
     }),
   list: publicProcedure.query(async ({ ctx }) => {
     const rows = await ctx.db
@@ -297,12 +531,24 @@ export const tournamentRouter = createTRPCRouter({
     .input(z.object({ tournamentId: z.number().int().positive() }))
     .query(async ({ ctx, input }) => {
       const [row] = await ctx.db
-        .select({ id: tournaments.id, name: tournaments.name, state: tournaments.state, finished: tournaments.finished, createdAt: tournaments.createdAt })
+        .select({
+          id: tournaments.id,
+          name: tournaments.name,
+          state: tournaments.state,
+          finished: tournaments.finished,
+          createdAt: tournaments.createdAt,
+        })
         .from(tournaments)
         .where(eq(tournaments.id, input.tournamentId))
         .limit(1);
       if (!row) return null;
       const state = leagueStateSchema.parse(JSON.parse(row.state));
-      return { id: row.id, name: row.name, finished: row.finished === 1, createdAt: row.createdAt, state } as const;
+      return {
+        id: row.id,
+        name: row.name,
+        finished: row.finished === 1,
+        createdAt: row.createdAt,
+        state,
+      } as const;
     }),
 });

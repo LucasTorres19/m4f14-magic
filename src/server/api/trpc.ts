@@ -10,10 +10,8 @@ import { initTRPC, TRPCError } from "@trpc/server";
 import superjson from "superjson";
 import { ZodError } from "zod";
 
-import { env } from "@/env";
+import { isAuthorizedByCookie } from "@/server/auth";
 import { db } from "@/server/db";
-import { verify } from "jsonwebtoken";
-import { cookies } from "next/headers";
 
 /**
  * 1. CONTEXT
@@ -28,18 +26,9 @@ import { cookies } from "next/headers";
  * @see https://trpc.io/docs/server/context
  */
 export const createTRPCContext = async (opts: { headers: Headers }) => {
-  // read a cookie
-  const cookieStore = await cookies();
-  const cookie = cookieStore.get("mafia-magic-auth");
-  let authorized = false;
-  try {
-    const decoded = verify(cookie?.value ?? "", env.AUTHORIZATION_SECRET);
-    if (decoded) authorized = true;
-  } catch {}
-
   return {
     db,
-    authorized,
+    authorized: await isAuthorizedByCookie(),
     ...opts,
   };
 };

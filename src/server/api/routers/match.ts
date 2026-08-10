@@ -1,24 +1,96 @@
 import { TRPCError } from "@trpc/server";
-import { and, eq, inArray } from "drizzle-orm";
+import { and, asc, eq, inArray } from "drizzle-orm";
 import { z } from "zod";
 
 import { utapi } from "@/app/api/uploadthing/core";
 import { createTRPCRouter, protectedProcedure } from "@/server/api/trpc";
+import { writeAuditLog } from "@/server/audit";
+import type { db as appDb } from "@/server/db";
 import {
   commanders,
   images,
   matches,
   players,
   playersToMatches,
+  tournaments,
 } from "@/server/db/schema";
 import { revalidatePath } from "next/cache";
 
 const PLACEMENT_EDIT_WINDOW_DAYS = 7;
+type Database = typeof appDb;
 
 const imageInputSchema = z.object({
   url: z.string().url(),
   key: z.string().min(1),
 });
+
+const getMatchAuditSnapshot = async (database: Database, matchId: number) => {
+  const [matchRow] = await database
+    .select({
+      id: matches.id,
+      startingHp: matches.startingHp,
+      tournamentId: matches.tournamentId,
+      tournamentName: tournaments.name,
+      createdAt: matches.createdAt,
+    })
+    .from(matches)
+    .leftJoin(tournaments, eq(tournaments.id, matches.tournamentId))
+    .where(eq(matches.id, matchId))
+    .limit(1);
+
+  const playerRows = await database
+    .select({
+      playerId: players.id,
+      playerName: players.name,
+      placement: playersToMatches.placement,
+      commanderId: commanders.id,
+      commanderName: commanders.name,
+    })
+    .from(playersToMatches)
+    .innerJoin(players, eq(players.id, playersToMatches.playerId))
+    .leftJoin(commanders, eq(commanders.id, playersToMatches.commanderId))
+    .where(eq(playersToMatches.matchId, matchId))
+    .orderBy(asc(playersToMatches.placement));
+
+  return {
+    id: matchRow?.id ?? matchId,
+    startingHp: matchRow?.startingHp ?? null,
+    tournament:
+      matchRow?.tournamentId == null
+        ? null
+        : { id: matchRow.tournamentId, name: matchRow.tournamentName },
+    createdAt: matchRow?.createdAt?.toISOString() ?? null,
+    players: playerRows.map((row) => ({
+      id: row.playerId,
+      name: row.playerName,
+      placement: row.placement,
+      commander:
+        row.commanderId == null
+          ? null
+          : { id: row.commanderId, name: row.commanderName },
+    })),
+  };
+};
+
+const auditMatchCreated = async (
+  database: Database,
+  headers: Headers,
+  matchId: number,
+) => {
+  try {
+    const snapshot = await getMatchAuditSnapshot(database, matchId);
+    await writeAuditLog({
+      action: "match.created",
+      entityType: "match",
+      entityId: matchId,
+      summary: `Match #${matchId} created with ${snapshot.players.length} players`,
+      metadata: snapshot,
+      headers,
+    });
+  } catch (error) {
+    console.error("[audit] Failed to build match creation audit log", error);
+  }
+};
 
 export const matchRouter = createTRPCRouter({
   save: protectedProcedure
@@ -214,6 +286,9 @@ export const matchRouter = createTRPCRouter({
         return matchRow.id;
       });
       revalidatePath("/analytics");
+      if (createdMatchId) {
+        await auditMatchCreated(ctx.db, ctx.headers, createdMatchId);
+      }
       return { matchId: createdMatchId ?? null } as const;
     }),
   setImage: protectedProcedure
@@ -296,13 +371,33 @@ export const matchRouter = createTRPCRouter({
           .where(eq(matches.id, matchRow.id));
 
         return {
+          matchId: matchRow.id,
           croppedImage,
           image,
           keysToDelete,
+          previousImageId: matchRow.image_id,
+          previousCroppedImageId: matchRow.cropped_image_id,
         };
       });
 
       await utapi.deleteFiles(transaction.keysToDelete);
+      await writeAuditLog({
+        action: "match.image_updated",
+        entityType: "match",
+        entityId: transaction.matchId,
+        summary: `Images updated for match #${transaction.matchId}`,
+        metadata: {
+          previous: {
+            hadFullImage: transaction.previousImageId != null,
+            hadCroppedImage: transaction.previousCroppedImageId != null,
+          },
+          next: {
+            fullImageId: transaction.image?.id ?? null,
+            croppedImageId: transaction.croppedImage.id,
+          },
+        },
+        headers: ctx.headers,
+      });
 
       return {
         croppedImage: transaction.croppedImage,
@@ -334,7 +429,7 @@ export const matchRouter = createTRPCRouter({
       }),
     )
     .mutation(async ({ ctx, input }) => {
-      const updated = await ctx.db.transaction(async (tx) => {
+      const updateResult = await ctx.db.transaction(async (tx) => {
         const [matchRow] = await tx
           .select({
             id: matches.id,
@@ -367,10 +462,16 @@ export const matchRouter = createTRPCRouter({
         const existing = await tx
           .select({
             playerId: playersToMatches.playerId,
+            playerName: players.name,
             placement: playersToMatches.placement,
+            commanderId: commanders.id,
+            commanderName: commanders.name,
           })
           .from(playersToMatches)
-          .where(eq(playersToMatches.matchId, input.matchId));
+          .innerJoin(players, eq(players.id, playersToMatches.playerId))
+          .leftJoin(commanders, eq(commanders.id, playersToMatches.commanderId))
+          .where(eq(playersToMatches.matchId, input.matchId))
+          .orderBy(asc(playersToMatches.placement));
 
         if (existing.length === 0) {
           throw new TRPCError({
@@ -420,13 +521,52 @@ export const matchRouter = createTRPCRouter({
           .set({ updatedAt: new Date() })
           .where(eq(matches.id, input.matchId));
 
-        return input.placements;
+        const byPlayerId = new Map(existing.map((row) => [row.playerId, row]));
+        const before = existing.map((row) => ({
+          playerId: row.playerId,
+          playerName: row.playerName,
+          placement: row.placement,
+          commander:
+            row.commanderId == null
+              ? null
+              : { id: row.commanderId, name: row.commanderName },
+        }));
+        const after = input.placements
+          .map((row) => {
+            const existingRow = byPlayerId.get(row.playerId);
+            return {
+              playerId: row.playerId,
+              playerName: existingRow?.playerName ?? "Unknown player",
+              placement: row.placement,
+              commander:
+                existingRow?.commanderId == null
+                  ? null
+                  : {
+                      id: existingRow.commanderId,
+                      name: existingRow.commanderName,
+                    },
+            };
+          })
+          .sort((a, b) => a.placement - b.placement);
+
+        return { placements: input.placements, before, after };
       });
 
       revalidatePath("/history");
       revalidatePath("/analytics");
       revalidatePath("/summoner");
+      await writeAuditLog({
+        action: "match.placements_updated",
+        entityType: "match",
+        entityId: input.matchId,
+        summary: `Placements updated for match #${input.matchId}`,
+        metadata: {
+          before: updateResult.before,
+          after: updateResult.after,
+        },
+        headers: ctx.headers,
+      });
 
-      return { placements: updated } as const;
+      return { placements: updateResult.placements } as const;
     }),
 });
