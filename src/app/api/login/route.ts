@@ -1,6 +1,7 @@
 // make a post route to login with a password
 
 import { env } from "@/env";
+import { writeAuditLog } from "@/server/audit";
 import { sign } from "jsonwebtoken";
 import { cookies } from "next/headers";
 import { NextResponse } from "next/server";
@@ -23,6 +24,13 @@ export async function POST(request: Request) {
 
   const { password } = parsed.data;
   if (password !== env.AUTHORIZATION_PASSWORD) {
+    await writeAuditLog({
+      action: "auth.login_failed",
+      entityType: "auth",
+      summary: "Failed login attempt",
+      metadata: { reason: "invalid_password" },
+      headers: request.headers,
+    });
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
 
@@ -33,6 +41,12 @@ export async function POST(request: Request) {
     value: token,
     secure: env.NODE_ENV === "production",
     httpOnly: true,
+  });
+  await writeAuditLog({
+    action: "auth.login_succeeded",
+    entityType: "auth",
+    summary: "Successful login",
+    headers: request.headers,
   });
   return NextResponse.json({ success: true });
 }

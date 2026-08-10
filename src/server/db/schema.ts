@@ -51,6 +51,21 @@ export const images = createTable("image", (d) => ({
     .notNull(),
 }));
 
+export const auditLogs = createTable("audit_log", (d) => ({
+  id: d.integer({ mode: "number" }).primaryKey({ autoIncrement: true }),
+  action: d.text({ length: 128 }).notNull(),
+  entityType: d.text("entity_type", { length: 128 }),
+  entityId: d.integer("entity_id", { mode: "number" }),
+  summary: d.text({ length: 1024 }).notNull(),
+  ipAddress: d.text("ip_address", { length: 128 }),
+  userAgent: d.text("user_agent", { length: 1024 }),
+  metadata: d.text({ length: 16384 }),
+  createdAt: d
+    .integer({ mode: "timestamp" })
+    .default(sql`(unixepoch())`)
+    .notNull(),
+}));
+
 export const tournaments = createTable("tournament", (d) => ({
   id: d.integer({ mode: "number" }).primaryKey({ autoIncrement: true }),
   name: d.text({ length: 256 }).notNull(),
