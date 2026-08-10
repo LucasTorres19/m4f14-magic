@@ -382,9 +382,12 @@ const PlayerCommanderCard = ({ player }: { player: PlayerSummary }) => {
               {initials}
             </div>
             <div>
-              <p className="text-foreground text-lg font-semibold tracking-tight">
+              <Link
+                href={`/summoner/${player.id}`}
+                className="text-foreground hover:text-primary text-lg font-semibold tracking-tight transition-colors"
+              >
                 {safeName}
-              </p>
+              </Link>
               <p className="text-muted-foreground text-[10px] uppercase tracking-[0.35em]">
                 {title}
               </p>
