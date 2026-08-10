@@ -36,6 +36,8 @@ const matchTimeOptions: Intl.DateTimeFormatOptions = {
   hour12: false,
 };
 
+const PLACEMENT_EDIT_WINDOW_DAYS = 7;
+
 const placementTitles: Record<number, string> = {
   1: "Campeón",
   2: "Subcampeón",
@@ -217,6 +219,10 @@ export const MatchCard = ({ match, gradient }: MatchCardProps) => {
     setPlayers(match.players);
   }, [match.players]);
 
+  const editDeadline = new Date(createdAt);
+  editDeadline.setDate(editDeadline.getDate() + PLACEMENT_EDIT_WINDOW_DAYS);
+  const canEditPlacements =
+    !Number.isNaN(editDeadline.getTime()) && editDeadline >= new Date();
   const playerCount = players.length;
 
   return (
@@ -272,7 +278,7 @@ export const MatchCard = ({ match, gradient }: MatchCardProps) => {
                 </p>
               </div>
             </div>
-            {players.length > 0 ? (
+            {players.length > 0 && canEditPlacements ? (
               <EditPlacementsDialog
                 matchId={match.id}
                 players={players}
