@@ -519,8 +519,14 @@ export default function SummonerPage() {
                           </span>
                         )}
                         {player.isStreakChampion && (
-                          <span className="text-[11px] py-1 rounded-full bg-amber-500/15 text-amber-600 flex w-fit items-center px-3 font-semibold">
-                            <Flame className="mr-1 h-4 w-4" /> Racha actual
+                          <span
+                            className="streak-fire-badge"
+                            role="img"
+                            aria-label="En racha"
+                          >
+                            <Flame className="flame" width={16} height={16} />
+                            <span className="label">En racha</span>
+                            <span aria-hidden className="fire-heat" />
                           </span>
                         )}
                       </div>
