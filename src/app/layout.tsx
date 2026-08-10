@@ -1,4 +1,5 @@
 import "@/styles/globals.css";
+import "mana-font/css/mana.css";
 
 import { ourFileRouter } from "@/app/api/uploadthing/core";
 import FlyingCards from "@/components/Flying-cards";

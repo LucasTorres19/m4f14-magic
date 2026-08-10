@@ -1,15 +1,8 @@
 "use client";
 
-import {
-  Circle,
-  Diamond,
-  Loader2,
-  LockKeyhole,
-  Square,
-  Triangle,
-} from "lucide-react";
+import { Loader2, LockKeyhole } from "lucide-react";
 import { useRouter } from "next/navigation";
-import type { ComponentType, FormEvent } from "react";
+import type { FormEvent } from "react";
 import { useState } from "react";
 
 import { Button } from "@/components/ui/button";
@@ -18,14 +11,15 @@ import { Input } from "@/components/ui/input";
 type PuzzleToken = {
   id: string;
   label: string;
-  icon: ComponentType<{ className?: string }>;
+  symbolClass: string;
 };
 
 const PUZZLE_TOKENS: PuzzleToken[] = [
-  { id: "circle", label: "Circulo", icon: Circle },
-  { id: "triangle", label: "Triangulo", icon: Triangle },
-  { id: "diamond", label: "Diamante", icon: Diamond },
-  { id: "square", label: "Cuadrado", icon: Square },
+  { id: "w", label: "Mana blanco", symbolClass: "ms-w" },
+  { id: "u", label: "Mana azul", symbolClass: "ms-u" },
+  { id: "b", label: "Mana negro", symbolClass: "ms-b" },
+  { id: "r", label: "Mana rojo", symbolClass: "ms-r" },
+  { id: "g", label: "Mana verde", symbolClass: "ms-g" },
 ];
 
 const createPuzzleSequence = () =>
@@ -40,6 +34,7 @@ export function AuditLoginForm() {
   const [puzzleProgress, setPuzzleProgress] = useState<string[]>([]);
   const [puzzleError, setPuzzleError] = useState<string | null>(null);
   const [password, setPassword] = useState("");
+  const [passwordAccepted, setPasswordAccepted] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [isPending, setIsPending] = useState(false);
   const puzzleSolved = puzzleProgress.length === puzzleSequence.length;
@@ -55,22 +50,21 @@ export function AuditLoginForm() {
     }
 
     setPuzzleError(null);
-    setPuzzleProgress((current) => [...current, tokenId]);
+    const nextProgress = [...puzzleProgress, tokenId];
+    setPuzzleProgress(nextProgress);
+    if (nextProgress.length === puzzleSequence.length) {
+      router.refresh();
+    }
   };
 
   const resetPuzzle = () => {
     setPuzzleSequence(createPuzzleSequence());
     setPuzzleProgress([]);
     setPuzzleError(null);
-    setPassword("");
   };
 
   const submit = async (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
-    if (!puzzleSolved) {
-      setError("Resuelve la secuencia antes de ingresar.");
-      return;
-    }
 
     setError(null);
     setIsPending(true);
@@ -89,7 +83,7 @@ export function AuditLoginForm() {
       return;
     }
 
-    router.refresh();
+    setPasswordAccepted(true);
   };
 
   return (
@@ -102,103 +96,110 @@ export function AuditLoginForm() {
           <div>
             <h1 className="text-xl font-semibold">Auditoria privada</h1>
             <p className="text-muted-foreground text-sm">
-              Resuelve la secuencia y despues ingresa la password.
+              Ingresa la password.
             </p>
           </div>
         </div>
 
         <form className="space-y-4" onSubmit={submit}>
-          <div className="rounded-xl border border-white/10 bg-background/55 p-3">
-            <div className="mb-3 flex items-center justify-between gap-3">
-              <div>
-                <p className="text-xs font-semibold uppercase tracking-[0.25em] text-primary">
-                  Secuencia
-                </p>
-                <div className="mt-2 flex gap-2">
-                  {puzzleSequence.map((tokenId, index) => {
-                    const token = PUZZLE_TOKENS.find(
-                      (item) => item.id === tokenId,
-                    );
-                    if (!token) return null;
-                    const Icon = token.icon;
-                    const solved = puzzleProgress[index] === tokenId;
-                    return (
-                      <span
-                        key={`${tokenId}-${index}`}
-                        className={
-                          solved
-                            ? "flex size-8 items-center justify-center rounded-md border border-emerald-400/50 bg-emerald-500/15 text-emerald-200"
-                            : "flex size-8 items-center justify-center rounded-md border border-primary/30 bg-primary/10 text-primary"
-                        }
-                        title={token.label}
-                      >
-                        <Icon className="size-4" />
-                      </span>
-                    );
-                  })}
+          {passwordAccepted ? (
+            <div className="rounded-xl border border-white/10 bg-background/55 p-3">
+              <div className="mb-3 flex items-center justify-between gap-3">
+                <div>
+                  <p className="text-xs font-semibold uppercase tracking-[0.25em] text-primary">
+                    Mana
+                  </p>
+                  <div className="mt-2 flex gap-2">
+                    {puzzleSequence.map((tokenId, index) => {
+                      const token = PUZZLE_TOKENS.find(
+                        (item) => item.id === tokenId,
+                      );
+                      if (!token) return null;
+                      const solved = puzzleProgress[index] === tokenId;
+                      return (
+                        <span
+                          key={`${tokenId}-${index}`}
+                          className={
+                            solved
+                              ? "flex size-8 items-center justify-center rounded-md border border-emerald-400/50 bg-emerald-500/15 text-emerald-200"
+                              : "flex size-8 items-center justify-center rounded-md border border-primary/30 bg-primary/10 text-primary"
+                          }
+                          title={token.label}
+                        >
+                          <i
+                            className={`ms ms-cost ${token.symbolClass} text-[18px]`}
+                            aria-hidden="true"
+                          />
+                        </span>
+                      );
+                    })}
+                  </div>
                 </div>
+                <Button
+                  type="button"
+                  variant="ghost"
+                  size="sm"
+                  onClick={resetPuzzle}
+                  disabled={isPending}
+                >
+                  Nueva
+                </Button>
               </div>
-              <Button
-                type="button"
-                variant="ghost"
-                size="sm"
-                onClick={resetPuzzle}
-                disabled={isPending}
+
+              <div className="grid grid-cols-5 gap-2">
+                {PUZZLE_TOKENS.map((token) => {
+                  return (
+                    <Button
+                      key={token.id}
+                      type="button"
+                      variant="secondary"
+                      size="icon"
+                      className="size-11"
+                      onClick={() => pressPuzzleToken(token.id)}
+                      disabled={puzzleSolved || isPending}
+                      aria-label={token.label}
+                    >
+                      <i
+                        className={`ms ms-cost ${token.symbolClass} text-[24px]`}
+                        aria-hidden="true"
+                      />
+                    </Button>
+                  );
+                })}
+              </div>
+
+              <p
+                className={
+                  puzzleSolved
+                    ? "mt-3 text-sm text-emerald-300"
+                    : "text-muted-foreground mt-3 text-sm"
+                }
               >
-                Nueva
+                {puzzleSolved
+                  ? "Secuencia resuelta."
+                  : (puzzleError ??
+                    "Repite la secuencia de mana en el orden indicado.")}
+              </p>
+            </div>
+          ) : (
+            <>
+              <Input
+                type="password"
+                value={password}
+                onChange={(event) => setPassword(event.target.value)}
+                placeholder="Password"
+                autoFocus
+                disabled={isPending}
+              />
+              {error ? (
+                <p className="text-destructive text-sm">{error}</p>
+              ) : null}
+              <Button type="submit" className="w-full" disabled={isPending}>
+                {isPending ? <Loader2 className="size-4 animate-spin" /> : null}
+                Continuar
               </Button>
-            </div>
-
-            <div className="grid grid-cols-4 gap-2">
-              {PUZZLE_TOKENS.map((token) => {
-                const Icon = token.icon;
-                return (
-                  <Button
-                    key={token.id}
-                    type="button"
-                    variant="secondary"
-                    size="icon"
-                    className="size-11"
-                    onClick={() => pressPuzzleToken(token.id)}
-                    disabled={puzzleSolved || isPending}
-                    aria-label={token.label}
-                  >
-                    <Icon className="size-5" />
-                  </Button>
-                );
-              })}
-            </div>
-
-            <p
-              className={
-                puzzleSolved
-                  ? "mt-3 text-sm text-emerald-300"
-                  : "text-muted-foreground mt-3 text-sm"
-              }
-            >
-              {puzzleSolved
-                ? "Secuencia resuelta."
-                : (puzzleError ?? "Toca los simbolos en el orden indicado.")}
-            </p>
-          </div>
-
-          <Input
-            type="password"
-            value={password}
-            onChange={(event) => setPassword(event.target.value)}
-            placeholder="Password"
-            autoFocus
-            disabled={isPending || !puzzleSolved}
-          />
-          {error ? <p className="text-destructive text-sm">{error}</p> : null}
-          <Button
-            type="submit"
-            className="w-full"
-            disabled={isPending || !puzzleSolved}
-          >
-            {isPending ? <Loader2 className="size-4 animate-spin" /> : null}
-            Entrar
-          </Button>
+            </>
+          )}
         </form>
       </section>
     </main>
