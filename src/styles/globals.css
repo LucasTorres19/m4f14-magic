@@ -239,303 +239,544 @@
 }
 
 .otp-badge {
-    --glow: 255, 94, 0;        /* naranja */
-    --hot: 255, 170, 0;        /* ámbar */
-    --ember: 255, 50, 20;      /* rojo */
-    display: inline-flex;
-    align-items: center;
-    gap: 0.4rem;
-    padding: 0.25rem 0.75rem;
-    border-radius: 9999px;
-    font-size: 0.75rem;        /* text-xs */
-    line-height: 1rem;
-    color: rgb(var(--glow));
-    position: relative;
-    isolation: isolate;
-    background: linear-gradient(90deg,
-      rgba(var(--hot), 0.18) 0%,
-      rgba(var(--glow), 0.16) 40%,
-      rgba(var(--ember), 0.18) 100%
+  --glow: 255, 94, 0; /* naranja */
+  --hot: 255, 170, 0; /* ámbar */
+  --ember: 255, 50, 20; /* rojo */
+  display: inline-flex;
+  align-items: center;
+  gap: 0.4rem;
+  padding: 0.25rem 0.75rem;
+  border-radius: 9999px;
+  font-size: 0.75rem; /* text-xs */
+  line-height: 1rem;
+  color: rgb(var(--glow));
+  position: relative;
+  isolation: isolate;
+  background: linear-gradient(
+    90deg,
+    rgba(var(--hot), 0.18) 0%,
+    rgba(var(--glow), 0.16) 40%,
+    rgba(var(--ember), 0.18) 100%
+  );
+  box-shadow:
+    0 0 12px rgba(var(--glow), 0.25),
+    inset 0 0 10px rgba(var(--hot), 0.25);
+  border: 1px solid rgba(var(--glow), 0.25);
+  animation: flameGlow 1.2s ease-in-out infinite alternate;
+}
+
+.otp-badge .label {
+  color: rgb(255 241 230);
+}
+
+.otp-badge .flame {
+  filter: drop-shadow(0 0 6px rgba(var(--glow), 0.7))
+    drop-shadow(0 0 14px rgba(var(--ember), 0.4));
+  animation: flameFlicker 220ms infinite steps(2, end);
+}
+
+.otp-badge .heat {
+  position: absolute;
+  inset: -6px -10px;
+  z-index: -1;
+  pointer-events: none;
+  background:
+    radial-gradient(
+      120px 40px at 20% 50%,
+      rgba(var(--hot), 0.18),
+      transparent 60%
+    ),
+    radial-gradient(
+      120px 40px at 80% 50%,
+      rgba(var(--ember), 0.15),
+      transparent 60%
     );
-    box-shadow:
-      0 0 12px rgba(var(--glow), 0.25),
-      inset 0 0 10px rgba(var(--hot), 0.25);
-    border: 1px solid rgba(var(--glow), 0.25);
-    animation: flameGlow 1.2s ease-in-out infinite alternate;
-  }
+  filter: blur(8px);
+  animation: heatWave 1.6s ease-in-out infinite alternate;
+}
 
-  .otp-badge .label {
-    color: rgb(255 241 230); 
-  }
-
-  .otp-badge .flame {
-    filter:
-      drop-shadow(0 0 6px rgba(var(--glow), 0.7))
-      drop-shadow(0 0 14px rgba(var(--ember), 0.4));
-    animation: flameFlicker 220ms infinite steps(2, end);
-  }
-
-  .otp-badge .heat {
-    position: absolute;
-    inset: -6px -10px;
-    z-index: -1;
-    pointer-events: none;
-    background:
-      radial-gradient(120px 40px at 20% 50%, rgba(var(--hot), 0.18), transparent 60%),
-      radial-gradient(120px 40px at 80% 50%, rgba(var(--ember), 0.15), transparent 60%);
-    filter: blur(8px);
-    animation: heatWave 1.6s ease-in-out infinite alternate;
-  }
-
-  .otp-badge::before,
-  .otp-badge::after {
-    content: "";
-    position: absolute;
-    width: 10px;
-    height: 16px;
-    top: -6px;
-    border-radius: 50% 50% 50% 50% / 60% 60% 40% 40%;
-    /* background: radial-gradient(circle at 50% 30%,
+.otp-badge::before,
+.otp-badge::after {
+  content: "";
+  position: absolute;
+  width: 10px;
+  height: 16px;
+  top: -6px;
+  border-radius: 50% 50% 50% 50% / 60% 60% 40% 40%;
+  /* background: radial-gradient(circle at 50% 30%,
       rgba(255,255,255,0.8) 0%,
       rgba(var(--hot), 0.9) 35%,
       rgba(var(--glow), 0.8) 65%,
       rgba(var(--ember), 0.0) 100%); */
-    filter: blur(0.4px) drop-shadow(0 0 8px rgba(var(--glow), 0.5));
-    transform-origin: bottom center;
-  }
-  .otp-badge::before {
-    left: 10px;
-    animation: lick 900ms infinite ease-in-out;
-  }
-  .otp-badge::after {
-    right: 10px;
-    animation: lick 1100ms infinite ease-in-out reverse;
-  }
+  filter: blur(0.4px) drop-shadow(0 0 8px rgba(var(--glow), 0.5));
+  transform-origin: bottom center;
+}
+.otp-badge::before {
+  left: 10px;
+  animation: lick 900ms infinite ease-in-out;
+}
+.otp-badge::after {
+  right: 10px;
+  animation: lick 1100ms infinite ease-in-out reverse;
+}
 
-  @keyframes flameGlow {
-    from { box-shadow:
-      0 0 10px rgba(var(--glow), 0.22),
-      inset 0 0 8px rgba(var(--hot), 0.2); }
-    to   { box-shadow:
-      0 0 18px rgba(var(--glow), 0.38),
-      inset 0 0 16px rgba(var(--hot), 0.32); }
-  }
-
-  @keyframes flameFlicker {
-    0%   { transform: translateY(0) rotate(-1deg) }
-    50%  { transform: translateY(-0.5px) rotate(1deg) }
-    100% { transform: translateY(0) rotate(-1deg) }
-  }
-
-  @keyframes heatWave {
-    from { opacity: 0.7; transform: translateY(0) }
-    to   { opacity: 1;   transform: translateY(-1px) }
-  }
-
-  @keyframes lick {
-    0%   { transform: scale(1) translateY(0) rotate(0deg) }
-    50%  { transform: scale(1.05) translateY(-2px) rotate(-3deg) }
-    100% { transform: scale(1) translateY(0) rotate(0deg) }
-  }
-
-  @media (prefers-reduced-motion: reduce) {
-    .otp-badge,
-    .otp-badge .flame,
-    .otp-badge .heat,
-    .otp-badge::before,
-    .otp-badge::after {
-      animation: none !important;
-    }
-  }
-
-  .otp-badge-summoner {
-    --glow: 16, 185, 129;   /* emerald 500 */
-    --hot: 52, 211, 153;    /* emerald 400 */
-    --ember: 5, 150, 105;   /* emerald 600 */
-    display: inline-flex;
-    align-items: center;
-    gap: 0.4rem;
-    padding: 0.25rem 0.75rem;
-    border-radius: 9999px;
-    font-size: 0.75rem;
-    line-height: 1rem;
-    color: rgb(var(--glow));
-    position: relative;
-    isolation: isolate;
-    background: linear-gradient(90deg,
-      rgba(var(--hot), 0.18) 0%,
-      rgba(var(--glow), 0.16) 40%,
-      rgba(var(--ember), 0.18) 100%
-    );
+@keyframes flameGlow {
+  from {
     box-shadow:
-      0 0 12px rgba(var(--glow), 0.25),
-      inset 0 0 10px rgba(var(--hot), 0.25);
-    border: 1px solid rgba(var(--glow), 0.25);
-    animation: flameGlow 1.2s ease-in-out infinite alternate;
+      0 0 10px rgba(var(--glow), 0.22),
+      inset 0 0 8px rgba(var(--hot), 0.2);
   }
-
-  .otp-badge-summoner .label {
-    color: rgb(236 253 245); /* emerald-50 */
+  to {
+    box-shadow:
+      0 0 18px rgba(var(--glow), 0.38),
+      inset 0 0 16px rgba(var(--hot), 0.32);
   }
+}
 
-  .otp-badge-summoner .flame {
-    filter:
-      drop-shadow(0 0 6px rgba(var(--glow), 0.7))
-      drop-shadow(0 0 14px rgba(var(--ember), 0.4));
-    animation: flameFlicker 220ms infinite steps(2, end);
+@keyframes flameFlicker {
+  0% {
+    transform: translateY(0) rotate(-1deg);
   }
-
-  .otp-badge-summoner .heat {
-    position: absolute;
-    inset: -6px -10px;
-    z-index: -1;
-    pointer-events: none;
-    background:
-      radial-gradient(120px 40px at 20% 50%, rgba(var(--hot), 0.18), transparent 60%),
-      radial-gradient(120px 40px at 80% 50%, rgba(var(--ember), 0.15), transparent 60%);
-    filter: blur(8px);
-    animation: heatWave 1.6s ease-in-out infinite alternate;
+  50% {
+    transform: translateY(-0.5px) rotate(1deg);
   }
+  100% {
+    transform: translateY(0) rotate(-1deg);
+  }
+}
 
+@keyframes heatWave {
+  from {
+    opacity: 0.7;
+    transform: translateY(0);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(-1px);
+  }
+}
+
+@keyframes lick {
+  0% {
+    transform: scale(1) translateY(0) rotate(0deg);
+  }
+  50% {
+    transform: scale(1.05) translateY(-2px) rotate(-3deg);
+  }
+  100% {
+    transform: scale(1) translateY(0) rotate(0deg);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .otp-badge,
+  .otp-badge .flame,
+  .otp-badge .heat,
+  .otp-badge::before,
+  .otp-badge::after {
+    animation: none !important;
+  }
+}
+
+.otp-badge-summoner {
+  --glow: 16, 185, 129; /* emerald 500 */
+  --hot: 52, 211, 153; /* emerald 400 */
+  --ember: 5, 150, 105; /* emerald 600 */
+  display: inline-flex;
+  align-items: center;
+  gap: 0.4rem;
+  padding: 0.25rem 0.75rem;
+  border-radius: 9999px;
+  font-size: 0.75rem;
+  line-height: 1rem;
+  color: rgb(var(--glow));
+  position: relative;
+  isolation: isolate;
+  background: linear-gradient(
+    90deg,
+    rgba(var(--hot), 0.18) 0%,
+    rgba(var(--glow), 0.16) 40%,
+    rgba(var(--ember), 0.18) 100%
+  );
+  box-shadow:
+    0 0 12px rgba(var(--glow), 0.25),
+    inset 0 0 10px rgba(var(--hot), 0.25);
+  border: 1px solid rgba(var(--glow), 0.25);
+  animation: flameGlow 1.2s ease-in-out infinite alternate;
+}
+
+.otp-badge-summoner .label {
+  color: rgb(236 253 245); /* emerald-50 */
+}
+
+.otp-badge-summoner .flame {
+  filter: drop-shadow(0 0 6px rgba(var(--glow), 0.7))
+    drop-shadow(0 0 14px rgba(var(--ember), 0.4));
+  animation: flameFlicker 220ms infinite steps(2, end);
+}
+
+.otp-badge-summoner .heat {
+  position: absolute;
+  inset: -6px -10px;
+  z-index: -1;
+  pointer-events: none;
+  background:
+    radial-gradient(
+      120px 40px at 20% 50%,
+      rgba(var(--hot), 0.18),
+      transparent 60%
+    ),
+    radial-gradient(
+      120px 40px at 80% 50%,
+      rgba(var(--ember), 0.15),
+      transparent 60%
+    );
+  filter: blur(8px);
+  animation: heatWave 1.6s ease-in-out infinite alternate;
+}
+
+.otp-badge-summoner::before,
+.otp-badge-summoner::after {
+  content: "";
+  position: absolute;
+  width: 10px;
+  height: 16px;
+  top: -6px;
+  border-radius: 50% 50% 50% 50% / 60% 60% 40% 40%;
+  filter: blur(0.4px) drop-shadow(0 0 8px rgba(var(--glow), 0.5));
+  transform-origin: bottom center;
+}
+.otp-badge-summoner::before {
+  left: 10px;
+  animation: lick 900ms infinite ease-in-out;
+}
+.otp-badge-summoner::after {
+  right: 10px;
+  animation: lick 1100ms infinite ease-in-out reverse;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .otp-badge-summoner,
+  .otp-badge-summoner .flame,
+  .otp-badge-summoner .heat,
   .otp-badge-summoner::before,
   .otp-badge-summoner::after {
-    content: "";
-    position: absolute;
-    width: 10px;
-    height: 16px;
-    top: -6px;
-    border-radius: 50% 50% 50% 50% / 60% 60% 40% 40%;
-    filter: blur(0.4px) drop-shadow(0 0 8px rgba(var(--glow), 0.5));
-    transform-origin: bottom center;
+    animation: none !important;
   }
-  .otp-badge-summoner::before { left: 10px; animation: lick 900ms infinite ease-in-out; }
-  .otp-badge-summoner::after  { right: 10px; animation: lick 1100ms infinite ease-in-out reverse; }
+}
 
-  @media (prefers-reduced-motion: reduce) {
-    .otp-badge-summoner,
-    .otp-badge-summoner .flame,
-    .otp-badge-summoner .heat,
-    .otp-badge-summoner::before,
-    .otp-badge-summoner::after {
-      animation: none !important;
-    }
-  }
-  
-  .cebolla-badge {
-    --ice: 120, 180, 255;
-    --deep: 40, 90, 200;
-    --mist: 170, 210, 255;
-    display: inline-flex;
-    align-items: center;
-    gap: 0.35rem;
-    padding: 0.2rem 0.6rem;
-    border-radius: 9999px;
-    font-size: 0.75rem;
-    line-height: 1rem;
-    color: rgb(230 245 255);
-    position: relative;
-    isolation: isolate;
-    background: linear-gradient(
-      90deg,
-      rgba(var(--mist), 0.18) 0%,
-      rgba(var(--ice), 0.16) 40%,
-      rgba(var(--deep), 0.20) 100%
+.cebolla-badge {
+  --ice: 120, 180, 255;
+  --deep: 40, 90, 200;
+  --mist: 170, 210, 255;
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+  padding: 0.2rem 0.6rem;
+  border-radius: 9999px;
+  font-size: 0.75rem;
+  line-height: 1rem;
+  color: rgb(230 245 255);
+  position: relative;
+  isolation: isolate;
+  background: linear-gradient(
+    90deg,
+    rgba(var(--mist), 0.18) 0%,
+    rgba(var(--ice), 0.16) 40%,
+    rgba(var(--deep), 0.2) 100%
+  );
+  box-shadow:
+    0 0 12px rgba(var(--ice), 0.25),
+    inset 0 0 10px rgba(var(--mist), 0.25);
+  border: 1px solid rgba(var(--ice), 0.25);
+  animation: blueGlow 1.4s ease-in-out infinite alternate;
+}
+.cebolla-badge .label {
+  color: rgb(225 240 255);
+}
+.cebolla-badge .tear {
+  filter: drop-shadow(0 0 6px rgba(var(--ice), 0.7))
+    drop-shadow(0 0 12px rgba(var(--deep), 0.3));
+  animation: tearBlink 700ms infinite steps(2, end);
+}
+.cebolla-badge .blue-heat {
+  position: absolute;
+  inset: -6px -10px;
+  z-index: -1;
+  pointer-events: none;
+  background:
+    radial-gradient(
+      120px 40px at 20% 50%,
+      rgba(var(--mist), 0.18),
+      transparent 60%
+    ),
+    radial-gradient(
+      120px 40px at 80% 50%,
+      rgba(var(--deep), 0.14),
+      transparent 60%
     );
-    box-shadow:
-      0 0 12px rgba(var(--ice), 0.25),
-      inset 0 0 10px rgba(var(--mist), 0.25);
-    border: 1px solid rgba(var(--ice), 0.25);
-    animation: blueGlow 1.4s ease-in-out infinite alternate;
-  }
-  .cebolla-badge .label {
-    color: rgb(225 240 255);
-  }
-  .cebolla-badge .tear {
-    filter:
-      drop-shadow(0 0 6px rgba(var(--ice), 0.7))
-      drop-shadow(0 0 12px rgba(var(--deep), 0.3));
-    animation: tearBlink 700ms infinite steps(2, end);
-  }
-  .cebolla-badge .blue-heat {
-    position: absolute;
-    inset: -6px -10px;
-    z-index: -1;
-    pointer-events: none;
-    background:
-      radial-gradient(120px 40px at 20% 50%, rgba(var(--mist), 0.18), transparent 60%),
-      radial-gradient(120px 40px at 80% 50%, rgba(var(--deep), 0.14), transparent 60%);
-    filter: blur(8px);
-    animation: blueWave 1.8s ease-in-out infinite alternate;
-  }
-  .cebolla-badge::before,
-  .cebolla-badge::after {
-    content: "";
-    position: absolute;
-    width: 10px;
-    height: 16px;
-    top: -6px;
-    border-radius: 50% 50% 50% 50% / 60% 60% 40% 40%;
-    /* background: radial-gradient(circle at 50% 30%,
+  filter: blur(8px);
+  animation: blueWave 1.8s ease-in-out infinite alternate;
+}
+.cebolla-badge::before,
+.cebolla-badge::after {
+  content: "";
+  position: absolute;
+  width: 10px;
+  height: 16px;
+  top: -6px;
+  border-radius: 50% 50% 50% 50% / 60% 60% 40% 40%;
+  /* background: radial-gradient(circle at 50% 30%,
       rgba(255,255,255,0.7) 0%,
       rgba(var(--mist), 0.9) 35%,
       rgba(var(--ice), 0.8) 65%,
       rgba(var(--deep), 0.0) 100%);
     filter: blur(0.4px) drop-shadow(0 0 8px rgba(var(--ice), 0.45)); */
-    transform-origin: bottom center;
-  }
-  .cebolla-badge::before { left: 10px; animation: blueLick 1000ms infinite ease-in-out; }
-  .cebolla-badge::after  { right: 10px; animation: blueLick 1200ms infinite ease-in-out reverse; }
-
-  @keyframes blueGlow {
-    from { box-shadow: 0 0 10px rgba(var(--ice), 0.22), inset 0 0 8px rgba(var(--mist), 0.2); }
-    to   { box-shadow: 0 0 18px rgba(var(--ice), 0.38), inset 0 0 16px rgba(var(--mist), 0.32); }
-  }
-  @keyframes tearBlink {
-    0%   { transform: translateY(0) rotate(-1deg) }
-    50%  { transform: translateY(-0.5px) rotate(1deg) }
-    100% { transform: translateY(0) rotate(-1deg) }
-  }
-  @keyframes blueWave {
-    from { opacity: 0.7; transform: translateY(0) }
-    to   { opacity: 1;   transform: translateY(-1px) }
-  }
-  @keyframes blueLick {
-    0%   { transform: scale(1) translateY(0) rotate(0deg) }
-    50%  { transform: scale(1.05) translateY(-2px) rotate(-3deg) }
-    100% { transform: scale(1) translateY(0) rotate(0deg) }
-  }
-
-  @media (prefers-reduced-motion: reduce) {
-    .cebolla-badge, .cebolla-badge .tear, .cebolla-badge .blue-heat,
-    .cebolla-badge::before, .cebolla-badge::after { animation: none !important; }
-  }
-
-
-@keyframes fc-float-kf {
-  0%   { transform: translate3d(0, 0, 0); }
-  50%  { transform: translate3d(0, -14px, 0); }
-  100% { transform: translate3d(0, 0, 0); }
+  transform-origin: bottom center;
 }
-@keyframes fc-drift-kf {
-  0%   { transform: translate3d(0, 0, 0); }
-  50%  { transform: translate3d(14px, 0, 0); }
-  100% { transform: translate3d(0, 0, 0); }
+.cebolla-badge::before {
+  left: 10px;
+  animation: blueLick 1000ms infinite ease-in-out;
+}
+.cebolla-badge::after {
+  right: 10px;
+  animation: blueLick 1200ms infinite ease-in-out reverse;
 }
 
-.fc-float { animation-timing-function: ease-in-out; animation-iteration-count: infinite; }
-.fc-drift { animation-timing-function: ease-in-out; animation-iteration-count: infinite; }
-
-.motion-safe\:animate-fc-float { animation-name: fc-float-kf; }
-.motion-safe\:animate-fc-drift { animation-name: fc-drift-kf; }
-
-
-.animate-fc-float { animation-name: fc-float-kf; }
-.animate-fc-drift { animation-name: fc-drift-kf; }
+@keyframes blueGlow {
+  from {
+    box-shadow:
+      0 0 10px rgba(var(--ice), 0.22),
+      inset 0 0 8px rgba(var(--mist), 0.2);
+  }
+  to {
+    box-shadow:
+      0 0 18px rgba(var(--ice), 0.38),
+      inset 0 0 16px rgba(var(--mist), 0.32);
+  }
+}
+@keyframes tearBlink {
+  0% {
+    transform: translateY(0) rotate(-1deg);
+  }
+  50% {
+    transform: translateY(-0.5px) rotate(1deg);
+  }
+  100% {
+    transform: translateY(0) rotate(-1deg);
+  }
+}
+@keyframes blueWave {
+  from {
+    opacity: 0.7;
+    transform: translateY(0);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(-1px);
+  }
+}
+@keyframes blueLick {
+  0% {
+    transform: scale(1) translateY(0) rotate(0deg);
+  }
+  50% {
+    transform: scale(1.05) translateY(-2px) rotate(-3deg);
+  }
+  100% {
+    transform: scale(1) translateY(0) rotate(0deg);
+  }
+}
 
 @media (prefers-reduced-motion: reduce) {
-  .fc-float, .fc-drift,
-  .animate-fc-float, .animate-fc-drift,
-  .motion-safe\:animate-fc-float, .motion-safe\:animate-fc-drift {
+  .cebolla-badge,
+  .cebolla-badge .tear,
+  .cebolla-badge .blue-heat,
+  .cebolla-badge::before,
+  .cebolla-badge::after {
+    animation: none !important;
+  }
+}
+
+.culo-roto-badge {
+  --crack: 255, 230, 170;
+  --bruise: 155, 45, 90;
+  --shadow: 55, 18, 35;
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+  padding: 0.2rem 0.6rem;
+  border-radius: 9999px;
+  font-size: 0.75rem;
+  line-height: 1rem;
+  color: rgb(255 236 222);
+  position: relative;
+  isolation: isolate;
+  overflow: hidden;
+  background:
+    linear-gradient(
+      135deg,
+      transparent 44%,
+      rgba(var(--crack), 0.9) 45%,
+      transparent 48%
+    ),
+    linear-gradient(90deg, rgba(var(--shadow), 0.9), rgba(var(--bruise), 0.55));
+  box-shadow:
+    0 0 12px rgba(var(--bruise), 0.32),
+    inset 0 0 12px rgba(var(--crack), 0.16);
+  border: 1px solid rgba(var(--crack), 0.32);
+  animation: brokenShake 1.2s steps(2, end) infinite;
+}
+.culo-roto-badge .label {
+  color: rgb(255 238 226);
+  text-shadow: 1px 0 rgba(var(--shadow), 0.85);
+}
+.culo-roto-badge .crack {
+  color: rgb(255 219 190);
+  filter: drop-shadow(1px 0 0 rgba(var(--shadow), 0.9))
+    drop-shadow(0 0 7px rgba(var(--crack), 0.45));
+  animation: crackPulse 850ms infinite steps(2, end);
+}
+.culo-roto-badge .broken-heat {
+  position: absolute;
+  inset: -8px -12px;
+  z-index: -1;
+  pointer-events: none;
+  background:
+    radial-gradient(
+      90px 32px at 20% 50%,
+      rgba(var(--bruise), 0.28),
+      transparent 62%
+    ),
+    radial-gradient(
+      80px 30px at 75% 45%,
+      rgba(var(--crack), 0.2),
+      transparent 65%
+    );
+  filter: blur(8px);
+  animation: brokenGlow 1.7s ease-in-out infinite alternate;
+}
+.culo-roto-badge::before,
+.culo-roto-badge::after {
+  content: "";
+  position: absolute;
+  width: 18px;
+  height: 2px;
+  background: rgba(var(--crack), 0.85);
+  box-shadow: 0 0 8px rgba(var(--crack), 0.45);
+  transform-origin: center;
+  opacity: 0.8;
+}
+.culo-roto-badge::before {
+  left: 9px;
+  top: 5px;
+  transform: rotate(-25deg);
+}
+.culo-roto-badge::after {
+  right: 8px;
+  bottom: 5px;
+  transform: rotate(22deg);
+}
+
+@keyframes brokenShake {
+  0%,
+  100% {
+    transform: translate(0, 0) skewX(0deg);
+  }
+  20% {
+    transform: translate(-0.5px, 0.5px) skewX(-2deg);
+  }
+  40% {
+    transform: translate(0.5px, -0.5px) skewX(2deg);
+  }
+  60% {
+    transform: translate(-0.5px, -0.5px) skewX(-1deg);
+  }
+  80% {
+    transform: translate(0.5px, 0.5px) skewX(1deg);
+  }
+}
+@keyframes crackPulse {
+  0%,
+  100% {
+    transform: rotate(-2deg) scale(1);
+  }
+  50% {
+    transform: rotate(3deg) scale(1.08);
+  }
+}
+@keyframes brokenGlow {
+  from {
+    opacity: 0.6;
+    transform: translateX(-1px);
+  }
+  to {
+    opacity: 1;
+    transform: translateX(1px);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .culo-roto-badge,
+  .culo-roto-badge .crack,
+  .culo-roto-badge .broken-heat {
+    animation: none !important;
+  }
+}
+
+@keyframes fc-float-kf {
+  0% {
+    transform: translate3d(0, 0, 0);
+  }
+  50% {
+    transform: translate3d(0, -14px, 0);
+  }
+  100% {
+    transform: translate3d(0, 0, 0);
+  }
+}
+@keyframes fc-drift-kf {
+  0% {
+    transform: translate3d(0, 0, 0);
+  }
+  50% {
+    transform: translate3d(14px, 0, 0);
+  }
+  100% {
+    transform: translate3d(0, 0, 0);
+  }
+}
+
+.fc-float {
+  animation-timing-function: ease-in-out;
+  animation-iteration-count: infinite;
+}
+.fc-drift {
+  animation-timing-function: ease-in-out;
+  animation-iteration-count: infinite;
+}
+
+.motion-safe\:animate-fc-float {
+  animation-name: fc-float-kf;
+}
+.motion-safe\:animate-fc-drift {
+  animation-name: fc-drift-kf;
+}
+
+.animate-fc-float {
+  animation-name: fc-float-kf;
+}
+.animate-fc-drift {
+  animation-name: fc-drift-kf;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .fc-float,
+  .fc-drift,
+  .animate-fc-float,
+  .animate-fc-drift,
+  .motion-safe\:animate-fc-float,
+  .motion-safe\:animate-fc-drift {
     animation: none !important;
   }
 }

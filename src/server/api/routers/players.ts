@@ -287,6 +287,9 @@ export const playersRouter = createTRPCRouter({
         podiums: sum(
           sql<number>`CASE WHEN ${matchSizeAgg.playerCount} >= 3 AND ${playersToMatches.placement} IN (1,2) THEN 1 ELSE 0 END`,
         ).as("podiums"),
+        lastPlaceCount: sum(
+          sql<number>`CASE WHEN ${matchSizeAgg.playerCount} > 2 AND ${playersToMatches.placement} = ${matchSizeAgg.playerCount} THEN 1 ELSE 0 END`,
+        ).as("lastPlaceCount"),
       })
       .from(playersToMatches)
       .innerJoin(
@@ -435,6 +438,7 @@ export const playersRouter = createTRPCRouter({
         wins: agg.wins,
         podiumMatchCount: agg.podiumMatchCount,
         podiums: agg.podiums,
+        lastPlaceCount: agg.lastPlaceCount,
       })
       .from(players)
       .leftJoin(agg, eq(agg.playerId, players.id))
@@ -504,6 +508,7 @@ export const playersRouter = createTRPCRouter({
       wins: Number(r.wins ?? 0),
       podiumMatchCount: Number(r.podiumMatchCount ?? 0),
       podiums: Number(r.podiums ?? 0),
+      lastPlaceCount: Number(r.lastPlaceCount ?? 0),
       topDecks: (topByPlayer.get(r.id) ?? []).sort((a, b) => b.count - a.count),
       isLastWinner: lastWinnerId != null && r.id === lastWinnerId,
       isStreakChampion: streakChampionId != null && r.id === streakChampionId,
