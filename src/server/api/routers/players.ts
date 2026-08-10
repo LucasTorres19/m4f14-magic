@@ -1,4 +1,4 @@
-import { asc, count, desc, eq, max, sql, sum, inArray } from "drizzle-orm";
+import { asc, count, desc, eq, inArray, max, sql, sum } from "drizzle-orm";
 import { alias } from "drizzle-orm/sqlite-core";
 import { z } from "zod";
 
@@ -9,10 +9,10 @@ import {
 } from "@/server/api/trpc";
 import {
   commanders,
+  images,
   matches,
   players,
   playersToMatches,
-  images,
   tournaments,
 } from "@/server/db/schema";
 
@@ -69,7 +69,10 @@ export const playersRouter = createTRPCRouter({
           ).as("podiums"),
         })
         .from(playersToMatches)
-        .innerJoin(matchSizeAgg, eq(matchSizeAgg.matchId, playersToMatches.matchId))
+        .innerJoin(
+          matchSizeAgg,
+          eq(matchSizeAgg.matchId, playersToMatches.matchId),
+        )
         .where(
           sql`${playersToMatches.playerId} = ${input.playerId} and ${playersToMatches.commanderId} is not null`,
         )
@@ -95,21 +98,24 @@ export const playersRouter = createTRPCRouter({
         id: player.id,
         name: player.name,
         backgroundColor: player.backgroundColor,
-          commanders: rows.map((r) => ({
-            commanderId: r.commanderId ?? 0,
-            name: r.name ?? null,
-            artImageUrl: r.artImageUrl ?? null,
-            imageUrl: r.imageUrl ?? null,
-            matchCount: Number(r.matchCount ?? 0),
-            wins: Number(r.wins ?? 0),
+        commanders: rows.map((r) => ({
+          commanderId: r.commanderId ?? 0,
+          name: r.name ?? null,
+          artImageUrl: r.artImageUrl ?? null,
+          imageUrl: r.imageUrl ?? null,
+          matchCount: Number(r.matchCount ?? 0),
+          wins: Number(r.wins ?? 0),
           podiumMatchCount: Number(r.podiumMatchCount ?? 0),
-            podiums: Number(r.podiums ?? 0),
-          })),
-        } as const;
+          podiums: Number(r.podiums ?? 0),
+        })),
+      } as const;
     }),
   history: publicProcedure
     .input(
-      z.object({ playerId: z.number().int().positive(), limit: z.number().int().min(1).max(5000).optional() })
+      z.object({
+        playerId: z.number().int().positive(),
+        limit: z.number().int().min(1).max(5000).optional(),
+      }),
     )
     .query(async ({ ctx, input }) => {
       const limit = input.limit ?? 50;
@@ -160,7 +166,10 @@ export const playersRouter = createTRPCRouter({
         .innerJoin(players, eq(players.id, playersToMatches.playerId))
         .leftJoin(commanders, eq(commanders.id, playersToMatches.commanderId))
         .where(inArray(playersToMatches.matchId, matchIds))
-        .orderBy(asc(playersToMatches.matchId), asc(playersToMatches.placement));
+        .orderBy(
+          asc(playersToMatches.matchId),
+          asc(playersToMatches.placement),
+        );
 
       const playersByMatch = new Map<
         number,
@@ -169,25 +178,32 @@ export const playersRouter = createTRPCRouter({
           name: string;
           backgroundColor: string;
           placement: number;
-          commander: { id: number; name: string | null; imageUrl: string | null; artImageUrl: string | null } | null;
+          commander: {
+            id: number;
+            name: string | null;
+            imageUrl: string | null;
+            artImageUrl: string | null;
+          } | null;
         }[]
       >();
 
       for (const row of playerRows) {
-        if (!playersByMatch.has(row.matchId)) playersByMatch.set(row.matchId, []);
+        if (!playersByMatch.has(row.matchId))
+          playersByMatch.set(row.matchId, []);
         playersByMatch.get(row.matchId)!.push({
           playerId: row.playerId,
           name: row.name ?? "Invocador desconocido",
           backgroundColor: row.backgroundColor ?? "#1f2937",
           placement: row.placement,
-          commander: row.commanderId != null
-            ? {
-                id: row.commanderId,
-                name: row.commanderName ?? null,
-                imageUrl: row.commanderImageUrl ?? null,
-                artImageUrl: row.commanderArtImageUrl ?? null,
-              }
-            : null,
+          commander:
+            row.commanderId != null
+              ? {
+                  id: row.commanderId,
+                  name: row.commanderName ?? null,
+                  imageUrl: row.commanderImageUrl ?? null,
+                  artImageUrl: row.commanderArtImageUrl ?? null,
+                }
+              : null,
         });
       }
 
@@ -195,13 +211,30 @@ export const playersRouter = createTRPCRouter({
       const selfCommanderIds = baseRows
         .map((r) => r.selfCommanderId)
         .filter((x): x is number => x != null);
-      const selfCommanderMap = new Map<number, { name: string | null; imageUrl: string | null; artImageUrl: string | null }>();
+      const selfCommanderMap = new Map<
+        number,
+        {
+          name: string | null;
+          imageUrl: string | null;
+          artImageUrl: string | null;
+        }
+      >();
       if (selfCommanderIds.length > 0) {
         const selfCmdRows = await ctx.db
-          .select({ id: commanders.id, name: commanders.name, imageUrl: commanders.imageUrl, artImageUrl: commanders.artImageUrl })
+          .select({
+            id: commanders.id,
+            name: commanders.name,
+            imageUrl: commanders.imageUrl,
+            artImageUrl: commanders.artImageUrl,
+          })
           .from(commanders)
           .where(inArray(commanders.id, Array.from(new Set(selfCommanderIds))));
-        for (const r of selfCmdRows) selfCommanderMap.set(r.id, { name: r.name ?? null, imageUrl: r.imageUrl ?? null, artImageUrl: r.artImageUrl ?? null });
+        for (const r of selfCmdRows)
+          selfCommanderMap.set(r.id, {
+            name: r.name ?? null,
+            imageUrl: r.imageUrl ?? null,
+            artImageUrl: r.artImageUrl ?? null,
+          });
       }
 
       return baseRows.map((r) => ({
@@ -210,9 +243,17 @@ export const playersRouter = createTRPCRouter({
         startingHp: r.startingHp,
         self: {
           placement: r.selfPlacement,
-          commander: r.selfCommanderId != null
-            ? { id: r.selfCommanderId, ...(selfCommanderMap.get(r.selfCommanderId) ?? { name: null, imageUrl: null, artImageUrl: null }) }
-            : null,
+          commander:
+            r.selfCommanderId != null
+              ? {
+                  id: r.selfCommanderId,
+                  ...(selfCommanderMap.get(r.selfCommanderId) ?? {
+                    name: null,
+                    imageUrl: null,
+                    artImageUrl: null,
+                  }),
+                }
+              : null,
         },
         image: r.image,
         croppedImage: r.croppedImage,
@@ -248,7 +289,10 @@ export const playersRouter = createTRPCRouter({
         ).as("podiums"),
       })
       .from(playersToMatches)
-      .innerJoin(matchSizeAgg, eq(matchSizeAgg.matchId, playersToMatches.matchId))
+      .innerJoin(
+        matchSizeAgg,
+        eq(matchSizeAgg.matchId, playersToMatches.matchId),
+      )
       .groupBy(playersToMatches.playerId)
       .as("agg");
 
@@ -283,7 +327,9 @@ export const playersRouter = createTRPCRouter({
       })
       .from(playersToMatches)
       .innerJoin(matches, eq(playersToMatches.matchId, matches.id))
-      .where(sql`${playersToMatches.commanderId} is not null and ${matches.createdAt} >= unixepoch('now','-30 days')`)
+      .where(
+        sql`${playersToMatches.commanderId} is not null and ${matches.createdAt} >= unixepoch('now','-30 days')`,
+      )
       .groupBy(playersToMatches.playerId, playersToMatches.commanderId)
       .as("usageAgg30");
 
@@ -448,23 +494,25 @@ export const playersRouter = createTRPCRouter({
       .orderBy(sql`count(*) desc`, sql`max(${orderedMatches.createdAt}) desc`)
       .limit(1);
 
-      const streakChampionId: number | null = streakChampion?.playerId ?? null;
+    const streakChampionId: number | null = streakChampion?.playerId ?? null;
 
-      return rows.map((r) => ({
-        id: r.id,
-        name: r.name,
-        backgroundColor: r.backgroundColor,
-        matchCount: Number(r.matchCount ?? 0),
-        wins: Number(r.wins ?? 0),
-        podiumMatchCount: Number(r.podiumMatchCount ?? 0),
-        podiums: Number(r.podiums ?? 0),
-        topDecks: (topByPlayer.get(r.id) ?? []).sort((a, b) => b.count - a.count),
-        isLastWinner: lastWinnerId != null && r.id === lastWinnerId,
-        isStreakChampion: streakChampionId != null && r.id === streakChampionId,
-        uniqueCommanderCount: Number(uniqueByPlayer.get(r.id) ?? 0),
+    return rows.map((r) => ({
+      id: r.id,
+      name: r.name,
+      backgroundColor: r.backgroundColor,
+      matchCount: Number(r.matchCount ?? 0),
+      wins: Number(r.wins ?? 0),
+      podiumMatchCount: Number(r.podiumMatchCount ?? 0),
+      podiums: Number(r.podiums ?? 0),
+      topDecks: (topByPlayer.get(r.id) ?? []).sort((a, b) => b.count - a.count),
+      isLastWinner: lastWinnerId != null && r.id === lastWinnerId,
+      isStreakChampion: streakChampionId != null && r.id === streakChampionId,
+      uniqueCommanderCount: Number(uniqueByPlayer.get(r.id) ?? 0),
       isOtp:
         (matchCount30ByPlayer.get(r.id) ?? 0) >= 5 &&
-        (top30ByPlayerCount.get(r.id) ?? 0) / Math.max(1, matchCount30ByPlayer.get(r.id) ?? 1) >= 0.6,
+        (top30ByPlayerCount.get(r.id) ?? 0) /
+          Math.max(1, matchCount30ByPlayer.get(r.id) ?? 1) >=
+          0.6,
     }));
   }),
   updateColor: protectedProcedure

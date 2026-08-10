@@ -143,9 +143,7 @@ async function findLocalCommanders(
     .as("matchAgg");
 
   const normalizedPlayerId =
-    typeof playerId === "number" && Number.isFinite(playerId)
-      ? playerId
-      : -1;
+    typeof playerId === "number" && Number.isFinite(playerId) ? playerId : -1;
 
   const playerAgg = db
     .select({
@@ -172,9 +170,10 @@ async function findLocalCommanders(
     matchCount: sql<number>`coalesce(${matchAgg.totalMatchCount}, 0)`.as(
       "matchCount",
     ),
-    playerMatchCount: sql<number>`coalesce(${playerAgg.playerMatchCount}, 0)`.as(
-      "playerMatchCount",
-    ),
+    playerMatchCount:
+      sql<number>`coalesce(${playerAgg.playerMatchCount}, 0)`.as(
+        "playerMatchCount",
+      ),
   };
 
   let commanderQuery = db
@@ -320,7 +319,10 @@ export const commandersRouter = createTRPCRouter({
           `).as("lastSecondAt"),
         })
         .from(playersToMatches)
-        .innerJoin(matchSizeAgg, eq(matchSizeAgg.matchId, playersToMatches.matchId))
+        .innerJoin(
+          matchSizeAgg,
+          eq(matchSizeAgg.matchId, playersToMatches.matchId),
+        )
         .groupBy(playersToMatches.commanderId)
         .as("agg");
 
