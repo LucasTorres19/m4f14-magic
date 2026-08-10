@@ -1,9 +1,5 @@
 "use client";
 
-import { useMemo, useState } from "react";
-import Link from "next/link";
-import Image from "next/image";
-import { api } from "@/trpc/react";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import {
@@ -14,16 +10,31 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
-import { Label } from "@/components/ui/label";
 import { Input } from "@/components/ui/input";
-import { toast } from "sonner";
-import { ArrowLeft, ChevronUp, ChevronDown, Users, Swords, Trophy, Boxes, Flame, Droplets, Layers } from "lucide-react";
+import { Label } from "@/components/ui/label";
 import {
   Tooltip,
   TooltipContent,
   TooltipProvider,
   TooltipTrigger,
 } from "@/components/ui/tooltip";
+import { api } from "@/trpc/react";
+import {
+  ArrowLeft,
+  Boxes,
+  ChevronDown,
+  ChevronUp,
+  Droplets,
+  Flame,
+  Layers,
+  Swords,
+  Trophy,
+  Users,
+} from "lucide-react";
+import Image from "next/image";
+import Link from "next/link";
+import { useMemo, useState } from "react";
+import { toast } from "sonner";
 
 type ApiPlayer = {
   id: number;
@@ -35,7 +46,12 @@ type ApiPlayer = {
   podiums?: number | string | null;
   isLastWinner?: boolean | null;
   isStreakChampion?: boolean | null;
-  topDecks?: { commanderId: number; name: string | null; artImageUrl: string | null; count: number | string | null }[];
+  topDecks?: {
+    commanderId: number;
+    name: string | null;
+    artImageUrl: string | null;
+    count: number | string | null;
+  }[];
   uniqueCommanderCount?: number | string | null;
   isOtp?: boolean | null;
 };
@@ -52,7 +68,12 @@ type PlayerUI = Required<Pick<ApiPlayer, "id">> & {
   isStreakChampion: boolean;
   isCebollita: boolean;
   isOtp: boolean;
-  topDecks: { commanderId: number; name: string; artImageUrl: string | null; count: number }[];
+  topDecks: {
+    commanderId: number;
+    name: string;
+    artImageUrl: string | null;
+    count: number;
+  }[];
   uniqueCommanderCount: number;
   isMostDiverse: boolean;
 };
@@ -60,9 +81,11 @@ type PlayerUI = Required<Pick<ApiPlayer, "id">> & {
 export default function SummonerPage() {
   const { data, isLoading, isError } = api.players.listWithStats.useQuery();
   const utils = api.useUtils();
-  const [colorDialog, setColorDialog] = useState<
-    { id: number; name: string; color: string } | null
-  >(null);
+  const [colorDialog, setColorDialog] = useState<{
+    id: number;
+    name: string;
+    color: string;
+  } | null>(null);
   const [colorInput, setColorInput] = useState<string>("#000000");
   const updateColor = api.players.updateColor.useMutation({
     onSuccess: async () => {
@@ -109,7 +132,10 @@ export default function SummonerPage() {
       } satisfies PlayerUI;
     });
 
-    const maxSeconds = base.reduce((m, p) => (p.seconds > m ? p.seconds : m), 0);
+    const maxSeconds = base.reduce(
+      (m, p) => (p.seconds > m ? p.seconds : m),
+      0,
+    );
     const maxUnique = base.reduce(
       (m, p) => (p.uniqueCommanderCount > m ? p.uniqueCommanderCount : m),
       0,
@@ -157,7 +183,8 @@ export default function SummonerPage() {
         va = winrate(a.wins, a.matchCount);
         vb = winrate(b.wins, b.matchCount);
       }
-      const cmp = va === vb ? collator.compare(a.name, b.name) : va < vb ? -1 : 1;
+      const cmp =
+        va === vb ? collator.compare(a.name, b.name) : va < vb ? -1 : 1;
       return sortDir === "asc" ? cmp : -cmp;
     });
     return arr;
@@ -179,9 +206,7 @@ export default function SummonerPage() {
               </Button>
             </Link>
             <h1 className="text-2xl md:text-5xl font-bold mb-2">Invocadores</h1>
-            <p className="text-muted-foreground">
-
-            </p>
+            <p className="text-muted-foreground"></p>
           </div>
           <div className="text-right hidden md:block">
             <p className="text-sm text-muted-foreground tracking-widest flex">
@@ -210,7 +235,10 @@ export default function SummonerPage() {
         {!isLoading && !isError && (
           <>
             <div className="mb-4 flex items-center justify-end gap-2">
-              <label htmlFor="sortKey" className="text-sm text-muted-foreground">
+              <label
+                htmlFor="sortKey"
+                className="text-sm text-muted-foreground"
+              >
                 Ordenar por:
               </label>
               <select
@@ -229,7 +257,9 @@ export default function SummonerPage() {
                 type="button"
                 variant="outline"
                 size="sm"
-                onClick={() => setSortDir((d) => (d === "asc" ? "desc" : "asc"))}
+                onClick={() =>
+                  setSortDir((d) => (d === "asc" ? "desc" : "asc"))
+                }
                 className="ml-2"
                 title={sortDir === "asc" ? "Ascendente" : "Descendente"}
               >
@@ -247,13 +277,16 @@ export default function SummonerPage() {
                   <Card
                     key={player.id}
                     className="overflow-hidden group hover:ring-2 hover:ring-primary transition-all"
-                  >    
+                  >
                     <div className="p-4 space-y-4">
                       <div className="flex items-center justify-between">
-                        <h3 className="font-bold text-lg leading-tight">  
-                            <Link href={`/summoner/${player.id}`} className="cursor-pointer">                       
-                              {player.name}
-                            </Link> 
+                        <h3 className="font-bold text-lg leading-tight">
+                          <Link
+                            href={`/summoner/${player.id}`}
+                            className="cursor-pointer"
+                          >
+                            {player.name}
+                          </Link>
                         </h3>
 
                         <Tooltip>
@@ -261,7 +294,9 @@ export default function SummonerPage() {
                             <button
                               type="button"
                               className="inline-flex h-6 w-6 rounded-full border cursor-pointer"
-                              style={{ backgroundColor: player.backgroundColor }}
+                              style={{
+                                backgroundColor: player.backgroundColor,
+                              }}
                               title={player.backgroundColor}
                               aria-label={`Cambiar color de ${player.name}`}
                               onClick={() => {
@@ -278,47 +313,58 @@ export default function SummonerPage() {
                             Cambiar color: {player.backgroundColor}
                           </TooltipContent>
                         </Tooltip>
-
                       </div>
-                            
+
                       <div className="flex items-center gap-2 text-xs text-muted-foreground flex-wrap">
-                        
-                      {player.isMostDiverse && (
+                        {player.isMostDiverse && (
                           <Tooltip>
                             <TooltipTrigger asChild>
                               <span className="text-[11px] py-1 rounded-full bg-indigo-500/15 text-indigo-600 flex w-fit items-center px-3 font-semibold">
-                                <Layers className="mr-1 h-4 w-4" /> Mas comandantes distintos
+                                <Layers className="mr-1 h-4 w-4" /> Mas
+                                comandantes distintos
                               </span>
                             </TooltipTrigger>
                             <TooltipContent side="top" align="center">
-                              {player.uniqueCommanderCount} comandantes diferentes
+                              {player.uniqueCommanderCount} comandantes
+                              diferentes
                             </TooltipContent>
                           </Tooltip>
                         )}
 
                         <span className="inline-flex items-center gap-1 py-1 px-2 rounded-full bg-primary/10 text-primary">
-                          <Swords className="h-4 w-4 mr-1" /> {player.matchCount} partidas
+                          <Swords className="h-4 w-4 mr-1" />{" "}
+                          {player.matchCount} partidas
                         </span>
                         <span className="inline-flex items-center gap-1 py-1 px-2 rounded-full bg-primary/10 text-primary">
-                          <Trophy className="h-4 w-4 mr-1" /> {Math.round(winrate(player.wins, player.matchCount))}% winrate
+                          <Trophy className="h-4 w-4 mr-1" />{" "}
+                          {Math.round(winrate(player.wins, player.matchCount))}%
+                          winrate
                         </span>
                         <span className="inline-flex items-center gap-1 py-1 px-2 rounded-full bg-primary/10 text-primary">
-                          <Boxes className="h-4 w-4 mr-1" /> {Math.round(podiumPct(player.podiums, player.podiumMatchCount))}% podio
+                          <Boxes className="h-4 w-4 mr-1" />{" "}
+                          {Math.round(
+                            podiumPct(player.podiums, player.podiumMatchCount),
+                          )}
+                          % podio
                         </span>
 
-                      {player.isCebollita && (
-                        <Tooltip>
-                          <TooltipTrigger asChild>
-                            <span
-                              className="cebolla-badge"
-                              role="img"
-                              aria-label="Cebollita"
-                            >
-                              <Droplets width={16} height={16} className="tear" />
-                              <span className="label">Cebollita</span>
-                              <span aria-hidden className="blue-heat" />
-                            </span>
-                          </TooltipTrigger>
+                        {player.isCebollita && (
+                          <Tooltip>
+                            <TooltipTrigger asChild>
+                              <span
+                                className="cebolla-badge"
+                                role="img"
+                                aria-label="Cebollita"
+                              >
+                                <Droplets
+                                  width={16}
+                                  height={16}
+                                  className="tear"
+                                />
+                                <span className="label">Cebollita</span>
+                                <span aria-hidden className="blue-heat" />
+                              </span>
+                            </TooltipTrigger>
 
                             <TooltipContent
                               side="top"
@@ -326,51 +372,80 @@ export default function SummonerPage() {
                               className="max-w-[280px] leading-relaxed"
                             >
                               <p className="font-semibold">¿Cebollita?</p>
-                              <p className="text-sm">Mayor cantidad de segundos puestos.</p>
+                              <p className="text-sm">
+                                Mayor cantidad de segundos puestos.
+                              </p>
 
                               <div className="mt-2 text-xs">
                                 cantidad: <strong>{player.seconds ?? 0}</strong>
                               </div>
-                          </TooltipContent>
-                        </Tooltip>
-                      )}
+                            </TooltipContent>
+                          </Tooltip>
+                        )}
 
-                      {player.isOtp && (
-                        <Tooltip>
-                          <TooltipTrigger asChild>
-                            <span className="otp-badge-summoner" role="img" aria-label="OTP">
-                              <Flame width={16} height={16} className="flame" />
-                              <span className="label">OTP</span>
-                              <span aria-hidden className="heat" />
-                            </span>
-                          </TooltipTrigger>
-                          <TooltipContent side="top" align="center" className="max-w-[280px] leading-relaxed">
-                            <p className="font-semibold">OTP (one trick pony)</p>
-                            <p className="text-sm">En el ultimo mes juega mayormente un mismo deck (= 60% y minimo 5 partidas).</p>
-                            <div className="mt-2 text-xs">
-                              top deck: <strong>{player.topDecks[0]?.count ?? 0}</strong> / {player.matchCount}
-                            </div>
-                          </TooltipContent>
-                        </Tooltip>
-                      )}
+                        {player.isOtp && (
+                          <Tooltip>
+                            <TooltipTrigger asChild>
+                              <span
+                                className="otp-badge-summoner"
+                                role="img"
+                                aria-label="OTP"
+                              >
+                                <Flame
+                                  width={16}
+                                  height={16}
+                                  className="flame"
+                                />
+                                <span className="label">OTP</span>
+                                <span aria-hidden className="heat" />
+                              </span>
+                            </TooltipTrigger>
+                            <TooltipContent
+                              side="top"
+                              align="center"
+                              className="max-w-[280px] leading-relaxed"
+                            >
+                              <p className="font-semibold">
+                                OTP (one trick pony)
+                              </p>
+                              <p className="text-sm">
+                                En el ultimo mes juega mayormente un mismo deck
+                                (= 60% y minimo 5 partidas).
+                              </p>
+                              <div className="mt-2 text-xs">
+                                top deck:{" "}
+                                <strong>
+                                  {player.topDecks[0]?.count ?? 0}
+                                </strong>{" "}
+                                / {player.matchCount}
+                              </div>
+                            </TooltipContent>
+                          </Tooltip>
+                        )}
 
-                          {player.isLastWinner && (
-                            <span className="text-[11px] py-1 rounded-full bg-emerald-500/15 text-emerald-600 flex w-fit items-center px-3 font-semibold">
-                              <Trophy className="mr-1 h-4 w-4" /> Último ganador
-                            </span>
-                          )}
-                          {player.isStreakChampion && (
-                            <span className="text-[11px] py-1 rounded-full bg-amber-500/15 text-amber-600 flex w-fit items-center px-3 font-semibold">
-                              <Flame className="mr-1 h-4 w-4" /> Racha actual
-                            </span>
-                          )}
-
+                        {player.isLastWinner && (
+                          <span className="text-[11px] py-1 rounded-full bg-emerald-500/15 text-emerald-600 flex w-fit items-center px-3 font-semibold">
+                            <Trophy className="mr-1 h-4 w-4" /> Último ganador
+                          </span>
+                        )}
+                        {player.isStreakChampion && (
+                          <span
+                            className="streak-fire-badge"
+                            role="img"
+                            aria-label="En racha"
+                          >
+                            <Flame className="flame" width={16} height={16} />
+                            <span className="label">En racha</span>
+                            <span aria-hidden className="fire-heat" />
+                          </span>
+                        )}
                       </div>
-
 
                       {player.topDecks.length > 0 && (
                         <div className="mt-2">
-                          <p className="text-sm font-medium mb-1">Comandantes mas jugados</p>
+                          <p className="text-sm font-medium mb-1">
+                            Comandantes mas jugados
+                          </p>
                           <ul className="text-sm text-muted-foreground space-y-2">
                             {player.topDecks.map((d, idx) => (
                               <li
@@ -390,9 +465,13 @@ export default function SummonerPage() {
                                   ) : (
                                     <span className="h-10 w-7 bg-muted rounded-sm shrink-0" />
                                   )}
-                                  <span className="truncate">{idx + 1}. {d.name}</span>
+                                  <span className="truncate">
+                                    {idx + 1}. {d.name}
+                                  </span>
                                 </span>
-                                <span className="ml-3 text-xs whitespace-nowrap">{d.count} partidas</span>
+                                <span className="ml-3 text-xs whitespace-nowrap">
+                                  {d.count} partidas
+                                </span>
                               </li>
                             ))}
                           </ul>
@@ -415,7 +494,9 @@ export default function SummonerPage() {
         )}
       </div>
       <ColorDialog
-        data={colorDialog ? { id: colorDialog.id, name: colorDialog.name } : null}
+        data={
+          colorDialog ? { id: colorDialog.id, name: colorDialog.name } : null
+        }
         value={colorInput}
         setValue={setColorInput}
         onClose={() => setColorDialog(null)}
@@ -483,4 +564,3 @@ function ColorDialog({
     </Dialog>
   );
 }
-
