@@ -21,8 +21,10 @@ import {
   CalendarDays,
   ChevronDown,
   ChevronUp,
+  Crown,
   Droplets,
   Flame,
+  HeartCrack,
   Layers,
   Swords,
   Trophy,
@@ -58,7 +60,10 @@ type PlayerListStatsRow = {
   wins: number;
   podiumMatchCount?: number;
   podiums: number;
+  lastPlaceCount?: number;
   isCebollita?: boolean;
+  isCuloRoto?: boolean;
+  isChampion?: boolean;
   isLastWinner?: boolean;
   isStreakChampion?: boolean;
   isMostDiverse?: boolean;
@@ -164,6 +169,7 @@ export default function SummonerDetailPage() {
       const wins = Number(p.wins ?? 0);
       const podiumMatchCount = Number(p.podiumMatchCount ?? 0);
       const podiums = Number(p.podiums ?? 0);
+      const lastPlaceCount = Number(p.lastPlaceCount ?? 0);
       const seconds = Math.max(0, podiums - wins);
       const uniqueCommanderCount = Number(p.uniqueCommanderCount ?? 0);
       const topDecks = (p.topDecks ?? []).map((d) => ({
@@ -178,16 +184,22 @@ export default function SummonerDetailPage() {
         wins,
         podiumMatchCount,
         podiums,
+        lastPlaceCount,
         uniqueCommanderCount,
         seconds,
         topDecks,
-      } as PlayerListStatsRow & { seconds: number };
+      } as PlayerListStatsRow & { seconds: number; lastPlaceCount: number };
     });
 
     const maxSeconds = base.reduce(
       (m, p) => (p.seconds > m ? p.seconds : m),
       0,
     );
+    const maxLastPlaceCount = base.reduce(
+      (m, p) => (p.lastPlaceCount > m ? p.lastPlaceCount : m),
+      0,
+    );
+    const maxWins = base.reduce((m, p) => (p.wins > m ? p.wins : m), 0);
     const maxUnique = base.reduce(
       (m, p) =>
         p.uniqueCommanderCount && p.uniqueCommanderCount > m
@@ -201,6 +213,9 @@ export default function SummonerDetailPage() {
         ({
           ...p,
           isCebollita: maxSeconds > 0 && p.seconds === maxSeconds,
+          isCuloRoto:
+            maxLastPlaceCount > 0 && p.lastPlaceCount === maxLastPlaceCount,
+          isChampion: maxWins > 0 && p.wins === maxWins,
           isMostDiverse:
             maxUnique > 0 && (p.uniqueCommanderCount ?? 0) === maxUnique,
           isOtp: Boolean(p.isOtp),
@@ -892,6 +907,35 @@ export default function SummonerDetailPage() {
                         % podio
                       </span>
 
+                      {Boolean(playerStats.isChampion) && (
+                        <Tooltip>
+                          <TooltipTrigger asChild>
+                            <span
+                              className="champion-badge"
+                              role="img"
+                              aria-label="Campeón"
+                            >
+                              <Crown width={16} height={16} className="crown" />
+                              <span className="label">Campeón</span>
+                              <span aria-hidden className="gold-shine" />
+                            </span>
+                          </TooltipTrigger>
+                          <TooltipContent
+                            side="top"
+                            align="center"
+                            className="max-w-[280px] leading-relaxed"
+                          >
+                            <p className="font-semibold">¿Campeón?</p>
+                            <p className="text-sm">
+                              Mayor cantidad de victorias.
+                            </p>
+                            <div className="mt-2 text-xs">
+                              victorias: <strong>{playerStats.wins}</strong>
+                            </div>
+                          </TooltipContent>
+                        </Tooltip>
+                      )}
+
                       {Boolean(playerStats.isOtp) && (
                         <Tooltip>
                           <TooltipTrigger asChild>
@@ -961,14 +1005,55 @@ export default function SummonerDetailPage() {
                         </Tooltip>
                       )}
 
+                      {Boolean(playerStats.isCuloRoto) && (
+                        <Tooltip>
+                          <TooltipTrigger asChild>
+                            <span
+                              className="culo-roto-badge"
+                              role="img"
+                              aria-label="Culo roto"
+                            >
+                              <HeartCrack
+                                width={16}
+                                height={16}
+                                className="crack"
+                              />
+                              <span className="label">Culo roto</span>
+                              <span aria-hidden className="broken-heat" />
+                            </span>
+                          </TooltipTrigger>
+                          <TooltipContent
+                            side="top"
+                            align="center"
+                            className="max-w-[280px] leading-relaxed"
+                          >
+                            <p className="font-semibold">¿Culo roto?</p>
+                            <p className="text-sm">
+                              Mayor cantidad de últimos puestos en partidas de
+                              más de dos jugadores.
+                            </p>
+                            <div className="mt-2 text-xs">
+                              cantidad:{" "}
+                              <strong>{playerStats.lastPlaceCount ?? 0}</strong>
+                            </div>
+                          </TooltipContent>
+                        </Tooltip>
+                      )}
+
                       {Boolean(playerStats.isLastWinner) && (
                         <span className="text-[11px] py-1 rounded-full bg-emerald-500/15 text-emerald-600 flex w-fit items-center px-3 font-semibold">
                           <Trophy className="mr-1 h-4 w-4" /> ultimo ganador
                         </span>
                       )}
                       {Boolean(playerStats.isStreakChampion) && (
-                        <span className="text-[11px] py-1 rounded-full bg-amber-500/15 text-amber-600 flex w-fit items-center px-3 font-semibold">
-                          <Flame className="mr-1 h-4 w-4" /> Racha actual
+                        <span
+                          className="streak-fire-badge"
+                          role="img"
+                          aria-label="En racha"
+                        >
+                          <Flame className="flame" width={16} height={16} />
+                          <span className="label">En racha</span>
+                          <span aria-hidden className="fire-heat" />
                         </span>
                       )}
                     </div>
