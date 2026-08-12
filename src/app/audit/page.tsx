@@ -34,7 +34,6 @@ const timeFormatter = new Intl.DateTimeFormat("es-AR", {
 
 const actionLabels: Record<string, string> = {
   "auth.login_failed": "Login fallido",
-  "auth.login_succeeded": "Login exitoso",
   "match.created": "Partida creada",
   "match.image_updated": "Imagen actualizada",
   "match.placements_updated": "Posiciones actualizadas",
