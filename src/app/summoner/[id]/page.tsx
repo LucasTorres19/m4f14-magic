@@ -601,7 +601,7 @@ export default function SummonerDetailPage() {
       },
       {
         id: "one-trampa-win",
-        label: "Victorias contra el Trampas",
+        label: "Victoria contra el Trampas",
         ts: trampaHit.get(1) ?? null,
         image: "/achievements/trampa1.png",
       },
