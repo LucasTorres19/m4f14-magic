@@ -232,6 +232,15 @@ export default function SummonerDetailPage() {
   type SortDir = "asc" | "desc";
   const [sortKey, setSortKey] = useState<SortKey>("winrate");
   const [sortDir, setSortDir] = useState<SortDir>("desc");
+  const toggleCommanderSort = (key: SortKey) => {
+    if (sortKey === key) {
+      setSortDir((dir) => (dir === "asc" ? "desc" : "asc"));
+      return;
+    }
+
+    setSortKey(key);
+    setSortDir(key === "name" ? "asc" : "desc");
+  };
   const collator = useMemo(
     () => new Intl.Collator("es", { sensitivity: "base" }),
     [],
@@ -342,12 +351,17 @@ export default function SummonerDetailPage() {
     const podiumHit = new Map<number, number>();
     const winHit = new Map<number, number>();
     const streakHit = new Map<number, number>();
+    const cocaHit = new Map<number, number>();
+    const trampaHit = new Map<number, number>();
     const gameTargets = new Set([10, 25, 50, 100]);
     const lastPlaceTargets = new Set([10, 25, 40]);
     const podiumTargets = new Set([10, 25, 50]);
     const winTargets = new Set([5, 10, 25, 50, 100]);
     const streakTargets = new Set([3, 5, 10]);
     const uniqueCmdTargets = new Set([5, 10, 20]);
+    const rivalWinTargets = new Set([1, 10]);
+    let cocaWins = 0;
+    let trampaWins = 0;
 
     for (const m of sorted) {
       games += 1;
@@ -390,6 +404,25 @@ export default function SummonerDetailPage() {
 
       if (winTargets.has(wins) && !winHit.has(wins)) {
         winHit.set(wins, m.createdAt);
+      }
+
+      if (isWin) {
+        const secondPlacePlayer = m.players.find((p) => p.placement === 2);
+        const secondPlaceName = secondPlacePlayer?.name.trim().toLowerCase();
+
+        if (secondPlaceName?.includes("thiago")) {
+          cocaWins += 1;
+          if (rivalWinTargets.has(cocaWins) && !cocaHit.has(cocaWins)) {
+            cocaHit.set(cocaWins, m.createdAt);
+          }
+        }
+
+        if (secondPlaceName?.includes("wachi")) {
+          trampaWins += 1;
+          if (rivalWinTargets.has(trampaWins) && !trampaHit.has(trampaWins)) {
+            trampaHit.set(trampaWins, m.createdAt);
+          }
+        }
       }
 
       if (placement != null && playerCount > 0 && placement === playerCount) {
@@ -554,6 +587,30 @@ export default function SummonerDetailPage() {
         ts: streakHit.get(10) ?? null,
         image: "/achievements/racha10victoria.png",
       },
+      {
+        id: "one-coca-win",
+        label: "Victoria contra el Gordo Coca",
+        ts: cocaHit.get(1) ?? null,
+        image: "/achievements/coca1.png",
+      },
+      {
+        id: "ten-coca-wins",
+        label: "Victoria contra el Gordo Coca",
+        ts: cocaHit.get(10) ?? null,
+        image: "/achievements/10coca.png",
+      },
+      {
+        id: "one-trampa-win",
+        label: "Victorias contra el Trampas",
+        ts: trampaHit.get(1) ?? null,
+        image: "/achievements/trampa1.png",
+      },
+      {
+        id: "ten-trampa-wins",
+        label: "Victorias contra el Trampas",
+        ts: trampaHit.get(10) ?? null,
+        image: "/achievements/trampa10.png",
+      },
     ];
 
     const milestoneGroups = [
@@ -574,6 +631,8 @@ export default function SummonerDetailPage() {
         "one-hundred-wins",
       ],
       ["three-win-streak", "five-win-streak", "ten-win-streak"],
+      ["one-coca-win", "ten-coca-wins"],
+      ["one-trampa-win", "ten-trampa-wins"],
     ];
     const hiddenMilestoneIds = new Set<string>();
     for (const group of milestoneGroups) {
@@ -1235,40 +1294,6 @@ export default function SummonerDetailPage() {
           <>
             <div className="mb-3 flex items-start gap-5 md:gap-0 md:items-center justify-between flex-col md:flex-row">
               <h2 className="text-xl font-semibold">Comandantes jugados</h2>
-              <div className="flex items-center gap-2">
-                <label
-                  htmlFor="sortKey"
-                  className="text-sm text-muted-foreground"
-                >
-                  Ordenar por:
-                </label>
-                <select
-                  id="sortKey"
-                  className="h-9 rounded-md border bg-background px-3 text-sm"
-                  value={sortKey}
-                  onChange={(e) => setSortKey(e.target.value as SortKey)}
-                >
-                  <option value="name">Nombre</option>
-                  <option value="matches">Partidas</option>
-                  <option value="winrate">Winrate</option>
-                  <option value="podio">Podio</option>
-                </select>
-                <Button
-                  type="button"
-                  variant="outline"
-                  size="sm"
-                  onClick={() =>
-                    setSortDir((d) => (d === "asc" ? "desc" : "asc"))
-                  }
-                  title={sortDir === "asc" ? "Ascendente" : "Descendente"}
-                >
-                  {sortDir === "asc" ? (
-                    <ChevronUp className="h-4 w-4" />
-                  ) : (
-                    <ChevronDown className="h-4 w-4" />
-                  )}
-                </Button>
-              </div>
             </div>
 
             <Card className="p-4 overflow-x-auto">
@@ -1276,21 +1301,93 @@ export default function SummonerDetailPage() {
                 <thead>
                   <tr className="text-left text-muted-foreground border-b">
                     <th className="py-2 pr-3">Foto</th>
-                    <th className="py-2 pr-3">Comandante</th>
                     <th className="py-2 pr-3">
-                      <span className="inline-flex items-center gap-1">
+                      <button
+                        type="button"
+                        className="inline-flex items-center gap-1 font-medium text-muted-foreground transition hover:text-foreground"
+                        onClick={() => toggleCommanderSort("name")}
+                        aria-sort={
+                          sortKey === "name"
+                            ? sortDir === "asc"
+                              ? "ascending"
+                              : "descending"
+                            : "none"
+                        }
+                      >
+                        Comandante
+                        {sortKey === "name" &&
+                          (sortDir === "asc" ? (
+                            <ChevronUp className="h-4 w-4" />
+                          ) : (
+                            <ChevronDown className="h-4 w-4" />
+                          ))}
+                      </button>
+                    </th>
+                    <th className="py-2 pr-3">
+                      <button
+                        type="button"
+                        className="inline-flex items-center gap-1 font-medium text-muted-foreground transition hover:text-foreground"
+                        onClick={() => toggleCommanderSort("matches")}
+                        aria-sort={
+                          sortKey === "matches"
+                            ? sortDir === "asc"
+                              ? "ascending"
+                              : "descending"
+                            : "none"
+                        }
+                      >
                         <Swords className="h-4 w-4" /> Partidas
-                      </span>
+                        {sortKey === "matches" &&
+                          (sortDir === "asc" ? (
+                            <ChevronUp className="h-4 w-4" />
+                          ) : (
+                            <ChevronDown className="h-4 w-4" />
+                          ))}
+                      </button>
                     </th>
                     <th className="py-2 pr-3">
-                      <span className="inline-flex items-center gap-1">
+                      <button
+                        type="button"
+                        className="inline-flex items-center gap-1 font-medium text-muted-foreground transition hover:text-foreground"
+                        onClick={() => toggleCommanderSort("winrate")}
+                        aria-sort={
+                          sortKey === "winrate"
+                            ? sortDir === "asc"
+                              ? "ascending"
+                              : "descending"
+                            : "none"
+                        }
+                      >
                         <Trophy className="h-4 w-4" /> Winrate
-                      </span>
+                        {sortKey === "winrate" &&
+                          (sortDir === "asc" ? (
+                            <ChevronUp className="h-4 w-4" />
+                          ) : (
+                            <ChevronDown className="h-4 w-4" />
+                          ))}
+                      </button>
                     </th>
                     <th className="py-2 pr-3">
-                      <span className="inline-flex items-center gap-1">
+                      <button
+                        type="button"
+                        className="inline-flex items-center gap-1 font-medium text-muted-foreground transition hover:text-foreground"
+                        onClick={() => toggleCommanderSort("podio")}
+                        aria-sort={
+                          sortKey === "podio"
+                            ? sortDir === "asc"
+                              ? "ascending"
+                              : "descending"
+                            : "none"
+                        }
+                      >
                         <Boxes className="h-4 w-4" /> Podios
-                      </span>
+                        {sortKey === "podio" &&
+                          (sortDir === "asc" ? (
+                            <ChevronUp className="h-4 w-4" />
+                          ) : (
+                            <ChevronDown className="h-4 w-4" />
+                          ))}
+                      </button>
                     </th>
                   </tr>
                 </thead>
