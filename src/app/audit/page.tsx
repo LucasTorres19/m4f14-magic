@@ -1,4 +1,4 @@
-import { desc } from "drizzle-orm";
+import { and, desc, eq, ne } from "drizzle-orm";
 import {
   Activity,
   CalendarDays,
@@ -9,6 +9,7 @@ import {
 import type { ComponentType } from "react";
 
 import { AuditLoginForm } from "@/app/audit/audit-login-form";
+import { AuditTypeFilter } from "@/app/audit/audit-type-filter";
 import { Card, CardContent } from "@/components/ui/card";
 import { isAuthorizedByCookie } from "@/server/auth";
 import { db } from "@/server/db";
@@ -34,7 +35,6 @@ const timeFormatter = new Intl.DateTimeFormat("es-AR", {
 
 const actionLabels: Record<string, string> = {
   "auth.login_failed": "Login fallido",
-  "auth.login_succeeded": "Login exitoso",
   "match.created": "Partida creada",
   "match.image_updated": "Imagen actualizada",
   "match.placements_updated": "Posiciones actualizadas",
@@ -44,6 +44,10 @@ const actionLabels: Record<string, string> = {
   "tournament.round_advanced": "Ronda avanzada",
   "tournament.tiebreaker_round_added": "Desempate agregado",
 };
+
+const actionFilterOptions = Object.entries(actionLabels).map(
+  ([action, label]) => ({ action, label }),
+);
 
 const actionAccent: Record<string, string> = {
   auth: "border-sky-400/40 bg-sky-500/10 text-sky-200",
@@ -69,14 +73,20 @@ const parseMetadata = (metadata: string | null) => {
   }
 };
 
-export default async function AuditPage() {
-  const authorized = await isAuthorizedByCookie();
+const getSelectedAction = (
+  searchParams: Record<string, string | string[] | undefined> | undefined,
+) => {
+  const type = searchParams?.type;
+  const action = Array.isArray(type) ? type[0] : type;
+  return action && action in actionLabels ? action : null;
+};
 
-  if (!authorized) {
-    return <AuditLoginForm />;
-  }
+type AuditPageProps = {
+  searchParams?: Promise<Record<string, string | string[] | undefined>>;
+};
 
-  const logs = await db
+const selectAuditLogs = () =>
+  db
     .select({
       id: auditLogs.id,
       action: auditLogs.action,
@@ -88,11 +98,33 @@ export default async function AuditPage() {
       metadata: auditLogs.metadata,
       createdAt: auditLogs.createdAt,
     })
-    .from(auditLogs)
-    .orderBy(desc(auditLogs.createdAt), desc(auditLogs.id))
-    .limit(100);
+    .from(auditLogs);
+
+const visibleAuditLogFilter = ne(auditLogs.action, "auth.login_succeeded");
+
+export default async function AuditPage({ searchParams }: AuditPageProps) {
+  const authorized = await isAuthorizedByCookie();
+
+  if (!authorized) {
+    return <AuditLoginForm />;
+  }
+
+  const params = await searchParams;
+  const selectedAction = getSelectedAction(params);
+  const logs = selectedAction
+    ? await selectAuditLogs()
+        .where(and(visibleAuditLogFilter, eq(auditLogs.action, selectedAction)))
+        .orderBy(desc(auditLogs.createdAt), desc(auditLogs.id))
+        .limit(100)
+    : await selectAuditLogs()
+        .where(visibleAuditLogFilter)
+        .orderBy(desc(auditLogs.createdAt), desc(auditLogs.id))
+        .limit(100);
 
   const groupedLogs = groupByDay(logs);
+  const selectedActionLabel = selectedAction
+    ? actionLabels[selectedAction]
+    : "Todos";
 
   return (
     <main className="relative mx-auto min-h-screen w-full max-w-6xl px-5 py-10 md:px-8">
@@ -107,8 +139,9 @@ export default async function AuditPage() {
               Auditoria
             </h1>
             <p className="text-muted-foreground mt-2 max-w-2xl text-sm">
-              Ultimas 100 acciones registradas. No hay acciones disponibles en
-              esta pagina.
+              Ultimas 100 acciones registradas
+              {selectedAction ? ` para ${selectedActionLabel}` : ""}. No hay
+              acciones disponibles en esta pagina.
             </p>
           </div>
         </div>
@@ -118,14 +151,24 @@ export default async function AuditPage() {
         </div>
       </header>
 
+      <AuditTypeFilter
+        options={actionFilterOptions}
+        selectedAction={selectedAction}
+      />
+
       {logs.length === 0 ? (
         <Card className="border-dashed border-primary/30 bg-card/60">
           <CardContent className="flex min-h-[240px] flex-col items-center justify-center gap-3 text-center">
             <Clock className="text-muted-foreground size-8" />
-            <h2 className="text-lg font-semibold">Todavia no hay logs</h2>
+            <h2 className="text-lg font-semibold">
+              {selectedAction
+                ? "No hay logs para este filtro"
+                : "Todavia no hay logs"}
+            </h2>
             <p className="text-muted-foreground max-w-md text-sm">
-              Las nuevas creaciones, actualizaciones y logins van a aparecer
-              aca.
+              {selectedAction
+                ? "Proba con otro tipo de log o volve a ver todos los eventos."
+                : "Las nuevas creaciones, actualizaciones y logins van a aparecer aca."}
             </p>
           </CardContent>
         </Card>
