@@ -1193,7 +1193,7 @@ export default function SummonerDetailPage() {
                     </div>
                     <div className="rounded-md border bg-background/70 p-3 text-center">
                       <p className="text-sm font-medium leading-tight">
-                        Actual victorias
+                        Racha Actual
                       </p>
                       <p className="mt-3 text-3xl font-semibold leading-none">
                         {streaks.currentWins}
@@ -1204,7 +1204,7 @@ export default function SummonerDetailPage() {
                     </div>
                     <div className="rounded-md border bg-background/70 p-3 text-center">
                       <p className="text-sm font-medium leading-tight">
-                        Mejor victorias
+                        Mayor Racha
                       </p>
                       <p className="mt-3 text-3xl font-semibold leading-none">
                         {streaks.bestWins}
