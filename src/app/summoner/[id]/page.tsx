@@ -329,7 +329,7 @@ export default function SummonerDetailPage() {
     const streakHit = new Map<number, number>();
     const gameTargets = new Set([10, 25, 50, 100]);
     const lastPlaceTargets = new Set([10, 25, 40]);
-    const podiumTargets = new Set([2, 25, 50]);
+    const podiumTargets = new Set([10, 25, 50]);
     const winTargets = new Set([5, 10, 25, 50, 100]);
     const streakTargets = new Set([3, 5, 10]);
     const uniqueCmdTargets = new Set([5, 10, 20]);
@@ -432,9 +432,9 @@ export default function SummonerDetailPage() {
         image: "/achievements/20comandersusados.png",
       },
       {
-        id: "two-podiums",
-        label: "2 podios",
-        ts: podiumHit.get(2) ?? null,
+        id: "ten-podiums",
+        label: "10 podios",
+        ts: podiumHit.get(10) ?? null,
         image: "/achievements/2podios.png",
       },
       {
@@ -543,7 +543,7 @@ export default function SummonerDetailPage() {
 
     const milestoneGroups = [
       ["five-commanders", "ten-commanders", "twenty-commanders"],
-      ["two-podiums", "twenty-five-podiums", "fifty-podiums"],
+      ["ten-podiums", "twenty-five-podiums", "fifty-podiums"],
       [
         "ten-matches",
         "twenty-five-matches",
