@@ -42,11 +42,5 @@ export async function POST(request: Request) {
     secure: env.NODE_ENV === "production",
     httpOnly: true,
   });
-  await writeAuditLog({
-    action: "auth.login_succeeded",
-    entityType: "auth",
-    summary: "Successful login",
-    headers: request.headers,
-  });
   return NextResponse.json({ success: true });
 }
