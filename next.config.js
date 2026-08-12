@@ -18,7 +18,9 @@ const config = {
       },
     ],
   },
-  typedRoutes: true,
+  experimental: {
+    typedRoutes: true,
+  },
   webpack(config) {
     // Grab the existing rule that handles SVG imports
     // @ts-ignore
@@ -46,34 +48,6 @@ const config = {
     fileLoaderRule.exclude = /\.svg$/i;
 
     return config;
-  },
-  turbopack: {
-    rules: {
-      "*.svg": {
-        loaders: [
-          {
-            loader: "@svgr/webpack",
-            options: {
-              // Optional: Customize SVGR options here
-              svgoConfig: {
-                plugins: [
-                  {
-                    name: "preset-default",
-                    params: {
-                      overrides: {
-                        removeViewBox: false, // Example: keep viewBox
-                      },
-                    },
-                  },
-                  "removeDimensions",
-                ],
-              },
-            },
-          },
-        ],
-        as: "*.js", // Treat the output as a JavaScript module
-      },
-    },
   },
 };
 
