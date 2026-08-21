@@ -5,6 +5,8 @@ import {
   type DominationSummary,
   type RivalSummary,
 } from "@/components/domination-relations";
+import { InvokerAvatar } from "@/components/invoker-avatar";
+import { ProfilePhotoDialog } from "@/components/profile-photo-dialog";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import {
@@ -24,6 +26,7 @@ import {
   ArrowLeft,
   Boxes,
   CalendarDays,
+  Camera,
   ChevronDown,
   ChevronUp,
   Crown,
@@ -64,6 +67,7 @@ type PlayerDetail = {
   id: number;
   name: string | null;
   backgroundColor?: string | null;
+  profileImageUrl?: string | null;
   commanders: CommanderRow[];
   parents: DominationSummary[];
   children: DominationSummary[];
@@ -1000,17 +1004,42 @@ export default function SummonerDetailPage() {
             </Link>
             {detail && (
               <div className="space-y-2">
-                <div className="flex items-center gap-3">
-                  <h1 className="text-2xl md:text-5xl font-bold mb-2">
-                    {detail.name ?? `#${detail.id}`}
-                  </h1>
-                  <span
-                    className="inline-flex h-4 w-4 rounded-full border"
-                    style={{
-                      backgroundColor: detail.backgroundColor ?? "#CBD5E1",
-                    }}
-                    aria-hidden
-                  />
+                <div className="flex items-center gap-4">
+                  <div className="relative shrink-0">
+                    <InvokerAvatar
+                      name={detail.name}
+                      imageUrl={detail.profileImageUrl}
+                      backgroundColor={detail.backgroundColor}
+                      size="profile"
+                    />
+                    <ProfilePhotoDialog
+                      playerId={detail.id}
+                      playerName={detail.name ?? `#${detail.id}`}
+                      imageUrl={detail.profileImageUrl}
+                    >
+                      <Button
+                        type="button"
+                        size="icon"
+                        variant="secondary"
+                        className="absolute -right-1 -bottom-1 size-9 rounded-full shadow-md ring-2 ring-background"
+                        aria-label={`Cambiar foto de ${detail.name ?? `#${detail.id}`}`}
+                      >
+                        <Camera className="size-4" />
+                      </Button>
+                    </ProfilePhotoDialog>
+                  </div>
+                  <div className="flex min-w-0 items-center gap-3">
+                    <h1 className="text-2xl md:text-5xl font-bold">
+                      {detail.name ?? `#${detail.id}`}
+                    </h1>
+                    <span
+                      className="inline-flex h-4 w-4 shrink-0 rounded-full border"
+                      style={{
+                        backgroundColor: detail.backgroundColor ?? "#CBD5E1",
+                      }}
+                      aria-hidden
+                    />
+                  </div>
                 </div>
                 {playerStats && (
                   <TooltipProvider>

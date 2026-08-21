@@ -1,5 +1,6 @@
 "use client";
 
+import { InvokerAvatar } from "@/components/invoker-avatar";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import {
@@ -43,6 +44,7 @@ type ApiPlayer = {
   id: number;
   name: string | null;
   backgroundColor: string | null;
+  profileImageUrl: string | null;
   matchCount?: number | string | null;
   wins?: number | string | null;
   podiumMatchCount?: number | string | null;
@@ -64,6 +66,7 @@ type ApiPlayer = {
 type PlayerUI = Required<Pick<ApiPlayer, "id">> & {
   name: string;
   backgroundColor: string;
+  profileImageUrl: string | null;
   matchCount: number;
   wins: number;
   podiumMatchCount: number;
@@ -155,6 +158,7 @@ export default function SummonerPage() {
         id: p.id,
         name: (p.name ?? "Sin nombre").trim(),
         backgroundColor: p.backgroundColor ?? "#CBD5E1",
+        profileImageUrl: p.profileImageUrl ?? null,
         matchCount,
         wins,
         podiumMatchCount,
@@ -339,15 +343,20 @@ export default function SummonerPage() {
                     className="overflow-hidden group hover:ring-2 hover:ring-primary transition-all"
                   >
                     <div className="p-4 space-y-4">
-                      <div className="flex items-center justify-between">
-                        <h3 className="font-bold text-lg leading-tight">
-                          <Link
-                            href={`/summoner/${player.id}`}
-                            className="cursor-pointer"
-                          >
+                      <div className="flex items-center justify-between gap-3">
+                        <Link
+                          href={`/summoner/${player.id}`}
+                          className="flex min-w-0 items-center gap-3 rounded-full focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+                        >
+                          <InvokerAvatar
+                            name={player.name}
+                            imageUrl={player.profileImageUrl}
+                            backgroundColor={player.backgroundColor}
+                          />
+                          <h3 className="truncate text-lg leading-tight font-bold">
                             {player.name}
-                          </Link>
-                        </h3>
+                          </h3>
+                        </Link>
 
                         <Tooltip>
                           <TooltipTrigger asChild>

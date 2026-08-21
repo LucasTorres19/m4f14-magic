@@ -1,3 +1,5 @@
+import { utapi } from "@/app/api/uploadthing/core";
+import { TRPCError } from "@trpc/server";
 import {
   and,
   asc,
@@ -18,6 +20,7 @@ import {
   protectedProcedure,
   publicProcedure,
 } from "@/server/api/trpc";
+import { writeAuditLog } from "@/server/audit";
 import type { db } from "@/server/db";
 import {
   commanders,
@@ -32,6 +35,18 @@ import {
   calculatePlayerRivalStats,
   type DominationRelation,
 } from "@/server/domain/domination";
+import { revalidatePath } from "next/cache";
+
+const playerProfileImage = alias(images, "player_profile_image");
+
+const profileImageInputSchema = z.object({
+  url: z.string().url(),
+  key: z.string().min(1),
+  width: z.number().int().positive(),
+  height: z.number().int().positive(),
+  sizeBytes: z.number().int().positive(),
+  mimeType: z.string().min(1),
+});
 
 async function getDominationRelations(database: typeof db) {
   const winnerEntry = alias(playersToMatches, "winner_entry");
@@ -165,8 +180,13 @@ export const playersRouter = createTRPCRouter({
           id: players.id,
           name: players.name,
           backgroundColor: players.backgroundColor,
+          profileImageUrl: playerProfileImage.fileUrl,
         })
         .from(players)
+        .leftJoin(
+          playerProfileImage,
+          eq(playerProfileImage.id, players.profileImage),
+        )
         .where(eq(players.id, input.playerId))
         .limit(1);
 
@@ -230,6 +250,7 @@ export const playersRouter = createTRPCRouter({
         id: player.id,
         name: player.name,
         backgroundColor: player.backgroundColor,
+        profileImageUrl: player.profileImageUrl,
         commanders: rows.map((r) => ({
           commanderId: r.commanderId ?? 0,
           name: r.name ?? null,
@@ -594,6 +615,7 @@ export const playersRouter = createTRPCRouter({
         id: players.id,
         name: players.name,
         backgroundColor: players.backgroundColor,
+        profileImageUrl: playerProfileImage.fileUrl,
         matchCount: agg.matchCount,
         wins: agg.wins,
         podiumMatchCount: agg.podiumMatchCount,
@@ -602,6 +624,10 @@ export const playersRouter = createTRPCRouter({
         lastPlayedAt: agg.lastPlayedAt,
       })
       .from(players)
+      .leftJoin(
+        playerProfileImage,
+        eq(playerProfileImage.id, players.profileImage),
+      )
       .leftJoin(agg, eq(agg.playerId, players.id))
       .orderBy(asc(players.name));
 
@@ -666,6 +692,7 @@ export const playersRouter = createTRPCRouter({
       id: r.id,
       name: r.name,
       backgroundColor: r.backgroundColor,
+      profileImageUrl: r.profileImageUrl,
       matchCount: Number(r.matchCount ?? 0),
       wins: Number(r.wins ?? 0),
       podiumMatchCount: Number(r.podiumMatchCount ?? 0),
@@ -703,5 +730,109 @@ export const playersRouter = createTRPCRouter({
         .where(eq(players.id, input.playerId));
 
       return { ok: true } as const;
+    }),
+  authorizeProfileImageUpload: protectedProcedure.mutation(() => {
+    return { ok: true } as const;
+  }),
+  setProfileImage: protectedProcedure
+    .input(
+      z.object({
+        playerId: z.number().int().positive(),
+        image: profileImageInputSchema.nullable(),
+      }),
+    )
+    .mutation(async ({ ctx, input }) => {
+      const result = await ctx.db.transaction(async (tx) => {
+        const [player] = await tx
+          .select({
+            id: players.id,
+            name: players.name,
+            profileImageId: players.profileImage,
+          })
+          .from(players)
+          .where(eq(players.id, input.playerId))
+          .limit(1);
+
+        if (!player) {
+          throw new TRPCError({
+            code: "NOT_FOUND",
+            message: "No encontramos ese invocador.",
+          });
+        }
+
+        let nextImage: { id: number; key: string; url: string } | undefined;
+
+        if (input.image) {
+          [nextImage] = await tx
+            .insert(images)
+            .values({
+              fileKey: input.image.key,
+              fileUrl: input.image.url,
+              variant: "profile",
+              width: input.image.width,
+              height: input.image.height,
+              sizeBytes: input.image.sizeBytes,
+              mimeType: input.image.mimeType,
+            })
+            .returning({
+              id: images.id,
+              key: images.fileKey,
+              url: images.fileUrl,
+            });
+
+          if (!nextImage) {
+            throw new TRPCError({
+              code: "INTERNAL_SERVER_ERROR",
+              message: "No se pudo guardar la foto.",
+            });
+          }
+        }
+
+        await tx
+          .update(players)
+          .set({ profileImage: nextImage?.id ?? null })
+          .where(eq(players.id, player.id));
+
+        let previousFileKey: string | null = null;
+        if (player.profileImageId != null) {
+          const [deletedImage] = await tx
+            .delete(images)
+            .where(eq(images.id, player.profileImageId))
+            .returning({ fileKey: images.fileKey });
+          previousFileKey = deletedImage?.fileKey ?? null;
+        }
+
+        return {
+          playerId: player.id,
+          playerName: player.name,
+          previousImageId: player.profileImageId,
+          previousFileKey,
+          image: nextImage ?? null,
+        };
+      });
+
+      if (result.previousFileKey) {
+        await utapi.deleteFiles(result.previousFileKey);
+      }
+
+      revalidatePath("/summoner");
+      revalidatePath(`/summoner/${result.playerId}`);
+      await writeAuditLog({
+        action: result.image
+          ? "player.profile_image_updated"
+          : "player.profile_image_removed",
+        entityType: "player",
+        entityId: result.playerId,
+        summary: result.image
+          ? `Profile image updated for ${result.playerName}`
+          : `Profile image removed for ${result.playerName}`,
+        metadata: {
+          previousImageId: result.previousImageId,
+          nextImageId: result.image?.id ?? null,
+        },
+        headers: ctx.headers,
+      });
+
+      return { image: result.image } as const;
     }),
 });
