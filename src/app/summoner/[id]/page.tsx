@@ -27,6 +27,7 @@ import {
   HeartCrack,
   Layers,
   Loader2,
+  Snowflake,
   Swords,
   Trophy,
   Users,
@@ -68,9 +69,11 @@ type PlayerListStatsRow = {
   podiumMatchCount?: number;
   podiums: number;
   lastPlaceCount?: number;
+  lastPlayedAt?: Date | number | string | null;
   isCebollita?: boolean;
   isCuloRoto?: boolean;
   isChampion?: boolean;
+  isFrozen?: boolean;
   isLastWinner?: boolean;
   isStreakChampion?: boolean;
   isMostDiverse?: boolean;
@@ -149,6 +152,31 @@ function getHeatmapCellClass(level: number, isCurrentYear: boolean) {
   return "bg-emerald-500 border-emerald-500/70";
 }
 
+function toTimestampMs(value: Date | number | string | null | undefined) {
+  if (value == null) return null;
+  if (value instanceof Date) return value.getTime();
+  if (typeof value === "number") {
+    return value > 1_000_000_000_000 ? value : value * 1000;
+  }
+
+  const parsed = Date.parse(value);
+  return Number.isFinite(parsed) ? parsed : null;
+}
+
+function formatInactiveDuration(from: number | null, now = Date.now()) {
+  if (from == null) return "sin partidas";
+
+  const days = Math.max(0, Math.floor((now - from) / 86_400_000));
+  if (days < 1) return "menos de 1 día";
+  if (days < 60) return `${days} ${days === 1 ? "día" : "días"}`;
+
+  const months = Math.floor(days / 30);
+  if (months < 24) return `${months} ${months === 1 ? "mes" : "meses"}`;
+
+  const years = Math.floor(months / 12);
+  return `${years} ${years === 1 ? "año" : "años"}`;
+}
+
 export default function SummonerDetailPage() {
   const params = useParams();
   const rawId = params?.id;
@@ -182,6 +210,7 @@ export default function SummonerDetailPage() {
       const podiumMatchCount = Number(p.podiumMatchCount ?? 0);
       const podiums = Number(p.podiums ?? 0);
       const lastPlaceCount = Number(p.lastPlaceCount ?? 0);
+      const lastPlayedAt = toTimestampMs(p.lastPlayedAt);
       const seconds = Math.max(0, podiums - wins);
       const uniqueCommanderCount = Number(p.uniqueCommanderCount ?? 0);
       const topDecks = (p.topDecks ?? []).map((d) => ({
@@ -197,10 +226,17 @@ export default function SummonerDetailPage() {
         podiumMatchCount,
         podiums,
         lastPlaceCount,
+        lastPlayedAt,
+        inactiveLabel: formatInactiveDuration(lastPlayedAt),
         uniqueCommanderCount,
         seconds,
         topDecks,
-      } as PlayerListStatsRow & { seconds: number; lastPlaceCount: number };
+      } as PlayerListStatsRow & {
+        seconds: number;
+        lastPlaceCount: number;
+        lastPlayedAt: number | null;
+        inactiveLabel: string;
+      };
     });
 
     const maxSeconds = base.reduce(
@@ -212,6 +248,12 @@ export default function SummonerDetailPage() {
       0,
     );
     const maxWins = base.reduce((m, p) => (p.wins > m ? p.wins : m), 0);
+    const oldestLastPlayedAt = base.reduce<number | null>((oldest, p) => {
+      if (p.lastPlayedAt == null) return oldest;
+      return oldest == null || p.lastPlayedAt < oldest
+        ? p.lastPlayedAt
+        : oldest;
+    }, null);
     const maxUnique = base.reduce(
       (m, p) =>
         p.uniqueCommanderCount && p.uniqueCommanderCount > m
@@ -228,10 +270,12 @@ export default function SummonerDetailPage() {
           isCuloRoto:
             maxLastPlaceCount > 0 && p.lastPlaceCount === maxLastPlaceCount,
           isChampion: maxWins > 0 && p.wins === maxWins,
+          isFrozen:
+            oldestLastPlayedAt != null && p.lastPlayedAt === oldestLastPlayedAt,
           isMostDiverse:
             maxUnique > 0 && (p.uniqueCommanderCount ?? 0) === maxUnique,
           isOtp: Boolean(p.isOtp),
-        }) as PlayerListStatsRow & { seconds: number },
+        }) as PlayerListStatsRow & { seconds: number; inactiveLabel: string },
     );
 
     return enriched.find((r) => r.id === playerId);
@@ -1027,6 +1071,43 @@ export default function SummonerDetailPage() {
                             </p>
                             <div className="mt-2 text-xs">
                               victorias: <strong>{playerStats.wins}</strong>
+                            </div>
+                          </TooltipContent>
+                        </Tooltip>
+                      )}
+
+                      {Boolean(playerStats.isFrozen) && (
+                        <Tooltip>
+                          <TooltipTrigger asChild>
+                            <span
+                              className="frozen-badge"
+                              role="img"
+                              aria-label="Congelado"
+                            >
+                              <Snowflake
+                                width={16}
+                                height={16}
+                                className="snowflake"
+                              />
+                              <span className="label">Congelado</span>
+                              <span className="time">
+                                {playerStats.inactiveLabel}
+                              </span>
+                              <span aria-hidden className="frost" />
+                            </span>
+                          </TooltipTrigger>
+                          <TooltipContent
+                            side="top"
+                            align="center"
+                            className="max-w-[280px] leading-relaxed"
+                          >
+                            <p className="font-semibold">¿Congelado?</p>
+                            <p className="text-sm">
+                              Es quien lleva más tiempo sin jugar.
+                            </p>
+                            <div className="mt-2 text-xs">
+                              sin jugar:{" "}
+                              <strong>{playerStats.inactiveLabel}</strong>
                             </div>
                           </TooltipContent>
                         </Tooltip>
@@ -1914,7 +1995,8 @@ export default function SummonerDetailPage() {
                   onLoad={() => setLightboxFullLoaded(true)}
                 />
               ) : null}
-              {!lightboxFullLoaded && lightbox.previewUrl !== lightbox.fullUrl ? (
+              {!lightboxFullLoaded &&
+              lightbox.previewUrl !== lightbox.fullUrl ? (
                 <div className="absolute bottom-4 left-1/2 inline-flex -translate-x-1/2 items-center gap-2 rounded-full bg-background/90 px-3 py-2 text-xs text-foreground shadow">
                   <Loader2 className="size-3 animate-spin" />
                   Cargando alta calidad

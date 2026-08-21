@@ -29,6 +29,7 @@ import {
   Flame,
   HeartCrack,
   Layers,
+  Snowflake,
   Swords,
   Trophy,
   Users,
@@ -47,6 +48,7 @@ type ApiPlayer = {
   podiumMatchCount?: number | string | null;
   podiums?: number | string | null;
   lastPlaceCount?: number | string | null;
+  lastPlayedAt?: Date | number | string | null;
   isLastWinner?: boolean | null;
   isStreakChampion?: boolean | null;
   topDecks?: {
@@ -67,12 +69,15 @@ type PlayerUI = Required<Pick<ApiPlayer, "id">> & {
   podiumMatchCount: number;
   podiums: number;
   lastPlaceCount: number;
+  lastPlayedAt: number | null;
+  inactiveLabel: string;
   seconds: number;
   isLastWinner: boolean;
   isStreakChampion: boolean;
   isCebollita: boolean;
   isCuloRoto: boolean;
   isChampion: boolean;
+  isFrozen: boolean;
   isOtp: boolean;
   topDecks: {
     commanderId: number;
@@ -83,6 +88,31 @@ type PlayerUI = Required<Pick<ApiPlayer, "id">> & {
   uniqueCommanderCount: number;
   isMostDiverse: boolean;
 };
+
+function toTimestampMs(value: Date | number | string | null | undefined) {
+  if (value == null) return null;
+  if (value instanceof Date) return value.getTime();
+  if (typeof value === "number") {
+    return value > 1_000_000_000_000 ? value : value * 1000;
+  }
+
+  const parsed = Date.parse(value);
+  return Number.isFinite(parsed) ? parsed : null;
+}
+
+function formatInactiveDuration(from: number | null, now = Date.now()) {
+  if (from == null) return "sin partidas";
+
+  const days = Math.max(0, Math.floor((now - from) / 86_400_000));
+  if (days < 1) return "menos de 1 día";
+  if (days < 60) return `${days} ${days === 1 ? "día" : "días"}`;
+
+  const months = Math.floor(days / 30);
+  if (months < 24) return `${months} ${months === 1 ? "mes" : "meses"}`;
+
+  const years = Math.floor(months / 12);
+  return `${years} ${years === 1 ? "año" : "años"}`;
+}
 
 export default function SummonerPage() {
   const { data, isLoading, isError } = api.players.listWithStats.useQuery();
@@ -112,6 +142,7 @@ export default function SummonerPage() {
       const podiumMatchCount = Number(p.podiumMatchCount ?? 0);
       const podiums = Number(p.podiums ?? 0);
       const lastPlaceCount = Number(p.lastPlaceCount ?? 0);
+      const lastPlayedAt = toTimestampMs(p.lastPlayedAt);
       const seconds = Math.max(0, podiums - wins);
       const uniqueCommanderCount = Number(p.uniqueCommanderCount ?? 0);
       const topDecks = (p.topDecks ?? []).map((d) => ({
@@ -129,12 +160,15 @@ export default function SummonerPage() {
         podiumMatchCount,
         podiums,
         lastPlaceCount,
+        lastPlayedAt,
+        inactiveLabel: formatInactiveDuration(lastPlayedAt),
         seconds,
         isLastWinner: Boolean(p.isLastWinner),
         isStreakChampion: Boolean(p.isStreakChampion),
         isCebollita: false,
         isCuloRoto: false,
         isChampion: false,
+        isFrozen: false,
         uniqueCommanderCount,
         isMostDiverse: false,
         isOtp: Boolean(p.isOtp),
@@ -151,6 +185,12 @@ export default function SummonerPage() {
       0,
     );
     const maxWins = base.reduce((m, p) => (p.wins > m ? p.wins : m), 0);
+    const oldestLastPlayedAt = base.reduce<number | null>((oldest, p) => {
+      if (p.lastPlayedAt == null) return oldest;
+      return oldest == null || p.lastPlayedAt < oldest
+        ? p.lastPlayedAt
+        : oldest;
+    }, null);
     const maxUnique = base.reduce(
       (m, p) => (p.uniqueCommanderCount > m ? p.uniqueCommanderCount : m),
       0,
@@ -162,6 +202,8 @@ export default function SummonerPage() {
       isCuloRoto:
         maxLastPlaceCount > 0 && p.lastPlaceCount === maxLastPlaceCount,
       isChampion: maxWins > 0 && p.wins === maxWins,
+      isFrozen:
+        oldestLastPlayedAt != null && p.lastPlayedAt === oldestLastPlayedAt,
       isMostDiverse: maxUnique > 0 && p.uniqueCommanderCount === maxUnique,
       isOtp: Boolean(p.isOtp),
     }));
@@ -396,6 +438,44 @@ export default function SummonerPage() {
 
                               <div className="mt-2 text-xs">
                                 victorias: <strong>{player.wins}</strong>
+                              </div>
+                            </TooltipContent>
+                          </Tooltip>
+                        )}
+
+                        {player.isFrozen && (
+                          <Tooltip>
+                            <TooltipTrigger asChild>
+                              <span
+                                className="frozen-badge"
+                                role="img"
+                                aria-label="Congelado"
+                              >
+                                <Snowflake
+                                  width={16}
+                                  height={16}
+                                  className="snowflake"
+                                />
+                                <span className="label">Congelado</span>
+                                <span className="time">
+                                  {player.inactiveLabel}
+                                </span>
+                                <span aria-hidden className="frost" />
+                              </span>
+                            </TooltipTrigger>
+
+                            <TooltipContent
+                              side="top"
+                              align="center"
+                              className="max-w-[280px] leading-relaxed"
+                            >
+                              <p className="font-semibold">¿Congelado?</p>
+                              <p className="text-sm">
+                                Es quien lleva más tiempo sin jugar.
+                              </p>
+                              <div className="mt-2 text-xs">
+                                sin jugar:{" "}
+                                <strong>{player.inactiveLabel}</strong>
                               </div>
                             </TooltipContent>
                           </Tooltip>
