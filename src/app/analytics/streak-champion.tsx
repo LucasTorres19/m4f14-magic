@@ -1,9 +1,12 @@
+import { InvokerAvatar } from "@/components/invoker-avatar";
 import { LocalizedDate } from "@/components/localized-date";
 import { Skeleton } from "@/components/ui/skeleton";
 import { db } from "@/server/db";
-import { matches, players, playersToMatches } from "@/server/db/schema";
+import { images, matches, players, playersToMatches } from "@/server/db/schema";
 import { eq, sql } from "drizzle-orm";
+import { alias } from "drizzle-orm/sqlite-core";
 import { Flame } from "lucide-react";
+import Link from "next/link";
 import type { ReactNode } from "react";
 
 const numberFormatter = new Intl.NumberFormat("es-AR");
@@ -21,7 +24,9 @@ export default async function StreakChampion() {
       .select({
         playerId: playersToMatches.playerId,
         name: players.name,
+        alias: players.alias,
         backgroundColor: players.backgroundColor,
+        profileImageId: players.profileImage,
         createdAt: matches.createdAt,
         placement: playersToMatches.placement,
         lossGroup: sql<number>`
@@ -50,12 +55,15 @@ export default async function StreakChampion() {
       .groupBy(playersToMatches.playerId),
   );
 
+  const profileImage = alias(images, "streak_champion_profile_image");
   const [streakChampion] = await db
     .with(orderedMatches, latestMatches)
     .select({
       playerId: orderedMatches.playerId,
       name: orderedMatches.name,
+      alias: orderedMatches.alias,
       backgroundColor: orderedMatches.backgroundColor,
+      profileImageUrl: profileImage.fileUrl,
       streak: sql<number>`count(*)`,
       lastWinAt: sql<string>`
         strftime('%Y-%m-%dT%H:%M:%fZ', max(${orderedMatches.createdAt}), 'unixepoch', 'utc')
@@ -67,11 +75,14 @@ export default async function StreakChampion() {
       latestMatches,
       eq(orderedMatches.playerId, latestMatches.playerId),
     )
+    .leftJoin(profileImage, eq(profileImage.id, orderedMatches.profileImageId))
     .where(eq(orderedMatches.placement, 1))
     .groupBy(
       orderedMatches.playerId,
       orderedMatches.name,
+      orderedMatches.alias,
       orderedMatches.backgroundColor,
+      orderedMatches.profileImageId,
       sql`${orderedMatches.lossGroup}`,
       sql`${latestMatches.latestMatchAt}`,
     )
@@ -96,7 +107,6 @@ export default async function StreakChampion() {
     hasValidLastWinDate &&
     hasValidLatestMatchDate &&
     lastWinDate.getTime() === latestMatchDate.getTime();
-  console.log({ lastWinDate });
   const name = streakChampion.name ?? "Invocador desconocido";
   const backgroundColor = streakChampion.backgroundColor ?? "#1f2937";
   const streak = Number(streakChampion.streak ?? 0);
@@ -124,13 +134,20 @@ export default async function StreakChampion() {
       </div>
       <div className="relative flex flex-col gap-6 rounded-[calc(var(--radius-3xl)-1px)] bg-card/90 px-6 py-8 sm:flex-row sm:items-center sm:justify-between sm:px-10">
         <div className="flex flex-col gap-5 text-center sm:flex-row sm:items-center sm:text-left">
-          <span
-            className="relative flex size-20 items-center justify-center rounded-2xl border border-white/20 shadow-[0_0_35px_rgba(250,204,21,0.35)] transition-transform duration-200 hover:-translate-y-1"
-            style={{ backgroundColor }}
-            aria-hidden="true"
+          <Link
+            href={`/summoner/${streakChampion.playerId}`}
+            className="relative self-center rounded-full transition-transform duration-200 hover:-translate-y-1 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary sm:self-auto"
           >
-            <Flame className="text-white size-10 drop-shadow-lg" />
-          </span>
+            <InvokerAvatar
+              name={name}
+              imageUrl={streakChampion.profileImageUrl}
+              backgroundColor={backgroundColor}
+              size="oracle"
+            />
+            <span className="absolute -right-1 -bottom-1 flex size-8 items-center justify-center rounded-full bg-orange-500 text-white shadow ring-2 ring-card">
+              <Flame className="size-5" aria-hidden />
+            </span>
+          </Link>
           <div className="flex flex-col gap-2">
             <span className="text-primary text-xs font-semibold uppercase tracking-[0.4em]">
               Racha legendaria
@@ -138,6 +155,11 @@ export default async function StreakChampion() {
             <p className="text-foreground text-2xl font-semibold tracking-tight sm:text-3xl">
               {name}
             </p>
+            {streakChampion.alias ? (
+              <p className="text-muted-foreground text-sm">
+                {streakChampion.alias}
+              </p>
+            ) : null}
             <p className="text-muted-foreground text-sm leading-relaxed">
               {statusMessage}
             </p>

@@ -19,6 +19,10 @@ type ImageUploaderProps = {
   onCroppedAreaChange?: (area: Area | null) => void;
   routeConfig?: ExpandedRouteConfig;
   disabled?: boolean;
+  aspect?: number;
+  cropShape?: NonNullable<CropperProps["cropShape"]>;
+  objectFit?: NonNullable<CropperProps["objectFit"]>;
+  className?: string;
 };
 
 type UploadedImage = {
@@ -43,6 +47,10 @@ export function ImageUploadButton({
   onFileSelected,
   routeConfig,
   disabled,
+  aspect = 16 / 9,
+  cropShape = "rect",
+  objectFit = "horizontal-cover",
+  className,
 }: ImageUploaderProps) {
   const isDesktop = useMediaQuery("(min-width: 768px)");
   const [uploadedImage, setUploadedImage] = useState<UploadedImage>();
@@ -125,6 +133,7 @@ export function ImageUploadButton({
           isDragReject && "bg-destructive/20 border-destructive/20",
           isDragAccept && "bg-muted/80 border-muted-foreground/80",
           showPreview && "",
+          className,
         )}
         {...getRootProps()}
         onClick={() => {
@@ -133,11 +142,12 @@ export function ImageUploadButton({
       >
         {showPreview && (
           <Cropper
-            objectFit="horizontal-cover"
+            objectFit={objectFit}
             image={srcToShow}
             crop={crop}
             zoom={zoom}
-            aspect={16 / 9}
+            aspect={aspect}
+            cropShape={cropShape}
             onCropChange={setCrop}
             onCropComplete={onCropComplete}
             onZoomChange={setZoom}

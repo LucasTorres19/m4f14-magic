@@ -1,0 +1,1 @@
+ALTER TABLE `mafia_magic_player` ADD `alias` text(128);

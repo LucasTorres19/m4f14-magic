@@ -15,6 +15,20 @@
       "when": 1787289257998,
       "tag": "0001_cuddly_ogun",
       "breakpoints": true
+    },
+    {
+      "idx": 2,
+      "version": "6",
+      "when": 1787333807915,
+      "tag": "0002_sour_supreme_intelligence",
+      "breakpoints": true
+    },
+    {
+      "idx": 3,
+      "version": "6",
+      "when": 1787335910875,
+      "tag": "0003_large_darkhawk",
+      "breakpoints": true
     }
   ]
 }

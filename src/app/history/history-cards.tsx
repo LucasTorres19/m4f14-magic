@@ -5,11 +5,16 @@ import Image from "next/image";
 import Link from "next/link";
 import { useEffect, useState } from "react";
 
+import { InvokerAvatar } from "@/components/invoker-avatar";
 import { LocalizedDate } from "@/components/localized-date";
 import { cn } from "@/lib/utils";
 import EditPlacementsDialog from "./edit-placements-dialog";
+import type {
+  LeagueSummary,
+  MatchSummary,
+  PlayerSummary,
+} from "./history-types";
 import { MatchGallery } from "./match-gallery";
-import type { LeagueSummary, MatchSummary, PlayerSummary } from "./history-types";
 
 export const gradientPalettes: [string, ...string[]] = [
   "from-amber-500/15 via-rose-500/10 to-purple-700/20",
@@ -44,14 +49,6 @@ const placementTitles: Record<number, string> = {
   3: "Tercero",
 };
 
-const toInitials = (name: string) =>
-  name
-    .split(/\s+/)
-    .filter(Boolean)
-    .slice(0, 2)
-    .map((segment) => segment[0]?.toUpperCase() ?? "")
-    .join("") || "??";
-
 const hexToRgb = (hex: string) => {
   const normalized = hex.replace("#", "");
   if (!(normalized.length === 3 || normalized.length === 6)) {
@@ -75,15 +72,6 @@ const hexToRgb = (hex: string) => {
   }
 
   return { r, g, b };
-};
-
-const contrastColor = (hex: string) => {
-  const rgb = hexToRgb(hex);
-  if (!rgb) return "rgba(15, 23, 42, 0.95)";
-  const luminance = (0.299 * rgb.r + 0.587 * rgb.g + 0.114 * rgb.b) / 255;
-  return luminance > 0.6
-    ? "rgba(15, 23, 42, 0.95)"
-    : "rgba(248, 250, 252, 0.95)";
 };
 
 const placementBadge = (placement: number) => {
@@ -321,8 +309,6 @@ export const MatchCard = ({ match, gradient }: MatchCardProps) => {
 const PlayerCommanderCard = ({ player }: { player: PlayerSummary }) => {
   const { ordinal, title } = placementBadge(player.placement);
   const safeName = player.name ?? "Invocador desconocido";
-  const initials = toInitials(safeName);
-  const textColor = contrastColor(player.backgroundColor);
   const commander = player.commander ?? null;
   const commanderName = commander?.name ?? "Comandante desconocido";
   const commanderImageUrl =
@@ -371,20 +357,19 @@ const PlayerCommanderCard = ({ player }: { player: PlayerSummary }) => {
       <div className="relative flex h-full flex-col gap-4 p-5">
         <div className="flex items-center justify-between gap-3">
           <div className="flex items-center gap-3">
-            <div
-              className="relative flex h-11 w-11 items-center justify-center rounded-full border border-white/20 text-sm font-semibold uppercase shadow"
-              style={{
-                backgroundColor: player.backgroundColor ?? "#f8fafc",
-                color: textColor,
-              }}
-              title={title}
-            >
-              {initials}
-            </div>
-            <div>
+            <InvokerAvatar
+              name={safeName}
+              imageUrl={player.profileImageUrl}
+              backgroundColor={player.backgroundColor}
+              size="card"
+            />
+            <div className="min-w-0">
               <p className="text-foreground text-lg font-semibold tracking-tight">
                 {safeName}
               </p>
+              {player.alias ? (
+                <p className="truncate text-xs text-white/70">{player.alias}</p>
+              ) : null}
               <p className="text-muted-foreground text-[10px] uppercase tracking-[0.35em]">
                 {title}
               </p>

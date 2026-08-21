@@ -1,9 +1,10 @@
+import { InvokerAvatar } from "@/components/invoker-avatar";
+import { LocalizedDate } from "@/components/localized-date";
 import { Button } from "@/components/ui/button";
+import { calculateLeagueStandings } from "@/lib/league-standings";
+import { cn } from "@/lib/utils";
 import { api } from "@/trpc/server";
 import Link from "next/link";
-import { LocalizedDate } from "@/components/localized-date";
-import { cn } from "@/lib/utils";
-import { calculateLeagueStandings } from "@/lib/league-standings";
 
 const leagueDateOptions: Intl.DateTimeFormatOptions = {
   day: "numeric",
@@ -98,20 +99,26 @@ export default async function TournamentHistoryPage({
                         </td>
                         <td className="py-2 pr-3">
                           <span className="flex items-center gap-2">
-                            <span
-                              aria-hidden
-                              className="inline-block size-3 rounded-full"
-                              style={{ backgroundColor: row.color }}
+                            <InvokerAvatar
+                              name={row.name}
+                              imageUrl={row.profileImageUrl}
+                              backgroundColor={row.color}
+                              size="compact"
                             />
-                            <span>{row.name}</span>
+                            <span className="min-w-0">
+                              <span className="block truncate">{row.name}</span>
+                              {row.alias ? (
+                                <span className="block truncate text-xs text-muted-foreground">
+                                  {row.alias}
+                                </span>
+                              ) : null}
+                            </span>
                           </span>
                         </td>
                         <td className="py-2 pr-3 text-right font-semibold">
                           {row.points}
                         </td>
-                        <td className="py-2 pr-3 text-right">
-                          {row.played}
-                        </td>
+                        <td className="py-2 pr-3 text-right">{row.played}</td>
                         <td className="py-2 pr-3 text-right">{row.wins}</td>
                         <td className="py-2 pr-3 text-right">
                           {Math.max(0, row.played - row.wins)}
@@ -177,10 +184,11 @@ export default async function TournamentHistoryPage({
                         </span>
                         <div className="mx-3 grid grid-cols-2 items-center gap-2">
                           <span className="flex items-center gap-2">
-                            <span
-                              aria-hidden
-                              className="inline-block size-3 rounded-full"
-                              style={{ backgroundColor: w.backgroundColor }}
+                            <InvokerAvatar
+                              name={w.name}
+                              imageUrl={w.profileImageUrl}
+                              backgroundColor={w.backgroundColor}
+                              size="compact"
                             />
                             <span className="truncate font-medium">
                               {w.name}
@@ -194,10 +202,11 @@ export default async function TournamentHistoryPage({
                               Perdió
                             </span>
                             <span className="truncate">{l.name}</span>
-                            <span
-                              aria-hidden
-                              className="inline-block size-3 rounded-full"
-                              style={{ backgroundColor: l.backgroundColor }}
+                            <InvokerAvatar
+                              name={l.name}
+                              imageUrl={l.profileImageUrl}
+                              backgroundColor={l.backgroundColor}
+                              size="compact"
                             />
                           </span>
                         </div>

@@ -8,12 +8,14 @@ import {
 } from "@/server/api/trpc";
 import { writeAuditLog } from "@/server/audit";
 import {
+  images,
   matches,
   players,
   playersToMatches,
   tournaments,
 } from "@/server/db/schema";
 import { asc, count, desc, eq, inArray } from "drizzle-orm";
+import { alias } from "drizzle-orm/sqlite-core";
 
 const leaguePlayerSchema = z.object({
   id: z.number().int().positive().nullable(),
@@ -450,16 +452,20 @@ export const tournamentRouter = createTRPCRouter({
 
       if (matchRows.length === 0) return [] as const;
       const ids = matchRows.map((m) => m.id);
+      const profileImage = alias(images, "league_player_profile_image");
       const rows = await ctx.db
         .select({
           matchId: playersToMatches.matchId,
           placement: playersToMatches.placement,
           id: players.id,
           name: players.name,
+          alias: players.alias,
           backgroundColor: players.backgroundColor,
+          profileImageUrl: profileImage.fileUrl,
         })
         .from(playersToMatches)
         .innerJoin(players, eq(players.id, playersToMatches.playerId))
+        .leftJoin(profileImage, eq(profileImage.id, players.profileImage))
         .where(inArray(playersToMatches.matchId, ids))
         .orderBy(
           asc(playersToMatches.matchId),
@@ -471,7 +477,9 @@ export const tournamentRouter = createTRPCRouter({
         {
           id: number;
           name: string;
+          alias: string | null;
           backgroundColor: string;
+          profileImageUrl: string | null;
           placement: number;
         }[]
       >();
@@ -480,7 +488,9 @@ export const tournamentRouter = createTRPCRouter({
         byMatch.get(r.matchId)!.push({
           id: r.id,
           name: r.name ?? "Invocador",
+          alias: r.alias ?? null,
           backgroundColor: r.backgroundColor ?? "#1f2937",
+          profileImageUrl: r.profileImageUrl ?? null,
           placement: r.placement,
         });
       }

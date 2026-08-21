@@ -4,6 +4,7 @@ import { ArrowDown, ArrowUp, Loader2, Trophy } from "lucide-react";
 import { useEffect, useState } from "react";
 import { toast } from "sonner";
 
+import { InvokerAvatar } from "@/components/invoker-avatar";
 import { Button } from "@/components/ui/button";
 import {
   Dialog,
@@ -24,14 +25,6 @@ type EditPlacementsDialogProps = {
   onSaved: (players: PlayerSummary[]) => void;
 };
 
-const toInitials = (name: string) =>
-  name
-    .split(/\s+/)
-    .filter(Boolean)
-    .slice(0, 2)
-    .map((segment) => segment[0]?.toUpperCase() ?? "")
-    .join("") || "??";
-
 export default function EditPlacementsDialog({
   matchId,
   players,
@@ -45,7 +38,9 @@ export default function EditPlacementsDialog({
 
   const mutation = api.match.updatePlacements.useMutation({
     onSuccess: (res) => {
-      const byId = new Map(res.placements.map((p) => [p.playerId, p.placement]));
+      const byId = new Map(
+        res.placements.map((p) => [p.playerId, p.placement]),
+      );
       const next = [...players]
         .map((player) => ({
           ...player,
@@ -122,14 +117,19 @@ export default function EditPlacementsDialog({
                 <span className="w-[1.5ch] shrink-0 text-lg font-semibold">
                   {index + 1}
                 </span>
-                <div
-                  className="text-background flex size-9 shrink-0 items-center justify-center rounded-full text-xs font-semibold"
-                  style={{ backgroundColor: player.backgroundColor }}
-                >
-                  {toInitials(safeName)}
-                </div>
+                <InvokerAvatar
+                  name={safeName}
+                  imageUrl={player.profileImageUrl}
+                  backgroundColor={player.backgroundColor}
+                  size="compact"
+                />
                 <div className="min-w-0 grow">
                   <p className="truncate font-medium">{safeName}</p>
+                  {player.alias ? (
+                    <p className="text-muted-foreground truncate text-xs">
+                      {player.alias}
+                    </p>
+                  ) : null}
                   <p className="text-muted-foreground truncate text-xs">
                     {player.commander?.name ?? "Sin comandante"}
                   </p>

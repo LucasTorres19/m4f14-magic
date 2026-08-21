@@ -32,6 +32,7 @@ export const matchesRouter = createTRPCRouter({
 
       const origImage = alias(images, "orig_image");
       const croppedImage = alias(images, "cropped_image");
+      const playerProfileImage = alias(images, "history_player_profile_image");
       const matchQuery = ctx.db
         .select({
           id: matches.id,
@@ -99,7 +100,9 @@ export const matchesRouter = createTRPCRouter({
           placement: playersToMatches.placement,
           playerId: players.id,
           name: players.name,
+          alias: players.alias,
           backgroundColor: players.backgroundColor,
+          profileImageUrl: playerProfileImage.fileUrl,
           commanderId: playersToMatches.commanderId,
           commanderName: commanders.name,
           commanderImageUrl: commanders.imageUrl,
@@ -107,6 +110,10 @@ export const matchesRouter = createTRPCRouter({
         })
         .from(playersToMatches)
         .innerJoin(players, eq(players.id, playersToMatches.playerId))
+        .leftJoin(
+          playerProfileImage,
+          eq(playerProfileImage.id, players.profileImage),
+        )
         .leftJoin(commanders, eq(commanders.id, playersToMatches.commanderId))
         .where(inArray(playersToMatches.matchId, matchIds))
         .orderBy(
@@ -119,7 +126,9 @@ export const matchesRouter = createTRPCRouter({
         {
           playerId: number;
           name: string;
+          alias: string | null;
           backgroundColor: string;
+          profileImageUrl: string | null;
           placement: number;
           commander: {
             id: number;
@@ -150,7 +159,9 @@ export const matchesRouter = createTRPCRouter({
         playersByMatch.get(row.matchId)?.push({
           playerId: row.playerId,
           name: safeName,
+          alias: row.alias ?? null,
           backgroundColor: safeColor,
+          profileImageUrl: row.profileImageUrl ?? null,
           placement: row.placement,
           commander,
         });
@@ -168,7 +179,9 @@ export const matchesRouter = createTRPCRouter({
             playersByMatch.get(match.id)?.map((player) => ({
               id: player.playerId,
               name: player.name,
+              alias: player.alias,
               backgroundColor: player.backgroundColor,
+              profileImageUrl: player.profileImageUrl,
               placement: player.placement,
               commander: player.commander
                 ? {
