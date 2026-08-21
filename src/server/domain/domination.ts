@@ -24,6 +24,24 @@ export type DominationRelation = {
   winPercentage: number;
 };
 
+export type SharedRivalCount = {
+  rivalId: number;
+  rivalName: string;
+  rivalColor: string;
+  sharedMatches: number;
+  wins: number;
+  losses: number;
+};
+
+export type RivalRelationship = "parent" | "child" | "rival";
+
+export type PlayerRivalStats = SharedRivalCount & {
+  directMatches: number;
+  otherWinnerMatches: number;
+  winPercentage: number | null;
+  relationship: RivalRelationship;
+};
+
 type PlayerRef = {
   id: number;
   name: string;
@@ -120,4 +138,42 @@ export function calculateDominationRelations(
       b.directMatches - a.directMatches ||
       a.parentName.localeCompare(b.parentName, "es"),
   );
+}
+
+export function calculatePlayerRivalStats(
+  playerId: number,
+  sharedRivals: readonly SharedRivalCount[],
+  relations: readonly DominationRelation[],
+): PlayerRivalStats[] {
+  const relationshipByRival = new Map<number, RivalRelationship>();
+
+  for (const relation of relations) {
+    if (relation.parentId === playerId) {
+      relationshipByRival.set(relation.childId, "child");
+    } else if (relation.childId === playerId) {
+      relationshipByRival.set(relation.parentId, "parent");
+    }
+  }
+
+  return sharedRivals
+    .map((rival) => {
+      const directMatches = rival.wins + rival.losses;
+
+      return {
+        ...rival,
+        directMatches,
+        otherWinnerMatches: Math.max(0, rival.sharedMatches - directMatches),
+        winPercentage:
+          directMatches > 0
+            ? Math.round((rival.wins / directMatches) * 100)
+            : null,
+        relationship: relationshipByRival.get(rival.rivalId) ?? "rival",
+      };
+    })
+    .sort(
+      (a, b) =>
+        b.sharedMatches - a.sharedMatches ||
+        b.directMatches - a.directMatches ||
+        a.rivalName.localeCompare(b.rivalName, "es"),
+    );
 }

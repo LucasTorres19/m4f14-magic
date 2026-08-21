@@ -29,6 +29,7 @@ import {
 } from "@/server/db/schema";
 import {
   calculateDominationRelations,
+  calculatePlayerRivalStats,
   type DominationRelation,
 } from "@/server/domain/domination";
 
@@ -71,6 +72,46 @@ async function getDominationRelations(database: typeof db) {
   return calculateDominationRelations(
     directWins.map((row) => ({ ...row, wins: Number(row.wins) })),
   );
+}
+
+async function getSharedRivalCounts(database: typeof db, playerId: number) {
+  const playerEntry = alias(playersToMatches, "player_entry");
+  const rivalEntry = alias(playersToMatches, "shared_rival_entry");
+  const rival = alias(players, "shared_rival");
+
+  const rows = await database
+    .select({
+      rivalId: rivalEntry.playerId,
+      rivalName: rival.name,
+      rivalColor: rival.backgroundColor,
+      sharedMatches: count(sql`1`).as("sharedMatches"),
+      wins: sum(
+        sql<number>`CASE WHEN ${playerEntry.placement} = 1 THEN 1 ELSE 0 END`,
+      ).as("wins"),
+      losses: sum(
+        sql<number>`CASE WHEN ${rivalEntry.placement} = 1 THEN 1 ELSE 0 END`,
+      ).as("losses"),
+    })
+    .from(playerEntry)
+    .innerJoin(
+      rivalEntry,
+      and(
+        eq(rivalEntry.matchId, playerEntry.matchId),
+        ne(rivalEntry.playerId, playerEntry.playerId),
+      ),
+    )
+    .innerJoin(rival, eq(rival.id, rivalEntry.playerId))
+    .where(eq(playerEntry.playerId, playerId))
+    .groupBy(rivalEntry.playerId, rival.name, rival.backgroundColor);
+
+  return rows.map((row) => ({
+    rivalId: row.rivalId,
+    rivalName: row.rivalName ?? "Invocador desconocido",
+    rivalColor: row.rivalColor ?? "#1f2937",
+    sharedMatches: Number(row.sharedMatches),
+    wins: Number(row.wins ?? 0),
+    losses: Number(row.losses ?? 0),
+  }));
 }
 
 function getPlayerDomination(
@@ -166,7 +207,7 @@ export const playersRouter = createTRPCRouter({
         .groupBy(playersToMatches.commanderId)
         .as("agg");
 
-      const [rows, dominationRelations] = await Promise.all([
+      const [rows, dominationRelations, sharedRivals] = await Promise.all([
         ctx.db
           .select({
             commanderId: agg.commanderId,
@@ -182,6 +223,7 @@ export const playersRouter = createTRPCRouter({
           .leftJoin(commanders, eq(commanders.id, agg.commanderId))
           .orderBy(desc(agg.matchCount), asc(commanders.name)),
         getDominationRelations(ctx.db),
+        getSharedRivalCounts(ctx.db, player.id),
       ]);
 
       return {
@@ -199,6 +241,11 @@ export const playersRouter = createTRPCRouter({
           podiums: Number(r.podiums ?? 0),
         })),
         ...getPlayerDomination(dominationRelations, player.id),
+        rivals: calculatePlayerRivalStats(
+          player.id,
+          sharedRivals,
+          dominationRelations,
+        ),
       } as const;
     }),
   history: publicProcedure

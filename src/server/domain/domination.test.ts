@@ -3,6 +3,7 @@ import test from "node:test";
 
 import {
   calculateDominationRelations,
+  calculatePlayerRivalStats,
   type DirectWinCount,
 } from "./domination";
 
@@ -83,5 +84,84 @@ void test("no compara entre si a participantes que no ganaron", () => {
   assert.equal(
     relations.some(({ parentId, childId }) => parentId === 2 && childId === 1),
     false,
+  );
+});
+
+void test("incluye todos los rivales y separa partidas ganadas por terceros", () => {
+  const relations = calculateDominationRelations([
+    wins(1, 2, 3),
+    wins(2, 1, 1),
+    wins(4, 1, 4),
+  ]);
+
+  assert.deepEqual(
+    calculatePlayerRivalStats(
+      1,
+      [
+        {
+          rivalId: 2,
+          rivalName: "Jugador 2",
+          rivalColor: "#000002",
+          sharedMatches: 7,
+          wins: 3,
+          losses: 1,
+        },
+        {
+          rivalId: 3,
+          rivalName: "Jugador 3",
+          rivalColor: "#000003",
+          sharedMatches: 5,
+          wins: 0,
+          losses: 0,
+        },
+        {
+          rivalId: 4,
+          rivalName: "Jugador 4",
+          rivalColor: "#000004",
+          sharedMatches: 4,
+          wins: 0,
+          losses: 4,
+        },
+      ],
+      relations,
+    ),
+    [
+      {
+        rivalId: 2,
+        rivalName: "Jugador 2",
+        rivalColor: "#000002",
+        sharedMatches: 7,
+        wins: 3,
+        losses: 1,
+        directMatches: 4,
+        otherWinnerMatches: 3,
+        winPercentage: 75,
+        relationship: "child",
+      },
+      {
+        rivalId: 3,
+        rivalName: "Jugador 3",
+        rivalColor: "#000003",
+        sharedMatches: 5,
+        wins: 0,
+        losses: 0,
+        directMatches: 0,
+        otherWinnerMatches: 5,
+        winPercentage: null,
+        relationship: "rival",
+      },
+      {
+        rivalId: 4,
+        rivalName: "Jugador 4",
+        rivalColor: "#000004",
+        sharedMatches: 4,
+        wins: 0,
+        losses: 4,
+        directMatches: 4,
+        otherWinnerMatches: 0,
+        winPercentage: 0,
+        relationship: "parent",
+      },
+    ],
   );
 });

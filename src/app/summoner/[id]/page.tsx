@@ -3,6 +3,7 @@
 import {
   DominationRelations,
   type DominationSummary,
+  type RivalSummary,
 } from "@/components/domination-relations";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
@@ -66,6 +67,7 @@ type PlayerDetail = {
   commanders: CommanderRow[];
   parents: DominationSummary[];
   children: DominationSummary[];
+  rivals: RivalSummary[];
 };
 
 type PlayerListStatsRow = {
@@ -1419,6 +1421,7 @@ export default function SummonerDetailPage() {
             <DominationRelations
               parents={detail.parents}
               childRelations={detail.children}
+              rivals={detail.rivals}
             />
           </div>
         )}
