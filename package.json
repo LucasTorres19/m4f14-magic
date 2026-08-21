@@ -20,7 +20,7 @@
     "lint:fix": "next lint --fix",
     "preview": "next build && next start",
     "start": "next start",
-    "test": "tsx --test src/lib/league-standings.test.ts",
+    "test": "tsx --test src/lib/league-standings.test.ts src/server/domain/domination.test.ts",
     "typecheck": "tsc --noEmit",
     "vercel-build": "npm run db:migrate && next build"
   },

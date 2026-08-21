@@ -1,4 +1,15 @@
-import { asc, count, desc, eq, inArray, max, sql, sum } from "drizzle-orm";
+import {
+  and,
+  asc,
+  count,
+  desc,
+  eq,
+  inArray,
+  max,
+  ne,
+  sql,
+  sum,
+} from "drizzle-orm";
 import { alias } from "drizzle-orm/sqlite-core";
 import { z } from "zod";
 
@@ -7,6 +18,7 @@ import {
   protectedProcedure,
   publicProcedure,
 } from "@/server/api/trpc";
+import type { db } from "@/server/db";
 import {
   commanders,
   images,
@@ -15,6 +27,122 @@ import {
   playersToMatches,
   tournaments,
 } from "@/server/db/schema";
+import {
+  calculateDominationRelations,
+  calculatePlayerRivalStats,
+  type DominationRelation,
+} from "@/server/domain/domination";
+
+async function getDominationRelations(database: typeof db) {
+  const winnerEntry = alias(playersToMatches, "winner_entry");
+  const rivalEntry = alias(playersToMatches, "rival_entry");
+  const winner = alias(players, "winner");
+  const rival = alias(players, "rival");
+
+  const directWins = await database
+    .select({
+      winnerId: winnerEntry.playerId,
+      winnerName: winner.name,
+      winnerColor: winner.backgroundColor,
+      rivalId: rivalEntry.playerId,
+      rivalName: rival.name,
+      rivalColor: rival.backgroundColor,
+      wins: count(sql`1`).as("wins"),
+    })
+    .from(winnerEntry)
+    .innerJoin(
+      rivalEntry,
+      and(
+        eq(rivalEntry.matchId, winnerEntry.matchId),
+        ne(rivalEntry.playerId, winnerEntry.playerId),
+      ),
+    )
+    .innerJoin(winner, eq(winner.id, winnerEntry.playerId))
+    .innerJoin(rival, eq(rival.id, rivalEntry.playerId))
+    .where(eq(winnerEntry.placement, 1))
+    .groupBy(
+      winnerEntry.playerId,
+      winner.name,
+      winner.backgroundColor,
+      rivalEntry.playerId,
+      rival.name,
+      rival.backgroundColor,
+    );
+
+  return calculateDominationRelations(
+    directWins.map((row) => ({ ...row, wins: Number(row.wins) })),
+  );
+}
+
+async function getSharedRivalCounts(database: typeof db, playerId: number) {
+  const playerEntry = alias(playersToMatches, "player_entry");
+  const rivalEntry = alias(playersToMatches, "shared_rival_entry");
+  const rival = alias(players, "shared_rival");
+
+  const rows = await database
+    .select({
+      rivalId: rivalEntry.playerId,
+      rivalName: rival.name,
+      rivalColor: rival.backgroundColor,
+      sharedMatches: count(sql`1`).as("sharedMatches"),
+      wins: sum(
+        sql<number>`CASE WHEN ${playerEntry.placement} = 1 THEN 1 ELSE 0 END`,
+      ).as("wins"),
+      losses: sum(
+        sql<number>`CASE WHEN ${rivalEntry.placement} = 1 THEN 1 ELSE 0 END`,
+      ).as("losses"),
+    })
+    .from(playerEntry)
+    .innerJoin(
+      rivalEntry,
+      and(
+        eq(rivalEntry.matchId, playerEntry.matchId),
+        ne(rivalEntry.playerId, playerEntry.playerId),
+      ),
+    )
+    .innerJoin(rival, eq(rival.id, rivalEntry.playerId))
+    .where(eq(playerEntry.playerId, playerId))
+    .groupBy(rivalEntry.playerId, rival.name, rival.backgroundColor);
+
+  return rows.map((row) => ({
+    rivalId: row.rivalId,
+    rivalName: row.rivalName ?? "Invocador desconocido",
+    rivalColor: row.rivalColor ?? "#1f2937",
+    sharedMatches: Number(row.sharedMatches),
+    wins: Number(row.wins ?? 0),
+    losses: Number(row.losses ?? 0),
+  }));
+}
+
+function getPlayerDomination(
+  relations: readonly DominationRelation[],
+  playerId: number,
+) {
+  return {
+    parents: relations
+      .filter((relation) => relation.childId === playerId)
+      .map((relation) => ({
+        counterpartId: relation.parentId,
+        counterpartName: relation.parentName,
+        counterpartColor: relation.parentColor,
+        wins: relation.parentWins,
+        losses: relation.childWins,
+        directMatches: relation.directMatches,
+        winPercentage: relation.winPercentage,
+      })),
+    children: relations
+      .filter((relation) => relation.parentId === playerId)
+      .map((relation) => ({
+        counterpartId: relation.childId,
+        counterpartName: relation.childName,
+        counterpartColor: relation.childColor,
+        wins: relation.parentWins,
+        losses: relation.childWins,
+        directMatches: relation.directMatches,
+        winPercentage: relation.winPercentage,
+      })),
+  };
+}
 
 export const playersRouter = createTRPCRouter({
   findAll: publicProcedure.query(async ({ ctx }) => {
@@ -79,20 +207,24 @@ export const playersRouter = createTRPCRouter({
         .groupBy(playersToMatches.commanderId)
         .as("agg");
 
-      const rows = await ctx.db
-        .select({
-          commanderId: agg.commanderId,
-          matchCount: agg.matchCount,
-          wins: agg.wins,
-          podiumMatchCount: agg.podiumMatchCount,
-          podiums: agg.podiums,
-          name: commanders.name,
-          artImageUrl: commanders.artImageUrl,
-          imageUrl: commanders.imageUrl,
-        })
-        .from(agg)
-        .leftJoin(commanders, eq(commanders.id, agg.commanderId))
-        .orderBy(desc(agg.matchCount), asc(commanders.name));
+      const [rows, dominationRelations, sharedRivals] = await Promise.all([
+        ctx.db
+          .select({
+            commanderId: agg.commanderId,
+            matchCount: agg.matchCount,
+            wins: agg.wins,
+            podiumMatchCount: agg.podiumMatchCount,
+            podiums: agg.podiums,
+            name: commanders.name,
+            artImageUrl: commanders.artImageUrl,
+            imageUrl: commanders.imageUrl,
+          })
+          .from(agg)
+          .leftJoin(commanders, eq(commanders.id, agg.commanderId))
+          .orderBy(desc(agg.matchCount), asc(commanders.name)),
+        getDominationRelations(ctx.db),
+        getSharedRivalCounts(ctx.db, player.id),
+      ]);
 
       return {
         id: player.id,
@@ -108,6 +240,12 @@ export const playersRouter = createTRPCRouter({
           podiumMatchCount: Number(r.podiumMatchCount ?? 0),
           podiums: Number(r.podiums ?? 0),
         })),
+        ...getPlayerDomination(dominationRelations, player.id),
+        rivals: calculatePlayerRivalStats(
+          player.id,
+          sharedRivals,
+          dominationRelations,
+        ),
       } as const;
     }),
   history: publicProcedure
@@ -280,6 +418,8 @@ export const playersRouter = createTRPCRouter({
       }));
     }),
   listWithStats: publicProcedure.query(async ({ ctx }) => {
+    const dominationRelationsPromise = getDominationRelations(ctx.db);
+
     // Usar cutoff desde SQLite para evitar problemas de zona horaria/tipos
     // equivalente a últimos 30 días: unixepoch('now','-30 days')
     // Count players per match to detect 1v1 (league) games and exclude them from podium metrics
@@ -520,6 +660,7 @@ export const playersRouter = createTRPCRouter({
       .limit(1);
 
     const streakChampionId: number | null = streakChampion?.playerId ?? null;
+    const dominationRelations = await dominationRelationsPromise;
 
     return rows.map((r) => ({
       id: r.id,
@@ -540,6 +681,7 @@ export const playersRouter = createTRPCRouter({
         (top30ByPlayerCount.get(r.id) ?? 0) /
           Math.max(1, matchCount30ByPlayer.get(r.id) ?? 1) >=
           0.6,
+      ...getPlayerDomination(dominationRelations, r.id),
     }));
   }),
   updateColor: protectedProcedure

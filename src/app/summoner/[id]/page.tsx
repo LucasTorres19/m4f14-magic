@@ -1,5 +1,10 @@
 "use client";
 
+import {
+  DominationRelations,
+  type DominationSummary,
+  type RivalSummary,
+} from "@/components/domination-relations";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import {
@@ -60,6 +65,9 @@ type PlayerDetail = {
   name: string | null;
   backgroundColor?: string | null;
   commanders: CommanderRow[];
+  parents: DominationSummary[];
+  children: DominationSummary[];
+  rivals: RivalSummary[];
 };
 
 type PlayerListStatsRow = {
@@ -1405,6 +1413,16 @@ export default function SummonerDetailPage() {
                 </section>
               </div>
             </Card>
+          </div>
+        )}
+
+        {!isLoading && !isError && detail && (
+          <div className="mb-10">
+            <DominationRelations
+              parents={detail.parents}
+              childRelations={detail.children}
+              rivals={detail.rivals}
+            />
           </div>
         )}
 
