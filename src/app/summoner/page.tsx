@@ -1,9 +1,5 @@
 "use client";
 
-import {
-  DominationRelations,
-  type DominationSummary,
-} from "@/components/domination-relations";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import {
@@ -63,8 +59,6 @@ type ApiPlayer = {
   }[];
   uniqueCommanderCount?: number | string | null;
   isOtp?: boolean | null;
-  parents?: DominationSummary[];
-  children?: DominationSummary[];
 };
 
 type PlayerUI = Required<Pick<ApiPlayer, "id">> & {
@@ -93,8 +87,6 @@ type PlayerUI = Required<Pick<ApiPlayer, "id">> & {
   }[];
   uniqueCommanderCount: number;
   isMostDiverse: boolean;
-  parents: DominationSummary[];
-  children: DominationSummary[];
 };
 
 function toTimestampMs(value: Date | number | string | null | undefined) {
@@ -181,8 +173,6 @@ export default function SummonerPage() {
         isMostDiverse: false,
         isOtp: Boolean(p.isOtp),
         topDecks,
-        parents: p.parents ?? [],
-        children: p.children ?? [],
       } satisfies PlayerUI;
     });
 
@@ -620,12 +610,6 @@ export default function SummonerPage() {
                           </span>
                         )}
                       </div>
-
-                      <DominationRelations
-                        parents={player.parents}
-                        childRelations={player.children}
-                        compact
-                      />
 
                       {player.topDecks.length > 0 && (
                         <div className="mt-2">

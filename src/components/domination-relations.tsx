@@ -22,7 +22,6 @@ export type DominationSummary = {
 type DominationRelationsProps = {
   parents: readonly DominationSummary[];
   childRelations: readonly DominationSummary[];
-  compact?: boolean;
 };
 
 function RelationList({
@@ -81,36 +80,7 @@ function RelationList({
 export function DominationRelations({
   parents,
   childRelations,
-  compact = false,
 }: DominationRelationsProps) {
-  if (compact) {
-    if (parents.length === 0 && childRelations.length === 0) return null;
-
-    return (
-      <div className="flex flex-col gap-3">
-        <p className="text-sm font-medium">Paternidades</p>
-        <div className="flex flex-col gap-3">
-          {parents.length > 0 ? (
-            <RelationList
-              title="Padres"
-              relations={parents}
-              kind="parents"
-              showEmpty={false}
-            />
-          ) : null}
-          {childRelations.length > 0 ? (
-            <RelationList
-              title="Hijos"
-              relations={childRelations}
-              kind="children"
-              showEmpty={false}
-            />
-          ) : null}
-        </div>
-      </div>
-    );
-  }
-
   return (
     <Card>
       <CardHeader>
