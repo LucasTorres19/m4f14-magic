@@ -13,6 +13,7 @@ import { toast } from "sonner";
 import {
   getCroppedFile,
   getCroppedFileName,
+  getOptimizedFullImageFile,
   ImageUploadButton,
   type SelectedFile,
 } from "@/components/image-upload-button";
@@ -47,6 +48,8 @@ function UploadDialog({
 }) {
   const [selectedFile, setSelectedFile] = useState<SelectedFile | null>(null);
   const [croppedArea, setCroppedArea] = useState<Area | null>(null);
+  const [preparingImage, setPreparingImage] = useState(false);
+  const [uploadProgress, setUploadProgress] = useState(0);
   const setImageMutation = api.match.setImage.useMutation({
     onSuccess: (res) => {
       setImages((prev) => ({
@@ -64,6 +67,13 @@ function UploadDialog({
   const { startUpload, routeConfig, isUploading } = useUploadThing(
     "imageUploader",
     {
+      uploadProgressGranularity: "fine",
+      onUploadBegin: () => {
+        setUploadProgress(0);
+      },
+      onUploadProgress: (progress) => {
+        setUploadProgress(progress);
+      },
       onUploadError: (error) => {
         toast.error(error?.message ?? "No se pudo crack.");
       },
@@ -110,31 +120,44 @@ function UploadDialog({
   const handleConfirm = async () => {
     if (!croppedArea || !someImage) return;
     try {
+      setPreparingImage(true);
+      setUploadProgress(0);
       const croppedFile = await getCroppedFile({
         imageSrc: someImage,
         pixelCrop: croppedArea,
         fileName: getCroppedFileName(
           selectedFile?.file.name ?? `match-${matchId}`,
         ),
-        mimeType: selectedFile?.file.type ?? "image/jpeg",
       });
+      const optimizedFullFile = selectedFile?.file
+        ? await getOptimizedFullImageFile({ file: selectedFile.file })
+        : undefined;
+      setPreparingImage(false);
       const files = await startUpload(
-        [croppedFile, selectedFile?.file].filter(Boolean) as File[],
+        [croppedFile, optimizedFullFile].filter(Boolean) as File[],
       );
       if (files) {
         await persistUploads(
           files.map((f) => ({
-            url: f.url,
+            url: f.ufsUrl ?? f.url,
             key: f.key,
           })),
         );
       }
     } catch (error) {
       console.error(error);
+      setPreparingImage(false);
     }
   };
 
-  const isLoading = isUploading || setImageMutation.isPending;
+  const isLoading = preparingImage || isUploading || setImageMutation.isPending;
+  const statusLabel = preparingImage
+    ? "Preparando imagen"
+    : isUploading
+      ? `Subiendo ${uploadProgress}%`
+      : setImageMutation.isPending
+        ? "Guardando"
+        : "Guardar";
 
   return (
     <div className="flex flex-col gap-2">
@@ -155,10 +178,10 @@ function UploadDialog({
         {isLoading ? (
           <>
             <Loader2 className="mr-2 size-4 animate-spin" />
-            Guardar
+            {statusLabel}
           </>
         ) : (
-          "Guardar"
+          statusLabel
         )}
       </Button>
     </div>

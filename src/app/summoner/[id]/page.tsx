@@ -1740,7 +1740,6 @@ export default function SummonerDetailPage() {
                     fill
                     className="object-cover transition-transform group-hover:scale-105"
                     sizes="(max-width: 640px) 50vw, (max-width: 1024px) 33vw, 25vw"
-                    unoptimized
                   />
                   <div className="absolute inset-x-0 bottom-0 p-2 bg-linear-to-t from-black/60 to-transparent text-white text-[11px] flex items-center justify-between">
                     <span className="truncate max-w-[70%]">
@@ -1780,7 +1779,6 @@ export default function SummonerDetailPage() {
                       fill
                       className="object-cover"
                       sizes="(max-width: 768px) 100vw, 800px"
-                      unoptimized
                     />
                   </div>
                 )}
@@ -1851,7 +1849,6 @@ export default function SummonerDetailPage() {
                 className="object-contain"
                 sizes="100vw"
                 priority
-                unoptimized
               />
               <button
                 type="button"
