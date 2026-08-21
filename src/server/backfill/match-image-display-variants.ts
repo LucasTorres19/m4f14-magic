@@ -111,6 +111,8 @@ async function loadCommentedProdEnv(envFile: string) {
   const lines = content.split(/\r?\n/);
   const values = new Map<string, string>();
   let insideProdBlock = false;
+  const stripWrappingQuotes = (value: string) =>
+    value.trim().replace(/^['"]|['"]$/g, "");
 
   for (const line of lines) {
     if (/drizzle\s+prod/i.test(line)) {
@@ -126,7 +128,7 @@ async function loadCommentedProdEnv(envFile: string) {
 
     const match = COMMENTED_ENV_ASSIGNMENT.exec(line);
     if (match) {
-      values.set(match[1]!, match[2] ?? "");
+      values.set(match[1]!, stripWrappingQuotes(match[2] ?? ""));
     }
   }
 
