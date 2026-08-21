@@ -43,6 +43,7 @@ import { toast } from "sonner";
 type ApiPlayer = {
   id: number;
   name: string | null;
+  alias: string | null;
   backgroundColor: string | null;
   profileImageUrl: string | null;
   matchCount?: number | string | null;
@@ -65,6 +66,7 @@ type ApiPlayer = {
 
 type PlayerUI = Required<Pick<ApiPlayer, "id">> & {
   name: string;
+  alias: string | null;
   backgroundColor: string;
   profileImageUrl: string | null;
   matchCount: number;
@@ -157,6 +159,7 @@ export default function SummonerPage() {
       return {
         id: p.id,
         name: (p.name ?? "Sin nombre").trim(),
+        alias: p.alias?.trim() ?? null,
         backgroundColor: p.backgroundColor ?? "#CBD5E1",
         profileImageUrl: p.profileImageUrl ?? null,
         matchCount,
@@ -353,9 +356,16 @@ export default function SummonerPage() {
                             imageUrl={player.profileImageUrl}
                             backgroundColor={player.backgroundColor}
                           />
-                          <h3 className="truncate text-lg leading-tight font-bold">
-                            {player.name}
-                          </h3>
+                          <div className="min-w-0">
+                            <h3 className="truncate text-lg leading-tight font-bold">
+                              {player.name}
+                            </h3>
+                            {player.alias ? (
+                              <p className="truncate text-xs text-muted-foreground">
+                                {player.alias}
+                              </p>
+                            ) : null}
+                          </div>
                         </Link>
 
                         <Tooltip>

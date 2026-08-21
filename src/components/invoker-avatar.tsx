@@ -3,6 +3,10 @@ import { cn } from "@/lib/utils";
 import Image from "next/image";
 
 const avatarSizes = {
+  compact: {
+    container: "size-9 text-xs",
+    imageSizes: "36px",
+  },
   card: {
     container: "size-12 text-sm",
     imageSizes: "48px",
@@ -10,6 +14,14 @@ const avatarSizes = {
   profile: {
     container: "size-24 text-2xl md:size-32 md:text-4xl",
     imageSizes: "(min-width: 768px) 128px, 96px",
+  },
+  feature: {
+    container: "size-16 text-xl",
+    imageSizes: "64px",
+  },
+  oracle: {
+    container: "size-20 text-2xl",
+    imageSizes: "80px",
   },
 } as const;
 

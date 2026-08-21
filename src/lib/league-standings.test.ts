@@ -4,6 +4,7 @@ import test from "node:test";
 import {
   calculateLeagueStandings,
   type LeagueResult,
+  type LeagueResultPlayer,
 } from "./league-standings";
 
 const players = {
@@ -15,8 +16,8 @@ const players = {
 } as const;
 
 function match(
-  winner: (typeof players)[keyof typeof players],
-  loser: (typeof players)[keyof typeof players],
+  winner: Omit<LeagueResultPlayer, "placement">,
+  loser: Omit<LeagueResultPlayer, "placement">,
 ): LeagueResult {
   return {
     players: [
@@ -91,5 +92,33 @@ void test("falls back deterministically when every direct record is equal", () =
   assert.deepEqual(
     standings.map(({ name }) => name),
     ["Ana", "Beto", "Carla"],
+  );
+});
+
+void test("keeps alias and profile image metadata in league standings", () => {
+  const standings = calculateLeagueStandings([
+    match(
+      {
+        ...players.a,
+        alias: "La Jefa",
+        profileImageUrl: "https://example.com/ana.webp",
+      },
+      players.b,
+    ),
+  ]);
+
+  assert.deepEqual(
+    standings.find((standing) => standing.id === players.a.id),
+    {
+      id: players.a.id,
+      name: players.a.name,
+      alias: "La Jefa",
+      color: players.a.backgroundColor,
+      profileImageUrl: "https://example.com/ana.webp",
+      points: 3,
+      wins: 1,
+      played: 1,
+      last: ["W"],
+    },
   );
 });

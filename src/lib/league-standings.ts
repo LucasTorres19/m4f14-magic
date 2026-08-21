@@ -1,7 +1,9 @@
 export type LeagueResultPlayer = {
   id: number;
   name: string;
+  alias?: string | null;
   backgroundColor: string;
+  profileImageUrl?: string | null;
   placement: number;
 };
 
@@ -12,7 +14,9 @@ export type LeagueResult = {
 export type LeagueStanding = {
   id: number;
   name: string;
+  alias: string | null;
   color: string;
+  profileImageUrl: string | null;
   points: number;
   wins: number;
   played: number;
@@ -94,7 +98,9 @@ export function calculateLeagueStandings(
       const standing = standingsByPlayer.get(player.id) ?? {
         id: player.id,
         name: player.name,
+        alias: player.alias ?? null,
         color: player.backgroundColor,
+        profileImageUrl: player.profileImageUrl ?? null,
         points: 0,
         wins: 0,
         played: 0,

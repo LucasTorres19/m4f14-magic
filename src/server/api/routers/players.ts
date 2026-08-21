@@ -15,6 +15,7 @@ import {
 import { alias } from "drizzle-orm/sqlite-core";
 import { z } from "zod";
 
+import { normalizeInvokerAlias } from "@/lib/invoker-profile";
 import {
   createTRPCRouter,
   protectedProcedure,
@@ -179,6 +180,7 @@ export const playersRouter = createTRPCRouter({
         .select({
           id: players.id,
           name: players.name,
+          alias: players.alias,
           backgroundColor: players.backgroundColor,
           profileImageUrl: playerProfileImage.fileUrl,
         })
@@ -249,6 +251,7 @@ export const playersRouter = createTRPCRouter({
       return {
         id: player.id,
         name: player.name,
+        alias: player.alias,
         backgroundColor: player.backgroundColor,
         profileImageUrl: player.profileImageUrl,
         commanders: rows.map((r) => ({
@@ -614,6 +617,7 @@ export const playersRouter = createTRPCRouter({
       .select({
         id: players.id,
         name: players.name,
+        alias: players.alias,
         backgroundColor: players.backgroundColor,
         profileImageUrl: playerProfileImage.fileUrl,
         matchCount: agg.matchCount,
@@ -691,6 +695,7 @@ export const playersRouter = createTRPCRouter({
     return rows.map((r) => ({
       id: r.id,
       name: r.name,
+      alias: r.alias,
       backgroundColor: r.backgroundColor,
       profileImageUrl: r.profileImageUrl,
       matchCount: Number(r.matchCount ?? 0),
@@ -730,6 +735,47 @@ export const playersRouter = createTRPCRouter({
         .where(eq(players.id, input.playerId));
 
       return { ok: true } as const;
+    }),
+  updateAlias: protectedProcedure
+    .input(
+      z.object({
+        playerId: z.number().int().positive(),
+        alias: z.string().trim().max(80).nullable(),
+      }),
+    )
+    .mutation(async ({ ctx, input }) => {
+      const normalizedAlias = normalizeInvokerAlias(input.alias);
+      const [updatedPlayer] = await ctx.db
+        .update(players)
+        .set({ alias: normalizedAlias })
+        .where(eq(players.id, input.playerId))
+        .returning({
+          id: players.id,
+          name: players.name,
+          alias: players.alias,
+        });
+
+      if (!updatedPlayer) {
+        throw new TRPCError({
+          code: "NOT_FOUND",
+          message: "No encontramos ese invocador.",
+        });
+      }
+
+      revalidatePath("/summoner");
+      revalidatePath(`/summoner/${updatedPlayer.id}`);
+      revalidatePath("/history");
+      revalidatePath("/analytics");
+      await writeAuditLog({
+        action: "player.alias_updated",
+        entityType: "player",
+        entityId: updatedPlayer.id,
+        summary: `Alias updated for ${updatedPlayer.name}`,
+        metadata: { alias: updatedPlayer.alias },
+        headers: ctx.headers,
+      });
+
+      return { alias: updatedPlayer.alias } as const;
     }),
   authorizeProfileImageUpload: protectedProcedure.mutation(() => {
     return { ok: true } as const;
@@ -817,6 +863,8 @@ export const playersRouter = createTRPCRouter({
 
       revalidatePath("/summoner");
       revalidatePath(`/summoner/${result.playerId}`);
+      revalidatePath("/history");
+      revalidatePath("/analytics");
       await writeAuditLog({
         action: result.image
           ? "player.profile_image_updated"

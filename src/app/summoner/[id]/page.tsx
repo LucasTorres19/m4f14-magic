@@ -5,6 +5,7 @@ import {
   type DominationSummary,
   type RivalSummary,
 } from "@/components/domination-relations";
+import { InvokerAliasDialog } from "@/components/invoker-alias-dialog";
 import { InvokerAvatar } from "@/components/invoker-avatar";
 import { ProfilePhotoDialog } from "@/components/profile-photo-dialog";
 import { Button } from "@/components/ui/button";
@@ -66,6 +67,7 @@ type CommanderRow = {
 type PlayerDetail = {
   id: number;
   name: string | null;
+  alias?: string | null;
   backgroundColor?: string | null;
   profileImageUrl?: string | null;
   commanders: CommanderRow[];
@@ -1028,17 +1030,31 @@ export default function SummonerDetailPage() {
                       </Button>
                     </ProfilePhotoDialog>
                   </div>
-                  <div className="flex min-w-0 items-center gap-3">
-                    <h1 className="text-2xl md:text-5xl font-bold">
-                      {detail.name ?? `#${detail.id}`}
-                    </h1>
-                    <span
-                      className="inline-flex h-4 w-4 shrink-0 rounded-full border"
-                      style={{
-                        backgroundColor: detail.backgroundColor ?? "#CBD5E1",
-                      }}
-                      aria-hidden
-                    />
+                  <div className="min-w-0">
+                    <div className="flex items-center gap-3">
+                      <h1 className="text-2xl md:text-5xl font-bold text-balance">
+                        {detail.name ?? `#${detail.id}`}
+                      </h1>
+                      <span
+                        className="inline-flex h-4 w-4 shrink-0 rounded-full border"
+                        style={{
+                          backgroundColor: detail.backgroundColor ?? "#CBD5E1",
+                        }}
+                        aria-hidden
+                      />
+                    </div>
+                    <div className="flex min-h-10 items-center gap-1">
+                      {detail.alias ? (
+                        <p className="truncate text-sm text-muted-foreground md:text-lg">
+                          {detail.alias}
+                        </p>
+                      ) : null}
+                      <InvokerAliasDialog
+                        playerId={detail.id}
+                        playerName={detail.name ?? `#${detail.id}`}
+                        alias={detail.alias}
+                      />
+                    </div>
                   </div>
                 </div>
                 {playerStats && (

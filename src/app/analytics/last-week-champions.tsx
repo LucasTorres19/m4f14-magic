@@ -8,31 +8,42 @@ import {
 import { Skeleton } from "@/components/ui/skeleton";
 
 import { db } from "@/server/db";
-import { matches, players, playersToMatches } from "@/server/db/schema";
+import { images, matches, players, playersToMatches } from "@/server/db/schema";
 import { subDays } from "date-fns";
 import { and, count, desc, eq, gte, sql } from "drizzle-orm";
+import { alias } from "drizzle-orm/sqlite-core";
 import { EmptyChartState } from "./empty-chart-state";
 import LastWeekChampionsChart from "./last-week-champions-chart";
 
 export default async function LastWeekChampions() {
+  const profileImage = alias(images, "weekly_champion_profile_image");
   const weeklyWinsData = await db
     .select({
       playerId: players.id,
       name: players.name,
+      alias: players.alias,
       color: players.backgroundColor,
+      profileImageUrl: profileImage.fileUrl,
       wins: count(playersToMatches.playerId).as("wins"),
       lastWinAt: sql<Date>`max(${matches.createdAt})`,
     })
     .from(playersToMatches)
     .innerJoin(matches, eq(matches.id, playersToMatches.matchId))
     .innerJoin(players, eq(players.id, playersToMatches.playerId))
+    .leftJoin(profileImage, eq(profileImage.id, players.profileImage))
     .where(
       and(
         gte(matches.createdAt, subDays(new Date(), 7)),
         eq(playersToMatches.placement, 1),
       ),
     )
-    .groupBy(players.id, players.name)
+    .groupBy(
+      players.id,
+      players.name,
+      players.alias,
+      players.backgroundColor,
+      profileImage.fileUrl,
+    )
     .orderBy(desc(sql`wins`))
     .limit(5);
 

@@ -9,3 +9,8 @@ export function getInvokerInitials(name: string | null | undefined) {
     .join("")
     .toLocaleUpperCase("es-AR");
 }
+
+export function normalizeInvokerAlias(alias: string | null | undefined) {
+  const normalized = alias?.trim();
+  return normalized?.length ? normalized : null;
+}

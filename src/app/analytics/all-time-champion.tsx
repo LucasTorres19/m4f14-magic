@@ -1,5 +1,6 @@
 import { Crown, Sparkles } from "lucide-react";
 
+import { InvokerAvatar } from "@/components/invoker-avatar";
 import {
   Card,
   CardContent,
@@ -9,8 +10,10 @@ import {
 } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
 import { db } from "@/server/db";
-import { matches, players, playersToMatches } from "@/server/db/schema";
+import { images, matches, players, playersToMatches } from "@/server/db/schema";
 import { eq, sql } from "drizzle-orm";
+import { alias } from "drizzle-orm/sqlite-core";
+import Link from "next/link";
 
 const numberFormatter = new Intl.NumberFormat("es-AR");
 export function AllTimeChampionSkeleton() {
@@ -40,7 +43,9 @@ export async function AllTimeChampion() {
       .select({
         playerId: players.id,
         name: players.name,
+        alias: players.alias,
         backgroundColor: players.backgroundColor,
+        profileImageId: players.profileImage,
         wins: sql<number>`count(*)`.as("wins"),
         lastWinAt: sql<number>`max(${matches.createdAt})`.as("lastWinAt"),
       })
@@ -48,19 +53,29 @@ export async function AllTimeChampion() {
       .innerJoin(players, eq(players.id, playersToMatches.playerId))
       .innerJoin(matches, eq(matches.id, playersToMatches.matchId))
       .where(eq(playersToMatches.placement, 1))
-      .groupBy(players.id, players.name, players.backgroundColor),
+      .groupBy(
+        players.id,
+        players.name,
+        players.alias,
+        players.backgroundColor,
+        players.profileImage,
+      ),
   );
 
+  const profileImage = alias(images, "all_time_champion_profile_image");
   const [allTimeChampion] = await db
     .with(winsPerPlayer)
     .select({
       playerId: winsPerPlayer.playerId,
       name: winsPerPlayer.name,
+      alias: winsPerPlayer.alias,
       backgroundColor: winsPerPlayer.backgroundColor,
+      profileImageUrl: profileImage.fileUrl,
       wins: winsPerPlayer.wins,
       lastWinAt: winsPerPlayer.lastWinAt,
     })
     .from(winsPerPlayer)
+    .leftJoin(profileImage, eq(profileImage.id, winsPerPlayer.profileImageId))
     .orderBy(
       sql`${winsPerPlayer.wins} desc`,
       sql`${winsPerPlayer.lastWinAt} desc`,
@@ -84,20 +99,32 @@ export async function AllTimeChampion() {
       <CardContent className="px-3 pb-6 md:px-0">
         {allTimeChampion ? (
           <div className="flex h-full flex-col items-center justify-center gap-5 rounded-xl bg-muted/20 p-6 text-center sm:p-8">
-            <div className="flex flex-col items-center gap-3">
-              <span
-                className="flex size-16 items-center justify-center rounded-full border border-foreground/10 shadow-inner transition-all"
-                style={{
-                  backgroundColor: championColor,
-                }}
-                aria-hidden="true"
-              >
-                <Crown className="text-white/90 size-7 drop-shadow" />
+            <Link
+              href={`/summoner/${allTimeChampion.playerId}`}
+              className="flex flex-col items-center gap-3 rounded-2xl focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary"
+            >
+              <span className="relative">
+                <InvokerAvatar
+                  name={championName}
+                  imageUrl={allTimeChampion.profileImageUrl}
+                  backgroundColor={championColor}
+                  size="feature"
+                />
+                <span className="absolute -right-1 -bottom-1 flex size-7 items-center justify-center rounded-full bg-amber-400 text-slate-950 shadow ring-2 ring-card">
+                  <Crown className="size-4" aria-hidden />
+                </span>
               </span>
-              <p className="text-foreground text-xl font-semibold tracking-tight">
-                {championName}
-              </p>
-            </div>
+              <span>
+                <span className="text-foreground block text-xl font-semibold tracking-tight">
+                  {championName}
+                </span>
+                {allTimeChampion.alias ? (
+                  <span className="text-muted-foreground mt-1 block text-sm">
+                    {allTimeChampion.alias}
+                  </span>
+                ) : null}
+              </span>
+            </Link>
             <p className="text-muted-foreground text-sm leading-relaxed">
               {`Reclamo ${numberFormatter.format(championWins)} victorias totales.`}
             </p>

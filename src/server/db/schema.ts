@@ -35,6 +35,7 @@ export const images = createTable("image", (d) => ({
 export const players = createTable("player", (d) => ({
   id: d.integer({ mode: "number" }).primaryKey({ autoIncrement: true }),
   name: d.text({ length: 256 }).notNull().unique(),
+  alias: d.text({ length: 128 }),
   backgroundColor: d.text({ length: 256 }).notNull(),
   profileImage: d
     .integer("profile_image")
