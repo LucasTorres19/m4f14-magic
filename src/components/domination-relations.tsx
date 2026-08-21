@@ -1,4 +1,4 @@
-import { ChevronDown, Crown, Swords, Users } from "lucide-react";
+import { Bird, ChevronDown, Egg, Users } from "lucide-react";
 import Link from "next/link";
 
 import {
@@ -61,7 +61,7 @@ function RelationList({
   kind: "parents" | "children";
   showEmpty: boolean;
 }) {
-  const Icon = kind === "parents" ? Crown : Swords;
+  const Icon = kind === "parents" ? Bird : Egg;
 
   return (
     <section className="flex min-w-0 flex-col gap-2" aria-label={title}>
