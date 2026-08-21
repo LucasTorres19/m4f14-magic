@@ -22,6 +22,11 @@ type Database = typeof appDb;
 const imageInputSchema = z.object({
   url: z.string().url(),
   key: z.string().min(1),
+  variant: z.enum(["card", "display", "original", "legacy"]).optional(),
+  width: z.number().int().positive().optional(),
+  height: z.number().int().positive().optional(),
+  sizeBytes: z.number().int().positive().optional(),
+  mimeType: z.string().min(1).optional(),
 });
 
 const getMatchAuditSnapshot = async (database: Database, matchId: number) => {
@@ -220,6 +225,11 @@ export const matchRouter = createTRPCRouter({
             .values({
               fileKey: input.croppedImage.key,
               fileUrl: input.croppedImage.url,
+              variant: input.croppedImage.variant ?? "card",
+              width: input.croppedImage.width,
+              height: input.croppedImage.height,
+              sizeBytes: input.croppedImage.sizeBytes,
+              mimeType: input.croppedImage.mimeType,
             })
             .returning({
               id: images.id,
@@ -232,6 +242,11 @@ export const matchRouter = createTRPCRouter({
             .values({
               fileKey: input.image.key,
               fileUrl: input.image.url,
+              variant: input.image.variant ?? "display",
+              width: input.image.width,
+              height: input.image.height,
+              sizeBytes: input.image.sizeBytes,
+              mimeType: input.image.mimeType,
             })
             .returning({
               id: images.id,
@@ -305,6 +320,7 @@ export const matchRouter = createTRPCRouter({
           .select({
             id: matches.id,
             image_id: matches.image,
+            original_image_id: matches.originalImage,
             cropped_image_id: matches.cropped_image,
           })
           .from(matches)
@@ -318,27 +334,37 @@ export const matchRouter = createTRPCRouter({
           });
         }
 
-        const imagesToDelete = [
-          matchRow.cropped_image_id,
-          input.image && matchRow.image_id,
-        ].filter(Boolean) as number[];
+        const imagesToDelete = Array.from(
+          new Set(
+            [
+              matchRow.cropped_image_id,
+              input.image && matchRow.image_id,
+              input.image && matchRow.original_image_id,
+            ].filter(Boolean) as number[],
+          ),
+        );
 
         const keysToDelete: string[] = [];
 
         if (imagesToDelete.length) {
-          const [deleted] = await tx
+          const deletedImages = await tx
             .delete(images)
             .where(inArray(images.id, imagesToDelete))
             .returning({
               fileKey: images.fileKey,
             });
-          if (deleted?.fileKey) keysToDelete.push(deleted.fileKey);
+          keysToDelete.push(...deletedImages.map((image) => image.fileKey));
         }
 
         const imagesToInsert = [
           {
             fileKey: input.croppedImage.key,
             fileUrl: input.croppedImage.url,
+            variant: input.croppedImage.variant ?? "card",
+            width: input.croppedImage.width,
+            height: input.croppedImage.height,
+            sizeBytes: input.croppedImage.sizeBytes,
+            mimeType: input.croppedImage.mimeType,
           },
         ];
 
@@ -346,6 +372,11 @@ export const matchRouter = createTRPCRouter({
           imagesToInsert.push({
             fileKey: input.image.key,
             fileUrl: input.image.url,
+            variant: input.image.variant ?? "display",
+            width: input.image.width,
+            height: input.image.height,
+            sizeBytes: input.image.sizeBytes,
+            mimeType: input.image.mimeType,
           });
 
         const [croppedImage, image] = await tx
@@ -353,7 +384,13 @@ export const matchRouter = createTRPCRouter({
           .values(imagesToInsert)
           .returning({
             id: images.id,
+            key: images.fileKey,
             url: images.fileUrl,
+            variant: images.variant,
+            width: images.width,
+            height: images.height,
+            sizeBytes: images.sizeBytes,
+            mimeType: images.mimeType,
           });
 
         if (!croppedImage)
@@ -367,6 +404,7 @@ export const matchRouter = createTRPCRouter({
           .set({
             cropped_image: croppedImage.id,
             image: image?.id ?? undefined,
+            originalImage: image ? null : undefined,
           })
           .where(eq(matches.id, matchRow.id));
 
@@ -376,6 +414,7 @@ export const matchRouter = createTRPCRouter({
           image,
           keysToDelete,
           previousImageId: matchRow.image_id,
+          previousOriginalImageId: matchRow.original_image_id,
           previousCroppedImageId: matchRow.cropped_image_id,
         };
       });
@@ -389,6 +428,7 @@ export const matchRouter = createTRPCRouter({
         metadata: {
           previous: {
             hadFullImage: transaction.previousImageId != null,
+            hadOriginalImage: transaction.previousOriginalImageId != null,
             hadCroppedImage: transaction.previousCroppedImageId != null,
           },
           next: {

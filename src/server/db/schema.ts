@@ -45,6 +45,12 @@ export const images = createTable("image", (d) => ({
   id: d.integer({ mode: "number" }).primaryKey({ autoIncrement: true }),
   fileKey: d.text("file_key", { length: 256 }).notNull(),
   fileUrl: d.text("file_url", { length: 1024 }).notNull(),
+  variant: d.text({ length: 32 }).notNull().default("legacy"),
+  width: d.integer({ mode: "number" }),
+  height: d.integer({ mode: "number" }),
+  sizeBytes: d.integer("size_bytes", { mode: "number" }),
+  mimeType: d.text("mime_type", { length: 128 }),
+  sourceFileKey: d.text("source_file_key", { length: 256 }),
   createdAt: d
     .integer({ mode: "timestamp" })
     .default(sql`(unixepoch())`)
@@ -86,6 +92,9 @@ export const matches = createTable("match", (d) => ({
     .references(() => tournaments.id, { onDelete: "set null" }),
   image: d
     .integer("image")
+    .references(() => images.id, { onDelete: "set null" }),
+  originalImage: d
+    .integer("original_image")
     .references(() => images.id, { onDelete: "set null" }),
   cropped_image: d
     .integer("cropped_image")

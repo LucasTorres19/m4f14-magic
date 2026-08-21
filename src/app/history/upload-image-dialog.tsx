@@ -13,7 +13,8 @@ import { toast } from "sonner";
 import {
   getCroppedFile,
   getCroppedFileName,
-  getOptimizedFullImageFile,
+  getDisplayImageFile,
+  getImageFileMetadata,
   ImageUploadButton,
   type SelectedFile,
 } from "@/components/image-upload-button";
@@ -32,6 +33,17 @@ import { Camera, Loader2 } from "lucide-react";
 import { useState, type Dispatch, type SetStateAction } from "react";
 import type { Area } from "react-easy-crop";
 import type { MatchImage } from "./match-gallery";
+
+type PreparedMatchImage = {
+  file: File;
+  variant: "card" | "display";
+  metadata: {
+    width: number;
+    height: number;
+    sizeBytes: number;
+    mimeType: string;
+  };
+};
 
 function UploadDialog({
   matchId,
@@ -85,13 +97,16 @@ function UploadDialog({
       url: string;
       key: string;
     }[],
+    preparedImages?: PreparedMatchImage[],
   ) => {
     if (!files || files.length === 0) {
       return;
     }
 
     const croppedImage = files.at(0);
-    const image = files.at(1);
+    const displayImage = files.at(1);
+    const croppedMetadata = preparedImages?.at(0)?.metadata;
+    const displayMetadata = preparedImages?.at(1)?.metadata;
 
     if (!croppedImage) {
       return;
@@ -100,15 +115,19 @@ function UploadDialog({
     try {
       await setImageMutation.mutateAsync({
         matchId,
-        image: image
+        image: displayImage
           ? {
-              key: image.key,
-              url: image.url,
+              key: displayImage.key,
+              url: displayImage.url,
+              variant: "display",
+              ...displayMetadata,
             }
           : undefined,
         croppedImage: {
           key: croppedImage.key,
           url: croppedImage.url,
+          variant: "card",
+          ...croppedMetadata,
         },
       });
     } catch {
@@ -129,12 +148,31 @@ function UploadDialog({
           selectedFile?.file.name ?? `match-${matchId}`,
         ),
       });
-      const optimizedFullFile = selectedFile?.file
-        ? await getOptimizedFullImageFile({ file: selectedFile.file })
+      const displayFile = selectedFile?.file
+        ? await getDisplayImageFile({ file: selectedFile.file })
         : undefined;
+      const preparedImages = (
+        await Promise.all(
+          [
+            { file: croppedFile, variant: "card" as const },
+            displayFile
+              ? { file: displayFile, variant: "display" as const }
+              : undefined,
+          ]
+            .filter(Boolean)
+            .map(async (image) =>
+              image
+                ? {
+                    ...image,
+                    metadata: await getImageFileMetadata(image.file),
+                  }
+                : undefined,
+            ),
+        )
+      ).filter(Boolean) as PreparedMatchImage[];
       setPreparingImage(false);
       const files = await startUpload(
-        [croppedFile, optimizedFullFile].filter(Boolean) as File[],
+        preparedImages.map((image) => image.file),
       );
       if (files) {
         await persistUploads(
@@ -142,6 +180,7 @@ function UploadDialog({
             url: f.ufsUrl ?? f.url,
             key: f.key,
           })),
+          preparedImages,
         );
       }
     } catch (error) {
