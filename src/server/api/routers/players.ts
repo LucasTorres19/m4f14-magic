@@ -133,8 +133,26 @@ export const playersRouter = createTRPCRouter({
           startingHp: matches.startingHp,
           selfPlacement: p2mSelf.placement,
           selfCommanderId: p2mSelf.commanderId,
-          image: { id: img.id, url: img.fileUrl },
-          croppedImage: { id: cimg.id, url: cimg.fileUrl },
+          image: {
+            id: img.id,
+            key: img.fileKey,
+            url: img.fileUrl,
+            variant: img.variant,
+            width: img.width,
+            height: img.height,
+            sizeBytes: img.sizeBytes,
+            mimeType: img.mimeType,
+          },
+          croppedImage: {
+            id: cimg.id,
+            key: cimg.fileKey,
+            url: cimg.fileUrl,
+            variant: cimg.variant,
+            width: cimg.width,
+            height: cimg.height,
+            sizeBytes: cimg.sizeBytes,
+            mimeType: cimg.mimeType,
+          },
           leagueName: tournaments.name,
         })
         .from(matches)

@@ -28,6 +28,9 @@ type UploadedImage = {
 };
 
 const imageResizer = createPica();
+export const MATCH_CARD_IMAGE_MAX_WIDTH = 1280;
+export const MATCH_CARD_IMAGE_MAX_HEIGHT = 720;
+export const MATCH_DISPLAY_IMAGE_MAX_DIMENSION = 1920;
 
 export type SelectedFile = {
   file: File;
@@ -208,11 +211,11 @@ export const getCroppedFileName = (originalName: string) => {
   return `${baseName}-cropped.webp`;
 };
 
-const getOptimizedFileName = (originalName: string) => {
+const getDisplayFileName = (originalName: string) => {
   const extensionIndex = originalName.lastIndexOf(".");
-  if (extensionIndex === -1) return `${originalName}-full.webp`;
+  if (extensionIndex === -1) return `${originalName}-display.webp`;
   const baseName = originalName.slice(0, extensionIndex);
-  return `${baseName}-full.webp`;
+  return `${baseName}-display.webp`;
 };
 
 const canvasToFile = async ({
@@ -266,8 +269,8 @@ export const getCroppedFile = async ({
   fileName,
   mimeType = "image/webp",
   quality = 0.86,
-  maxWidth = 1280,
-  maxHeight = 720,
+  maxWidth = MATCH_CARD_IMAGE_MAX_WIDTH,
+  maxHeight = MATCH_CARD_IMAGE_MAX_HEIGHT,
 }: {
   imageSrc: string;
   pixelCrop: Area;
@@ -296,17 +299,7 @@ export const getCroppedFile = async ({
   const cropX = Math.round(pixelCrop.x);
   const cropY = Math.round(pixelCrop.y);
 
-  ctx.drawImage(
-    image,
-    cropX,
-    cropY,
-    width,
-    height,
-    0,
-    0,
-    width,
-    height,
-  );
+  ctx.drawImage(image, cropX, cropY, width, height, 0, 0, width, height);
 
   return resizeCanvasToFile({
     source: croppedCanvas,
@@ -318,9 +311,25 @@ export const getCroppedFile = async ({
   });
 };
 
-export const getOptimizedFullImageFile = async ({
+export const getImageFileMetadata = async (file: File) => {
+  const imageUrl = URL.createObjectURL(file);
+
+  try {
+    const image = await createImage(imageUrl);
+    return {
+      width: image.naturalWidth,
+      height: image.naturalHeight,
+      sizeBytes: file.size,
+      mimeType: file.type,
+    };
+  } finally {
+    URL.revokeObjectURL(imageUrl);
+  }
+};
+
+export const getDisplayImageFile = async ({
   file,
-  maxDimension = 2560,
+  maxDimension = MATCH_DISPLAY_IMAGE_MAX_DIMENSION,
   mimeType = "image/webp",
   quality = 0.9,
 }: {
@@ -349,7 +358,7 @@ export const getOptimizedFullImageFile = async ({
 
     return canvasToFile({
       canvas,
-      fileName: getOptimizedFileName(file.name),
+      fileName: getDisplayFileName(file.name),
       mimeType,
       quality,
     });
