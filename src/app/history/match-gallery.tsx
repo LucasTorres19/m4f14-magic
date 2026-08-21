@@ -1,8 +1,8 @@
 "use client";
 
-import { ImageOff, X } from "lucide-react";
+import { ImageOff, Loader2, X } from "lucide-react";
 import Image from "next/image";
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useState, type MouseEvent } from "react";
 import { createPortal } from "react-dom";
 
 import { AspectRatio } from "@/components/ui/aspect-ratio";
@@ -29,17 +29,51 @@ export function MatchGallery({
   });
 
   const [lightboxOpen, setLightboxOpen] = useState(false);
+  const [lightboxPreviewSrc, setLightboxPreviewSrc] = useState<string | null>(
+    null,
+  );
+  const [fullImageLoaded, setFullImageLoaded] = useState(false);
+  const [fullImagePreloadRequested, setFullImagePreloadRequested] =
+    useState(false);
   const [mounted, setMounted] = useState(false);
+
+  const previewUrl = images.croppedImage?.url ?? images.image?.url ?? null;
+  const fullUrl = images.image?.url ?? previewUrl;
+  const hasSeparateFullImage = Boolean(
+    images.image?.url && images.image.url !== previewUrl,
+  );
+  const fullscreenPreviewSrc = lightboxPreviewSrc ?? previewUrl ?? fullUrl;
+  const showFullImage = Boolean(
+    fullUrl && (!hasSeparateFullImage || fullImageLoaded),
+  );
+
+  const preloadFullImage = useCallback(() => {
+    if (!hasSeparateFullImage || !fullUrl || fullImagePreloadRequested) return;
+    setFullImagePreloadRequested(true);
+  }, [fullImagePreloadRequested, fullUrl, hasSeparateFullImage]);
+
+  const openLightbox = (event: MouseEvent<HTMLDivElement>) => {
+    const thumbnail = event.currentTarget.querySelector("img");
+    const thumbnailSrc = thumbnail?.currentSrc ?? thumbnail?.src;
+    setLightboxPreviewSrc(thumbnailSrc ?? previewUrl);
+    setLightboxOpen(true);
+  };
+
+  useEffect(() => {
+    setFullImagePreloadRequested(false);
+    setFullImageLoaded(!hasSeparateFullImage);
+  }, [fullUrl, hasSeparateFullImage]);
 
   useEffect(() => {
     setMounted(true);
     if (!lightboxOpen) return;
+    preloadFullImage();
     const onKey = (e: KeyboardEvent) => {
       if (e.key === "Escape") setLightboxOpen(false);
     };
     window.addEventListener("keydown", onKey);
     return () => window.removeEventListener("keydown", onKey);
-  }, [lightboxOpen]);
+  }, [hasSeparateFullImage, lightboxOpen, preloadFullImage]);
 
   const altText = `Landscape image for ${matchId}`;
 
@@ -52,7 +86,10 @@ export function MatchGallery({
             "relative rounded-2xl border border-white/12 bg-background/60 shadow-lg",
             images.image && "cursor-zoom-in",
           )}
-          onClick={() => setLightboxOpen(true)}
+          onClick={openLightbox}
+          onFocus={preloadFullImage}
+          onMouseEnter={preloadFullImage}
+          onTouchStart={preloadFullImage}
         >
           <Image
             src={images.croppedImage.url}
@@ -75,6 +112,17 @@ export function MatchGallery({
               setImages={setImages}
             />
           </div>
+          {fullUrl && hasSeparateFullImage && fullImagePreloadRequested ? (
+            <Image
+              src={fullUrl}
+              alt=""
+              aria-hidden="true"
+              width={1920}
+              height={1080}
+              sizes="100vw"
+              className="pointer-events-none absolute size-px opacity-0"
+            />
+          ) : null}
         </AspectRatio>
       ) : (
         <div className="flex relative h-full min-h-[220px] flex-col items-center justify-center gap-3 rounded-2xl border border-dashed border-white/15 bg-background/60 p-4 text-center text-sm text-muted-foreground">
@@ -88,7 +136,7 @@ export function MatchGallery({
 
       {mounted &&
         lightboxOpen &&
-        images.image &&
+        fullscreenPreviewSrc &&
         createPortal(
           <div
             className="fixed inset-0 z-9999 bg-black/80 backdrop-blur-sm flex items-center justify-center p-4"
@@ -100,14 +148,40 @@ export function MatchGallery({
               className="relative w-[95vw] h-[90vh] max-w-[95vw] max-h-[90vh] rounded-xl overflow-hidden shadow-2xl"
               onClick={(e) => e.stopPropagation()}
             >
-              <Image
-                src={images.image.url}
-                alt={`Imagen completa del match: ${matchId}`}
-                fill
-                className="object-contain"
-                sizes="100vw"
-                priority
+              <div
+                className={cn(
+                  "absolute inset-0 bg-contain bg-center bg-no-repeat transition-opacity duration-200",
+                  showFullImage && hasSeparateFullImage
+                    ? "opacity-0"
+                    : "opacity-100",
+                )}
+                style={{
+                  backgroundImage: fullscreenPreviewSrc
+                    ? `url("${fullscreenPreviewSrc}")`
+                    : undefined,
+                }}
+                aria-hidden="true"
               />
+              {fullUrl && hasSeparateFullImage ? (
+                <Image
+                  src={fullUrl}
+                  alt={`Imagen completa del match: ${matchId}`}
+                  fill
+                  className={cn(
+                    "object-contain transition-opacity duration-200",
+                    showFullImage ? "opacity-100" : "opacity-0",
+                  )}
+                  sizes="100vw"
+                  priority
+                  onLoad={() => setFullImageLoaded(true)}
+                />
+              ) : null}
+              {hasSeparateFullImage && !fullImageLoaded ? (
+                <div className="absolute bottom-4 left-1/2 inline-flex -translate-x-1/2 items-center gap-2 rounded-full bg-background/90 px-3 py-2 text-xs text-foreground shadow">
+                  <Loader2 className="size-3 animate-spin" />
+                  Cargando alta calidad
+                </div>
+              ) : null}
               <button
                 type="button"
                 onClick={() => setLightboxOpen(false)}
