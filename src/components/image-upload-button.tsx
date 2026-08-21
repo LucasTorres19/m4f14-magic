@@ -2,6 +2,7 @@ import { cn } from "@/lib/utils";
 import { useMediaQuery } from "@uidotdev/usehooks";
 import { useDropzone } from "@uploadthing/react";
 import { BookImage, Camera } from "lucide-react";
+import createPica from "pica";
 import { useCallback, useEffect, useState, type ChangeEvent } from "react";
 import Cropper, { type Area, type CropperProps } from "react-easy-crop";
 import {
@@ -25,6 +26,8 @@ type UploadedImage = {
   url: string;
   name: string | null;
 };
+
+const imageResizer = createPica();
 
 export type SelectedFile = {
   file: File;
@@ -223,21 +226,38 @@ const canvasToFile = async ({
   mimeType: string;
   quality: number;
 }) => {
-  const blob = await new Promise<Blob>((resolve, reject) => {
-    canvas.toBlob(
-      (createdBlob) => {
-        if (!createdBlob) {
-          reject(new Error("Unable to create blob from canvas"));
-          return;
-        }
-        resolve(createdBlob);
-      },
-      mimeType,
-      quality,
-    );
-  });
+  const blob = await imageResizer.toBlob(canvas, mimeType, quality);
 
   return new File([blob], fileName, { type: blob.type || mimeType });
+};
+
+const resizeCanvasToFile = async ({
+  source,
+  width,
+  height,
+  fileName,
+  mimeType,
+  quality,
+}: {
+  source: HTMLCanvasElement | HTMLImageElement;
+  width: number;
+  height: number;
+  fileName: string;
+  mimeType: string;
+  quality: number;
+}) => {
+  const output = document.createElement("canvas");
+  output.width = width;
+  output.height = height;
+
+  await imageResizer.resize(source, output);
+
+  return canvasToFile({
+    canvas: output,
+    fileName,
+    mimeType,
+    quality,
+  });
 };
 
 export const getCroppedFile = async ({
@@ -264,11 +284,11 @@ export const getCroppedFile = async ({
   const outputWidth = Math.max(Math.round(width * scale), 1);
   const outputHeight = Math.max(Math.round(height * scale), 1);
 
-  const canvas = document.createElement("canvas");
-  canvas.width = outputWidth;
-  canvas.height = outputHeight;
+  const croppedCanvas = document.createElement("canvas");
+  croppedCanvas.width = width;
+  croppedCanvas.height = height;
 
-  const ctx = canvas.getContext("2d");
+  const ctx = croppedCanvas.getContext("2d");
   if (!ctx) {
     throw new Error("Failed to retrieve canvas context");
   }
@@ -276,8 +296,6 @@ export const getCroppedFile = async ({
   const cropX = Math.round(pixelCrop.x);
   const cropY = Math.round(pixelCrop.y);
 
-  ctx.imageSmoothingEnabled = true;
-  ctx.imageSmoothingQuality = "high";
   ctx.drawImage(
     image,
     cropX,
@@ -286,11 +304,18 @@ export const getCroppedFile = async ({
     height,
     0,
     0,
-    outputWidth,
-    outputHeight,
+    width,
+    height,
   );
 
-  return canvasToFile({ canvas, fileName, mimeType, quality });
+  return resizeCanvasToFile({
+    source: croppedCanvas,
+    width: outputWidth,
+    height: outputHeight,
+    fileName,
+    mimeType,
+    quality,
+  });
 };
 
 export const getOptimizedFullImageFile = async ({
@@ -320,14 +345,7 @@ export const getOptimizedFullImageFile = async ({
     canvas.width = width;
     canvas.height = height;
 
-    const ctx = canvas.getContext("2d");
-    if (!ctx) {
-      throw new Error("Failed to retrieve canvas context");
-    }
-
-    ctx.imageSmoothingEnabled = true;
-    ctx.imageSmoothingQuality = "high";
-    ctx.drawImage(image, 0, 0, width, height);
+    await imageResizer.resize(image, canvas);
 
     return canvasToFile({
       canvas,
