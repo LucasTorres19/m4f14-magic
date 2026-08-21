@@ -59,8 +59,7 @@ export function MatchGallery({
             alt={altText}
             fill
             className="object-cover object-top rounded-2xl"
-            sizes="(min-width: 1024px) 480px, 100vw"
-            unoptimized
+            sizes="(min-width: 1024px) 960px, 100vw"
           />
           <div className="absolute inset-0 bg-linear-to-t from-slate-950/80 via-slate-950/20 to-transparent rounded-2xl" />
           <div className="absolute inset-x-0 bottom-0 flex items-center justify-start gap-3 px-4 py-3 text-xs uppercase tracking-[0.3em] text-white/80">
@@ -108,7 +107,6 @@ export function MatchGallery({
                 className="object-contain"
                 sizes="100vw"
                 priority
-                unoptimized
               />
               <button
                 type="button"

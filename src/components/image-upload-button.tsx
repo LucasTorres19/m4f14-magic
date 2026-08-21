@@ -200,29 +200,73 @@ const createImage = (url: string) =>
 
 export const getCroppedFileName = (originalName: string) => {
   const extensionIndex = originalName.lastIndexOf(".");
-  if (extensionIndex === -1) return `${originalName}-cropped`;
+  if (extensionIndex === -1) return `${originalName}-cropped.webp`;
   const baseName = originalName.slice(0, extensionIndex);
-  const extension = originalName.slice(extensionIndex);
-  return `${baseName}-cropped${extension}`;
+  return `${baseName}-cropped.webp`;
+};
+
+const getOptimizedFileName = (originalName: string) => {
+  const extensionIndex = originalName.lastIndexOf(".");
+  if (extensionIndex === -1) return `${originalName}-full.webp`;
+  const baseName = originalName.slice(0, extensionIndex);
+  return `${baseName}-full.webp`;
+};
+
+const canvasToFile = async ({
+  canvas,
+  fileName,
+  mimeType,
+  quality,
+}: {
+  canvas: HTMLCanvasElement;
+  fileName: string;
+  mimeType: string;
+  quality: number;
+}) => {
+  const blob = await new Promise<Blob>((resolve, reject) => {
+    canvas.toBlob(
+      (createdBlob) => {
+        if (!createdBlob) {
+          reject(new Error("Unable to create blob from canvas"));
+          return;
+        }
+        resolve(createdBlob);
+      },
+      mimeType,
+      quality,
+    );
+  });
+
+  return new File([blob], fileName, { type: blob.type || mimeType });
 };
 
 export const getCroppedFile = async ({
   imageSrc,
   pixelCrop,
   fileName,
-  mimeType,
+  mimeType = "image/webp",
+  quality = 0.86,
+  maxWidth = 1280,
+  maxHeight = 720,
 }: {
   imageSrc: string;
   pixelCrop: Area;
   fileName: string;
-  mimeType: string;
+  mimeType?: string;
+  quality?: number;
+  maxWidth?: number;
+  maxHeight?: number;
 }) => {
   const image = await createImage(imageSrc);
-  const canvas = document.createElement("canvas");
   const width = Math.max(Math.round(pixelCrop.width), 1);
   const height = Math.max(Math.round(pixelCrop.height), 1);
-  canvas.width = width;
-  canvas.height = height;
+  const scale = Math.min(maxWidth / width, maxHeight / height, 1);
+  const outputWidth = Math.max(Math.round(width * scale), 1);
+  const outputHeight = Math.max(Math.round(height * scale), 1);
+
+  const canvas = document.createElement("canvas");
+  canvas.width = outputWidth;
+  canvas.height = outputHeight;
 
   const ctx = canvas.getContext("2d");
   if (!ctx) {
@@ -232,17 +276,66 @@ export const getCroppedFile = async ({
   const cropX = Math.round(pixelCrop.x);
   const cropY = Math.round(pixelCrop.y);
 
-  ctx.drawImage(image, cropX, cropY, width, height, 0, 0, width, height);
+  ctx.imageSmoothingEnabled = true;
+  ctx.imageSmoothingQuality = "high";
+  ctx.drawImage(
+    image,
+    cropX,
+    cropY,
+    width,
+    height,
+    0,
+    0,
+    outputWidth,
+    outputHeight,
+  );
 
-  const blob = await new Promise<Blob>((resolve, reject) => {
-    canvas.toBlob((createdBlob) => {
-      if (!createdBlob) {
-        reject(new Error("Unable to create blob from canvas"));
-        return;
-      }
-      resolve(createdBlob);
-    }, mimeType);
-  });
+  return canvasToFile({ canvas, fileName, mimeType, quality });
+};
 
-  return new File([blob], fileName, { type: mimeType });
+export const getOptimizedFullImageFile = async ({
+  file,
+  maxDimension = 2560,
+  mimeType = "image/webp",
+  quality = 0.9,
+}: {
+  file: File;
+  maxDimension?: number;
+  mimeType?: string;
+  quality?: number;
+}) => {
+  const imageUrl = URL.createObjectURL(file);
+
+  try {
+    const image = await createImage(imageUrl);
+    const scale = Math.min(
+      maxDimension / image.naturalWidth,
+      maxDimension / image.naturalHeight,
+      1,
+    );
+    const width = Math.max(Math.round(image.naturalWidth * scale), 1);
+    const height = Math.max(Math.round(image.naturalHeight * scale), 1);
+
+    const canvas = document.createElement("canvas");
+    canvas.width = width;
+    canvas.height = height;
+
+    const ctx = canvas.getContext("2d");
+    if (!ctx) {
+      throw new Error("Failed to retrieve canvas context");
+    }
+
+    ctx.imageSmoothingEnabled = true;
+    ctx.imageSmoothingQuality = "high";
+    ctx.drawImage(image, 0, 0, width, height);
+
+    return canvasToFile({
+      canvas,
+      fileName: getOptimizedFileName(file.name),
+      mimeType,
+      quality,
+    });
+  } finally {
+    URL.revokeObjectURL(imageUrl);
+  }
 };
