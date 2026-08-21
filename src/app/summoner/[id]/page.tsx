@@ -26,6 +26,7 @@ import {
   Flame,
   HeartCrack,
   Layers,
+  Loader2,
   Swords,
   Trophy,
   Users,
@@ -34,7 +35,13 @@ import {
 import Image from "next/image";
 import Link from "next/link";
 import { useParams } from "next/navigation";
-import { useEffect, useMemo, useState } from "react";
+import {
+  useCallback,
+  useEffect,
+  useMemo,
+  useState,
+  type MouseEvent,
+} from "react";
 
 type CommanderRow = {
   commanderId: number;
@@ -103,6 +110,11 @@ type HistoryEntry = {
   image?: { url: string } | null;
   croppedImage?: { url: string } | null;
   leagueName?: string | null;
+};
+
+type PhotoLightbox = {
+  previewUrl: string;
+  fullUrl: string;
 };
 
 const DAY_MS = 24 * 60 * 60 * 1000;
@@ -690,7 +702,32 @@ export default function SummonerDetailPage() {
     () => history?.find((h) => h.matchId === openMatchId) ?? null,
     [history, openMatchId],
   );
-  const [lightboxUrl, setLightboxUrl] = useState<string | null>(null);
+  const [lightbox, setLightbox] = useState<PhotoLightbox | null>(null);
+  const [lightboxFullLoaded, setLightboxFullLoaded] = useState(false);
+  const [preloadedPhotoUrl, setPreloadedPhotoUrl] = useState<string | null>(
+    null,
+  );
+
+  const preloadPhoto = useCallback((url?: string | null) => {
+    if (!url) return;
+    setPreloadedPhotoUrl(url);
+  }, []);
+
+  const openPhotoLightbox = useCallback(
+    (photo: HistoryEntry, event: MouseEvent<HTMLButtonElement>) => {
+      const thumbnail = event.currentTarget.querySelector("img");
+      const previewUrl =
+        thumbnail?.currentSrc ?? photo.croppedImage?.url ?? photo.image?.url;
+      const fullUrl = photo.image?.url ?? photo.croppedImage?.url;
+
+      if (!previewUrl || !fullUrl) return;
+
+      setLightboxFullLoaded(previewUrl === fullUrl);
+      setLightbox({ previewUrl, fullUrl });
+      preloadPhoto(fullUrl);
+    },
+    [preloadPhoto],
+  );
 
   const podiumPhotos = useMemo(() => {
     return (history ?? []).filter((h) => {
@@ -1725,11 +1762,10 @@ export default function SummonerDetailPage() {
                   key={p.matchId}
                   type="button"
                   className="relative aspect-video rounded overflow-hidden bg-muted group"
-                  onClick={() =>
-                    setLightboxUrl(
-                      p.image?.url ?? p.croppedImage?.url ?? "/placeholder.svg",
-                    )
-                  }
+                  onClick={(event) => openPhotoLightbox(p, event)}
+                  onFocus={() => preloadPhoto(p.image?.url)}
+                  onMouseEnter={() => preloadPhoto(p.image?.url)}
+                  onTouchStart={() => preloadPhoto(p.image?.url)}
                   aria-label={`Abrir foto del duelo ${fmt(p.createdAt)}`}
                 >
                   <Image
@@ -1831,10 +1867,22 @@ export default function SummonerDetailPage() {
           </DialogContent>
         </Dialog>
 
-        {lightboxUrl && (
+        {preloadedPhotoUrl ? (
+          <Image
+            src={preloadedPhotoUrl}
+            alt=""
+            aria-hidden="true"
+            width={1920}
+            height={1080}
+            sizes="100vw"
+            className="pointer-events-none absolute size-px opacity-0"
+          />
+        ) : null}
+
+        {lightbox && (
           <div
             className="fixed inset-0 z-9999 bg-black/80 backdrop-blur-sm flex items-center justify-center p-4"
-            onClick={() => setLightboxUrl(null)}
+            onClick={() => setLightbox(null)}
             role="dialog"
             aria-modal="true"
           >
@@ -1842,17 +1890,39 @@ export default function SummonerDetailPage() {
               className="relative w-[95vw] h-[90vh] max-w-[95vw] max-h-[90vh] rounded-xl overflow-hidden shadow-2xl"
               onClick={(e) => e.stopPropagation()}
             >
-              <Image
-                src={lightboxUrl}
-                alt="Imagen completa del duelo"
-                fill
-                className="object-contain"
-                sizes="100vw"
-                priority
+              <div
+                className={`absolute inset-0 bg-contain bg-center bg-no-repeat transition-opacity duration-200 ${
+                  lightboxFullLoaded && lightbox.previewUrl !== lightbox.fullUrl
+                    ? "opacity-0"
+                    : "opacity-100"
+                }`}
+                style={{
+                  backgroundImage: `url("${lightbox.previewUrl}")`,
+                }}
+                aria-hidden="true"
               />
+              {lightbox.previewUrl !== lightbox.fullUrl ? (
+                <Image
+                  src={lightbox.fullUrl}
+                  alt="Imagen completa del duelo"
+                  fill
+                  className={`object-contain transition-opacity duration-200 ${
+                    lightboxFullLoaded ? "opacity-100" : "opacity-0"
+                  }`}
+                  sizes="100vw"
+                  priority
+                  onLoad={() => setLightboxFullLoaded(true)}
+                />
+              ) : null}
+              {!lightboxFullLoaded && lightbox.previewUrl !== lightbox.fullUrl ? (
+                <div className="absolute bottom-4 left-1/2 inline-flex -translate-x-1/2 items-center gap-2 rounded-full bg-background/90 px-3 py-2 text-xs text-foreground shadow">
+                  <Loader2 className="size-3 animate-spin" />
+                  Cargando alta calidad
+                </div>
+              ) : null}
               <button
                 type="button"
-                onClick={() => setLightboxUrl(null)}
+                onClick={() => setLightbox(null)}
                 className="absolute top-2 right-2 inline-flex items-center gap-1 rounded-full bg-background/90 px-3 py-2 text-sm shadow hover:bg-background"
                 aria-label="Cerrar"
               >
